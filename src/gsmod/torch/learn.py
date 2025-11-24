@@ -59,7 +59,7 @@ class ColorGradingConfig:
     :param highlight_tint_hue: Highlight tint hue in degrees
     :param highlight_tint_sat: Highlight tint saturation (0 to 1)
     :param learnable: List of parameter names to learn (None = all)
-    :param device: Device to create tensors on ('cpu', 'cuda', etc.)
+    :param device: Device to create tensors on (None = auto-detect CUDA, or 'cpu', 'cuda', etc.)
 
     Example:
         >>> config = ColorGradingConfig(
@@ -86,9 +86,12 @@ class ColorGradingConfig:
     highlight_tint_sat: float = 0.0
 
     learnable: list[str] | None = None
-    device: str = "cuda"  # 'cuda:0', 'cuda:1', 'cpu', etc.
+    device: str | None = None  # None = auto-detect, or 'cpu', 'cuda', 'cuda:0', etc.
 
     def __post_init__(self):
+        # Auto-detect device: prefer CUDA if available
+        if self.device is None:
+            self.device = "cuda" if torch.cuda.is_available() else "cpu"
         if self.learnable is None:
             self.learnable = [
                 "brightness",
@@ -134,9 +137,12 @@ class TransformConfig:
     rotation: tuple[float, float, float] = (0.0, 0.0, 0.0)
 
     learnable: list[str] | None = None
-    device: str = "cuda"  # 'cuda:0', 'cuda:1', 'cpu', etc.
+    device: str | None = None  # None = auto-detect, or 'cpu', 'cuda', 'cuda:0', etc.
 
     def __post_init__(self):
+        # Auto-detect device: prefer CUDA if available
+        if self.device is None:
+            self.device = "cuda" if torch.cuda.is_available() else "cpu"
         if self.learnable is None:
             self.learnable = ["translation", "scale", "rotation"]
 
@@ -205,9 +211,12 @@ class LearnableFilterConfig:
     box_sharpness: float = 10.0
 
     learnable: list[str] | None = None
-    device: str = "cuda"  # 'cuda:0', 'cuda:1', 'cpu', etc.
+    device: str | None = None  # None = auto-detect, or 'cpu', 'cuda', 'cuda:0', etc.
 
     def __post_init__(self):
+        # Auto-detect device: prefer CUDA if available
+        if self.device is None:
+            self.device = "cuda" if torch.cuda.is_available() else "cpu"
         if self.geometry_type not in ("sphere", "ellipsoid", "box", "none"):
             raise ValueError(
                 f"geometry_type must be 'sphere', 'ellipsoid', 'box', or 'none', got {self.geometry_type}"
