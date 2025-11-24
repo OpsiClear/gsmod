@@ -20,11 +20,6 @@ from gsmod.histogram.apply import (
     compute_histogram_positions,
     compute_histogram_scales,
 )
-from gsmod.histogram.loss import (
-    MomentMatchingLoss,
-    soft_histogram,
-    soft_histogram_rgb,
-)
 from gsmod.histogram.result import HistogramResult
 
 __all__ = [
@@ -33,8 +28,17 @@ __all__ = [
     "compute_histogram_scales",
     "compute_histogram_positions",
     "HistogramResult",
-    # Differentiable loss
-    "MomentMatchingLoss",
-    "soft_histogram",
-    "soft_histogram_rgb",
 ]
+
+# Optional torch-dependent imports (for learning/GPU features)
+try:
+    from gsmod.histogram.loss import (  # noqa: F401
+        MomentMatchingLoss,
+        soft_histogram,
+        soft_histogram_rgb,
+    )
+
+    __all__.extend(["MomentMatchingLoss", "soft_histogram", "soft_histogram_rgb"])
+except ImportError:
+    # torch not installed - learning features will not be available
+    pass

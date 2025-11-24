@@ -46,6 +46,9 @@ dev = [
     "ruff>=0.1.0",
     "pre-commit>=3.0.0",
 ]
+torch = [
+    "torch>=2.0.0",
+]
 docs = [
     "sphinx>=7.2",
     "myst-parser>=2.0",

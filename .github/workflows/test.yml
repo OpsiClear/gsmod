@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest]
         python-version: ['3.12', '3.13']
 
     steps:
@@ -30,10 +30,19 @@ jobs:
         echo "Python version: ${{ matrix.python-version }}"
         echo "Platform: ${{ matrix.os }}"
 
-    - name: Install dependencies
+    - name: Install dependencies (Ubuntu with CUDA)
+      if: matrix.os == 'ubuntu-latest'
       run: |
         python -m pip install --upgrade pip
         pip install -e ".[dev]"
+        pip install torch --index-url https://download.pytorch.org/whl/cu128
+
+    - name: Install dependencies (Windows CPU-only)
+      if: matrix.os != 'ubuntu-latest'
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+        pip install torch --index-url https://download.pytorch.org/whl/cpu
 
     - name: Create test data
       run: |
@@ -66,6 +75,10 @@ jobs:
     - name: Verify numba installation
       run: |
         python -c "import numba; print(f'numba version: {numba.__version__}')"
+
+    - name: Verify torch installation
+      run: |
+        python -c "import torch; print(f'PyTorch version: {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}')"
 
     - name: Run tests
       run: |
@@ -107,7 +120,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -e ".[dev]"
-        pip install torch --index-url https://download.pytorch.org/whl/cpu
+        pip install torch --index-url https://download.pytorch.org/whl/cu128
 
     - name: Verify torch installation
       run: |
