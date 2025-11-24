@@ -16,11 +16,8 @@ uv run benchmark_filter.py
 uv run benchmark_mask_strategies.py
 
 # Run optimization benchmarks (used in CI/CD)
-uv run benchmark_optimizations.py
-uv run benchmark_filter_micro.py
-
-# Run large-scale benchmarks (1M+ Gaussians)
-uv run benchmark_large_scale.py
+uv run benchmark_color_optimization.py
+uv run benchmark_learnable_cpu.py
 ```
 
 ## Active Benchmarks

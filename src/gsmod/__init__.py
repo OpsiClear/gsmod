@@ -20,21 +20,20 @@ Performance (with inplace=True, recommended):
   - Filter: 46M/sec (2.2ms for 100K)
 
 Example - GSDataPro (Recommended):
-    >>> from gsmod import GSDataPro, ColorValues, Filter, TransformValues
+    >>> from gsmod import GSDataPro, ColorValues, FilterValues, TransformValues
     >>>
     >>> # Load and process
     >>> data = GSDataPro.from_ply("scene.ply")
-    >>> data.filter(Filter.sphere(radius=0.8) & Filter.min_opacity(0.1))
+    >>> data.filter(FilterValues(min_opacity=0.1, sphere_radius=5.0))
     >>> data.transform(TransformValues.from_translation(1, 0, 0))
     >>> data.color(ColorValues(brightness=1.2, saturation=1.3))
     >>> data.to_ply("output.ply")
 
 Example - Advanced (Low-level Pipelines):
-    >>> from gsmod import Color, Transform, Filter
+    >>> from gsmod import Color, Transform
     >>>
     >>> # For fine-grained control over compilation/optimization
-    >>> result = Filter.sphere(radius=0.8) & Filter.min_opacity(0.1)(data)
-    >>> result = Transform().rotate_quat(quat).translate([1, 0, 0])(result)
+    >>> result = Transform().rotate_quat(quat).translate([1, 0, 0])(data)
     >>> result = Color().brightness(1.2).saturation(1.3)(result)
 
 Example - Parameterized Templates:

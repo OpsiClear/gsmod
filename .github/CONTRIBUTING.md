@@ -43,7 +43,7 @@ Thank you for your interest in contributing to gsmod! This document provides gui
 5. Run benchmarks (if performance-related):
    ```bash
    cd benchmarks
-   python run_all_benchmarks.py
+   uv run benchmark_color_optimization.py
    ```
 
 6. Commit your changes:
@@ -61,7 +61,7 @@ Thank you for your interest in contributing to gsmod! This document provides gui
 
 ## Code Style
 
-- Use Python 3.10+ type hints (`list[int]`, `X | Y` syntax)
+- Use Python 3.12+ type hints (`list[int]`, `X | Y` syntax)
 - Follow PEP 8 style guidelines (enforced by ruff)
 - Use descriptive variable names
 - Add docstrings to all public functions (`:params` style)
@@ -73,7 +73,7 @@ Thank you for your interest in contributing to gsmod! This document provides gui
 - Write tests for all new features
 - Ensure all existing tests pass
 - Aim for >80% test coverage
-- Test on multiple Python versions (3.10, 3.11, 3.12, 3.13)
+- Test on supported Python versions (3.12, 3.13)
 - Tests MUST pass before committing
 
 ## Performance
@@ -110,7 +110,8 @@ Before submitting performance improvements:
 1. Run the benchmark suite:
    ```bash
    cd benchmarks
-   python run_all_benchmarks.py
+   uv run benchmark_color_optimization.py
+   uv run benchmark_learnable_cpu.py
    ```
 
 2. Document the improvement:

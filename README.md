@@ -2,14 +2,12 @@
 
 # gsmod
 
-### High-Performance Processing for 3D Gaussian Splatting
+### Processing Tools for 3D Gaussian Splatting
 
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](#testing)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
-
-**CPU: 1,389M colors/sec | 698M Gaussians/sec transforms | GPU: 1.09B Gaussians/sec | Up to 183x speedup**
 
 [Features](#features) | [Installation](#installation) | [Quick Start](#quick-start) | [Performance](#performance) | [Documentation](#documentation)
 
@@ -19,61 +17,65 @@
 
 ## Overview
 
-**gsmod** is a pure Python library for ultra-fast processing of 3D Gaussian Splatting data using Look-Up Tables (LUTs) and Numba-accelerated operations. Built for performance-critical applications, gsmod achieves color processing speeds up to 1,722M colors/sec, transform speeds up to 1,593M Gaussians/sec, and filtering speeds up to 447M Gaussians/sec.
+**gsmod** provides processing operations for 3D Gaussian Splatting data: color grading, 3D transforms, spatial filtering, and learnable modules for auto-adjustment. Works with both CPU (NumPy) and GPU (PyTorch) backends.
 
-**Why gsmod?**
-- **Blazing Fast**: Zero-copy APIs, LUT-based color ops, Numba JIT with parallel processing
-- **GPU Acceleration**: PyTorch-based GPU operations with up to 183x speedup (1.09B Gaussians/sec)
-- **Pure Python**: NumPy + Numba for CPU, PyTorch for GPU (no C++ compilation needed)
-- **Composable**: Pipeline API for chaining operations, built-in presets
-- **Format-Aware**: Automatic SH/RGB format tracking and conversion optimization
-- **Complete**: Color grading, 3D transforms, spatial filtering all in one library
-- **Integrated with gsply**: Built on gsply v0.3.0+ for advanced data management
+**Included Features:**
+- **Color Grading**: 15 adjustments (brightness, contrast, saturation, temperature, tint, gamma, shadows, highlights, fade, hue shift, split toning)
+- **3D Transforms**: translate, rotate, scale with quaternion/euler/axis-angle support
+- **Spatial Filtering**: sphere, box, ellipsoid, frustum volumes + opacity/scale thresholds
+- **Learnable Modules**: PyTorch nn.Modules for gradient-based color/transform/filter optimization
+- **Composable Pipelines**: Method chaining, built-in presets, JSON serialization
+- **Scene Composition**: Concatenate, merge, deduplicate, split scenes
+- **Format-Aware**: Automatic SH/RGB format tracking and conversion
 
 ---
 
 ## Features
 
-- **Fastest Color Processing**: Peak performance of 1,722M colors/sec with zero-copy API
-  - **100K colors**: 0.072ms (1,389M/s) zero-copy, 0.473ms (211M/s) standard
-  - **1M colors**: 0.581ms (1,722M/s)
-  - **Operations**: 15 color adjustments (temperature, tint, brightness, contrast, gamma, saturation, vibrance, shadows, highlights, fade, hue_shift, shadow_tint, highlight_tint)
-  - **Optimizations**: Zero-copy API (6.6x faster), LUT-based processing, nogil=True for true parallelism
+- **Color Grading**: 15 adjustments for comprehensive color control
+  - temperature, tint, brightness, contrast, gamma, saturation, vibrance
+  - shadows, highlights, fade, hue_shift
+  - Split toning: shadow_tint, highlight_tint
+  - LUT-based processing with zero-copy API
 
-- **Fast 3D Transforms**: Up to 1,593M Gaussians/sec for geometric operations
-  - **1M Gaussians**: 1.43ms (698M/s) combined transform
-  - **500K Gaussians**: 0.31ms (1,593M/s) peak performance
-  - **Operations**: translate, rotate, scale, combined transforms
-  - **Rotation formats**: quaternion, matrix, axis_angle, euler
-  - **Utilities**: Quaternion multiply, format conversions
+- **3D Transforms**: Geometric operations on Gaussian positions and orientations
+  - translate, rotate, scale, combined transforms
+  - Rotation formats: quaternion, matrix, axis_angle, euler
+  - Quaternion utilities for orientation manipulation
 
-- **High-Performance Filtering**: 62-447M Gaussians/sec full filtering pipeline
-  - **1M Gaussians full filtering**: 16.1ms (62M/s)
-  - **Individual operations**: 392-447M Gaussians/sec
-  - **Volume filtering**: Sphere and cuboid spatial selection
-  - **Property filtering**: Opacity and scale thresholds with AND logic
-  - **Multi-layer masks**: FilterMasks API with 55x faster Numba-optimized combination (0.026ms vs 1.447ms)
-  - **Optimizations**: Fused kernels, parallel scatter pattern, nogil=True, adaptive mask combination
+- **Spatial Filtering**: Volume and property-based selection
+  - Volume filters: sphere, box, ellipsoid, frustum
+  - Property filters: opacity and scale thresholds
+  - Composable with AND/OR/NOT operators
+  - Multi-layer mask management (FilterMasks API)
 
-- **Pre-Activation Stage** (via gsply): Prepare log-domain GSData for downstream GPU/CPU pipelines
-  - Use `gsply.apply_pre_activations()` to exponentiate scales, sigmoid opacities, and normalize quaternions
-  - 1.3ms for 1M Gaussians on a laptop CPU (~750M Gaussians/sec)
-  - Works in-place with automatic dtype/contiguity fixes for data from `gsply.plyread`
+- **Learnable Modules**: PyTorch nn.Modules for training
+  - `LearnableColor`: Gradient-based color parameter optimization
+  - `LearnableTransform`: Learnable geometric transformations
+  - `LearnableFilter`: Differentiable filtering parameters
+  - Convert to/from config values for inference
 
-- **Composable Pipeline**: Chain operations with lazy execution
-  - **Built-in presets**: 7 color grading looks (cinematic, warm, cool, vibrant, muted, dramatic)
-  - **Functional API**: One-line color adjustments and preset application
-  - **Custom operations**: Add user-defined processing steps
+- **Scene Composition**: Multi-scene operations
+  - Concatenate, merge, deduplicate scenes
+  - Compose with transforms (position scenes in space)
+  - Split by spatial region
 
-- **GPU Acceleration**: PyTorch-based GPU pipeline for massive parallelism
-  - **1M Gaussians**: Up to 183x speedup over CPU
-  - **Throughput**: 1.09 billion Gaussians/sec on RTX 3090 Ti
-  - **Format-aware**: Automatic SH/RGB format tracking with lazy conversion
-  - **Operations**: All CPU operations available on GPU (color, transform, filter)
+- **Parameterized Templates**: Reusable pipelines with named parameters
+  - Efficient for parameter sweeps and animation
+  - Auto-cached for repeated use
 
-- **Pure Python**: NumPy + Numba JIT (no C++ compilation required)
-- **Type-safe**: Full type hints with Python 3.12+ syntax (PEP 695)
-- **Production-ready**: Comprehensive test suite, CI/CD pipeline, pre-commit hooks, detailed documentation
+- **Pre-Activation Stage** (via gsply): Prepare log-domain GSData
+  - `gsply.apply_pre_activations()` for scales, opacities, quaternions
+  - Works in-place with automatic dtype/contiguity fixes
+
+- **Built-in Presets**: Ready-to-use configurations
+  - Color: cinematic, warm, cool, vibrant, muted, dramatic, vintage, golden_hour, moonlight
+  - Filter: strict, quality, cleanup
+  - Transform: double_size, half_size, flip_x/y/z
+
+- **GPU Support**: All operations available on GPU via PyTorch
+- **Pure Python**: NumPy + Numba for CPU, PyTorch for GPU
+- **Type-safe**: Full type hints with Python 3.12+ syntax
 
 ---
 
@@ -177,16 +179,16 @@ cinematic_warm = CINEMATIC + WARM
 data.color(cinematic_warm)
 ```
 
-### GPU Pipeline (Recommended for Large Data)
+### GPU Pipeline
 
 ```python
 from gsmod.torch import GSTensorPro
 from gsmod import ColorValues, FilterValues, TransformValues
 
-# Load data and convert to GPU
+# Load data to GPU
 data = GSTensorPro.from_ply("scene.ply", device="cuda")
 
-# Apply GPU-accelerated operations (up to 183x faster)
+# Apply operations
 data.filter(FilterValues(min_opacity=0.1, sphere_radius=0.8))
 data.transform(TransformValues.from_translation(1, 0, 0))
 data.color(ColorValues(brightness=1.2, saturation=1.3))

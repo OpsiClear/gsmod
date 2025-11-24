@@ -25,11 +25,11 @@ from gsmod import ColorValues, FilterValues, TransformValues
 from gsmod import CINEMATIC, STRICT_FILTER, DOUBLE_SIZE
 
 # Load data directly to GPU
-data = GSTensorPro.from_ply("scene.ply", device="cuda")
+data = GSTensorPro.load("scene.ply", device="cuda")
 
 # Apply GPU-accelerated operations with method chaining
 (data
-    .filter(FilterValues(min_opacity=0.1, sphere_radius=0.8))
+    .filter(FilterValues(min_opacity=0.1, sphere_radius=5.0))
     .transform(TransformValues.from_translation(1, 0, 0))
     .color(ColorValues(brightness=1.2, saturation=1.3))
 )
@@ -39,7 +39,7 @@ data.color(CINEMATIC)
 data.filter(STRICT_FILTER)
 
 # Save result
-data.to_ply("output.ply")
+data.save("output.ply")
 ```
 
 ### Legacy Pipeline API
@@ -90,7 +90,7 @@ GSTensorPro(
 
 ```python
 # Create from PLY file (recommended)
-gstensor = GSTensorPro.from_ply(path: str, device: str = "cuda")
+gstensor = GSTensorPro.load(path: str, device: str = "cuda")
 
 # Create from GSData
 gstensor = GSTensorPro.from_gsdata(data: GSData, device: str = "cuda")
@@ -99,7 +99,7 @@ gstensor = GSTensorPro.from_gsdata(data: GSData, device: str = "cuda")
 gsdata = gstensor.to_gsdata()
 
 # Save to PLY file
-gstensor.to_ply(path: str)
+gstensor.save(path: str)
 
 # Clone
 clone = gstensor.clone()
@@ -313,9 +313,11 @@ pipeline.clone()
 
 ### Radius Interpretation
 
-Filter radius is interpreted as a factor of scene size (matching CPU behavior):
-- `radius=1.0` = half of max scene dimension
-- `radius=0.5` = quarter of max scene dimension
+Filter radius is interpreted as **absolute radius in world units** (matching CPU behavior):
+- `radius=1.0` = 1.0 world units from center
+- `radius=5.0` = 5.0 world units from center
+- No scene bounds calculation needed
+- Choose radius based on your scene scale
 
 ## PipelineGPU (Unified)
 
@@ -361,11 +363,14 @@ Tested on NVIDIA GeForce RTX 3090 Ti with 1M Gaussians:
 
 ## Format Tracking
 
-GSTensorPro tracks the format of sh0 data:
+GSTensorPro tracks the format of sh0 data using gsply v0.2.8+ query properties:
 
 ```python
-# Check current format
-format = gstensor._format.get("sh0")  # "sh" or "rgb"
+# Check current format using query properties
+if gstensor.is_sh0_rgb:
+    print("Currently in RGB format")
+elif gstensor.is_sh0_sh:
+    print("Currently in SH format")
 
 # Convert between formats
 gstensor.to_rgb(inplace=True)   # SH -> RGB
@@ -406,7 +411,7 @@ from gsmod.torch import GSTensorPro
 from gsmod import ColorValues, CINEMATIC
 
 # Load directly to GPU
-data = GSTensorPro.from_ply("scene.ply", device="cuda")
+data = GSTensorPro.load("scene.ply", device="cuda")
 
 # Apply color grading
 data.color(ColorValues(
@@ -420,7 +425,7 @@ data.color(ColorValues(
 data.color(CINEMATIC)
 
 # Save
-data.to_ply("output.ply")
+data.save("output.ply")
 ```
 
 ### Scene Transformation
@@ -430,7 +435,7 @@ from gsmod.torch import GSTensorPro
 from gsmod import TransformValues
 
 # Load directly to GPU
-data = GSTensorPro.from_ply("scene.ply", device="cuda")
+data = GSTensorPro.load("scene.ply", device="cuda")
 
 # Transform scene
 data.transform(TransformValues.from_translation(1, 0, 0))
@@ -445,7 +450,7 @@ combined = (
 )
 data.transform(combined)
 
-data.to_ply("output.ply")
+data.save("output.ply")
 ```
 
 ### Spatial Filtering
@@ -455,7 +460,7 @@ from gsmod.torch import GSTensorPro
 from gsmod import FilterValues, STRICT_FILTER
 
 # Load directly to GPU
-data = GSTensorPro.from_ply("scene.ply", device="cuda")
+data = GSTensorPro.load("scene.ply", device="cuda")
 original_count = len(data.means)
 
 # Filter scene
@@ -479,7 +484,7 @@ from gsmod import ColorValues, FilterValues, TransformValues
 from gsmod import CINEMATIC
 
 # Load directly to GPU
-data = GSTensorPro.from_ply("scene.ply", device="cuda")
+data = GSTensorPro.load("scene.ply", device="cuda")
 
 # Apply full pipeline with method chaining
 (data
@@ -496,7 +501,7 @@ data = GSTensorPro.from_ply("scene.ply", device="cuda")
 )
 
 # Save
-data.to_ply("output.ply")
+data.save("output.ply")
 ```
 
 ### Legacy Pipeline Example
@@ -534,7 +539,7 @@ from gsmod.torch import GSTensorPro, ColorGPU
 
 # Load with default SH format
 gstensor = GSTensorPro.from_gsdata(data, device="cuda")
-print(f"Initial format: {gstensor._format.get('sh0', 'sh')}")
+print(f"Initial format: {'rgb' if gstensor.is_sh0_rgb else 'sh'}")
 
 # Pipeline that needs RGB
 pipeline = ColorGPU().brightness(1.2).saturation(1.3)
@@ -544,7 +549,7 @@ if pipeline.requires_rgb():
 
 # Process with format restoration
 result = pipeline(gstensor, inplace=False, restore_format=True)
-print(f"Final format: {result._format.get('sh0')}")  # Back to 'sh'
+print(f"Final format: {'rgb' if result.is_sh0_rgb else 'sh'}")  # Back to 'sh'
 ```
 
 ## Troubleshooting
@@ -576,7 +581,7 @@ for i in range(0, len(data), chunk_size):
 
 ```python
 # Ensure correct format before operations
-if gstensor._format.get("sh0") != "rgb":
+if not gstensor.is_sh0_rgb:
     gstensor.to_rgb(inplace=True)
 
 # Or let operations auto-convert

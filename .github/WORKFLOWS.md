@@ -13,9 +13,9 @@ This repository uses GitHub Actions for CI/CD. The workflows are based on the gs
 **Purpose**: Run comprehensive tests across multiple platforms and Python versions
 
 **Matrix**:
-- OS: Ubuntu, Windows, macOS
-- Python: 3.10, 3.11, 3.12, 3.13
-- Total: 12 combinations
+- OS: Ubuntu, Windows
+- Python: 3.12, 3.13
+- Total: 4 combinations
 
 **Steps**:
 1. Install dependencies (including Numba)
@@ -27,7 +27,7 @@ This repository uses GitHub Actions for CI/CD. The workflows are based on the gs
 - Runs ruff linting and formatting checks
 - Runs mypy type checking (continue-on-error)
 
-**Status**: ✅ Production ready
+**Status**: [OK] Production ready
 
 ---
 
@@ -53,7 +53,7 @@ This repository uses GitHub Actions for CI/CD. The workflows are based on the gs
   - Main APIs: ColorLUT, transform, Pipeline, ColorPreset
   - Filter APIs: filter_gaussians, apply_filter
 
-**Status**: ✅ Production ready
+**Status**: [OK] Production ready
 
 ---
 
@@ -77,7 +77,7 @@ This repository uses GitHub Actions for CI/CD. The workflows are based on the gs
 - Signs artifacts with Sigstore
 - Uploads signed artifacts to GitHub release
 
-**Status**: ✅ Production ready
+**Status**: [OK] Production ready
 
 **Setup Required**:
 1. Configure PyPI trusted publisher in PyPI settings
@@ -94,16 +94,15 @@ This repository uses GitHub Actions for CI/CD. The workflows are based on the gs
 **Purpose**: Run performance benchmarks and report results
 
 **Benchmarks Run**:
-1. `run_all_benchmarks.py` - Comprehensive suite
-2. `benchmark_optimizations.py` - Optimization impact analysis
-3. `benchmark_filter_micro.py` - Detailed filter performance
+1. `benchmark_color_optimization.py` - Color processing performance
+2. `benchmark_learnable_cpu.py` - Learnable parameters CPU performance
 
 **Features**:
 - Uploads benchmark results as artifacts
 - Comments results on PRs automatically
 - Continue-on-error for each benchmark (won't fail entire workflow)
 
-**Status**: ✅ Production ready
+**Status**: [OK] Production ready
 
 ---
 
@@ -113,7 +112,7 @@ This repository uses GitHub Actions for CI/CD. The workflows are based on the gs
 |---------|-------|-------|
 | Numba | Optional (with/without matrix) | Required (always installed) |
 | Test data creation | Creates PLY test files | No test data needed |
-| Python versions | 3.10-3.13 | 3.10-3.13 |
+| Python versions | 3.10-3.13 | 3.12-3.13 |
 | Platforms | Ubuntu, Windows, macOS | Ubuntu, Windows, macOS |
 | PyPI Test | Included | **Excluded** (per request) |
 | Benchmark PR comments | Yes | Yes |
@@ -174,42 +173,39 @@ This repository uses GitHub Actions for CI/CD. The workflows are based on the gs
 ### Test Workflow
 ```bash
 # Install dependencies
-pip install -e ".[dev]"
+uv pip install -e ".[dev]"
 
 # Run tests
-pytest tests/ -v --cov=gsmod --cov-report=xml --cov-report=term
+uv run pytest tests/ -v --cov=gsmod --cov-report=xml --cov-report=term
 
 # Lint
-ruff check src/ tests/
-ruff format --check src/ tests/
+uv run ruff check src/ tests/
+uv run ruff format --check src/ tests/
 ```
 
 ### Build Workflow
 ```bash
 # Install build tools
-pip install build twine
+uv pip install build twine
 
 # Build
-python -m build
+uv run python -m build
 
 # Check
-twine check dist/*
+uv run twine check dist/*
 
 # Test install
-pip install dist/*.whl
-python -c "import gsmod; print(gsmod.__version__)"
+uv pip install dist/*.whl
+uv run python -c "import gsmod; print(gsmod.__version__)"
 ```
 
 ### Benchmark Workflow
 ```bash
 cd benchmarks
 
-# Run all benchmarks
-python run_all_benchmarks.py
-
-# Run specific benchmarks
-python benchmark_optimizations.py
-python benchmark_filter_micro.py
+# Run benchmarks
+uv run benchmark_color_optimization.py
+uv run benchmark_learnable_cpu.py
 ```
 
 ---
@@ -243,7 +239,7 @@ python benchmark_filter_micro.py
 Edit matrix in `test.yml` and `build.yml`:
 ```yaml
 matrix:
-  python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']  # Add new version
+  python-version: ['3.12', '3.13', '3.14']  # Add new version
 ```
 
 ### Updating Action Versions
@@ -283,10 +279,10 @@ Add to `benchmark.yml`:
 
 All workflows are production-ready and follow best practices:
 
-- ✅ test.yml - Comprehensive testing
-- ✅ build.yml - Build verification
-- ✅ publish.yml - PyPI publishing (no test.pypi)
-- ✅ benchmark.yml - Performance tracking
+- [OK] test.yml - Comprehensive testing
+- [OK] build.yml - Build verification
+- [OK] publish.yml - PyPI publishing (no test.pypi)
+- [OK] benchmark.yml - Performance tracking
 
 **Created**: 2025-11-13
 **Based on**: gsply workflows (adapted)
