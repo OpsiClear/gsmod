@@ -34,15 +34,17 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: |
         python -m pip install --upgrade pip
-        pip install torch --index-url https://download.pytorch.org/whl/cu128
-        pip install -e ".[dev]"
+        pip cache purge
+        pip install --force-reinstall --no-cache-dir torch --index-url https://download.pytorch.org/whl/cu121
+        pip install -e ".[dev]" --no-cache-dir
 
     - name: Install dependencies (Windows CPU-only)
       if: matrix.os != 'ubuntu-latest'
       run: |
         python -m pip install --upgrade pip
-        pip install torch --index-url https://download.pytorch.org/whl/cpu
-        pip install -e ".[dev]"
+        pip cache purge
+        pip install --force-reinstall --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+        pip install -e ".[dev]" --no-cache-dir
 
     - name: Create test data
       run: |
@@ -119,8 +121,9 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install torch --index-url https://download.pytorch.org/whl/cu128
-        pip install -e ".[dev]"
+        pip cache purge
+        pip install --force-reinstall --no-cache-dir torch --index-url https://download.pytorch.org/whl/cu121
+        pip install -e ".[dev]" --no-cache-dir
 
     - name: Verify torch installation
       run: |
@@ -156,7 +159,7 @@ jobs:
 
     - name: Run torch tests
       run: |
-        pytest tests/ -v -k "torch or gpu or tensor" --cov=gsmod.torch --cov-report=xml --cov-report=term
+        pytest tests/ -v -k "torch or gpu or tensor"
 
   lint:
     name: Lint
