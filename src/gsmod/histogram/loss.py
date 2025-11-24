@@ -76,7 +76,7 @@ def soft_histogram(
     centers_expanded = bin_centers.unsqueeze(0)  # [1, n_bins]
 
     # Gaussian kernel weights
-    weights = torch.exp(-((x_expanded - centers_expanded) ** 2) / (2 * sigma ** 2))
+    weights = torch.exp(-((x_expanded - centers_expanded) ** 2) / (2 * sigma**2))
 
     # Sum weights to get histogram
     hist = weights.sum(dim=0)
@@ -158,7 +158,7 @@ class MomentMatchingLoss(nn.Module):
     def forward(
         self,
         source_colors: torch.Tensor,
-        target_hist: "HistogramResult",
+        target_hist: HistogramResult,
     ) -> torch.Tensor:
         """Compute moment matching loss.
 
@@ -195,8 +195,8 @@ class MomentMatchingLoss(nn.Module):
 
             # Optional skewness
             if self.include_skewness:
-                src_skew = ((src - src_mean) ** 3).mean() / (src_std ** 3 + 1e-8)
+                src_skew = ((src - src_mean) ** 3).mean() / (src_std**3 + 1e-8)
                 # Penalize skewness (assumes symmetric target)
-                loss = loss + src_skew ** 2 * 0.1
+                loss = loss + src_skew**2 * 0.1
 
         return loss / n_channels

@@ -103,11 +103,7 @@ class FormatVerifier:
         return data
 
     @staticmethod
-    def assert_same_format(
-        cpu_data: GSData,
-        gpu_data: GSData,
-        field: str = 'sh0'
-    ) -> None:
+    def assert_same_format(cpu_data: GSData, gpu_data: GSData, field: str = "sh0") -> None:
         """Assert CPU and GPU data have same format.
 
         :param cpu_data: CPU result (GSData)
@@ -134,7 +130,7 @@ class FormatVerifier:
         rtol: float = 1e-5,
         atol: float = 1e-6,
         check_format: bool = True,
-        check_all_fields: bool = True
+        check_all_fields: bool = True,
     ) -> None:
         """Assert CPU and GPU results are equivalent with format verification.
 
@@ -158,9 +154,7 @@ class FormatVerifier:
 
         # Step 2: Verify same length
         if len(cpu_result) != len(gpu_result):
-            raise AssertionError(
-                f"Length mismatch: CPU={len(cpu_result)}, GPU={len(gpu_result)}"
-            )
+            raise AssertionError(f"Length mismatch: CPU={len(cpu_result)}, GPU={len(gpu_result)}")
 
         # Step 3: Compare sh0 (color values)
         np.testing.assert_allclose(
@@ -168,7 +162,7 @@ class FormatVerifier:
             gpu_result.sh0,
             rtol=rtol,
             atol=atol,
-            err_msg="Color values (sh0) differ between CPU and GPU"
+            err_msg="Color values (sh0) differ between CPU and GPU",
         )
 
         if check_all_fields:
@@ -178,7 +172,7 @@ class FormatVerifier:
                 gpu_result.means,
                 rtol=rtol,
                 atol=atol,
-                err_msg="Positions (means) differ between CPU and GPU"
+                err_msg="Positions (means) differ between CPU and GPU",
             )
 
             # Step 5: Compare quaternions
@@ -187,7 +181,7 @@ class FormatVerifier:
                 gpu_result.quats,
                 rtol=rtol,
                 atol=atol,
-                err_msg="Quaternions differ between CPU and GPU"
+                err_msg="Quaternions differ between CPU and GPU",
             )
 
             # Step 6: Compare scales
@@ -196,7 +190,7 @@ class FormatVerifier:
                 gpu_result.scales,
                 rtol=rtol,
                 atol=atol,
-                err_msg="Scales differ between CPU and GPU"
+                err_msg="Scales differ between CPU and GPU",
             )
 
             # Step 7: Compare opacities
@@ -205,13 +199,13 @@ class FormatVerifier:
                 gpu_result.opacities,
                 rtol=rtol,
                 atol=atol,
-                err_msg="Opacities differ between CPU and GPU"
+                err_msg="Opacities differ between CPU and GPU",
             )
 
         logger.debug(
             "[FormatVerifier] Equivalence verified: %d Gaussians, format=%s",
             len(cpu_result),
-            FormatVerifier.get_format(cpu_result).name
+            FormatVerifier.get_format(cpu_result).name,
         )
 
     @staticmethod

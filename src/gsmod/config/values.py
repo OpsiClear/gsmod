@@ -77,7 +77,7 @@ class ColorValues:
 
     @black_level.setter
     def black_level(self, value: float) -> None:
-        object.__setattr__(self, 'brightness', value)
+        object.__setattr__(self, "brightness", value)
 
     @property
     def white_level(self) -> float:
@@ -86,7 +86,7 @@ class ColorValues:
 
     @white_level.setter
     def white_level(self, value: float) -> None:
-        object.__setattr__(self, 'contrast', value)
+        object.__setattr__(self, "contrast", value)
 
     @property
     def lift(self) -> float:
@@ -95,7 +95,7 @@ class ColorValues:
 
     @lift.setter
     def lift(self, value: float) -> None:
-        object.__setattr__(self, 'shadows', value)
+        object.__setattr__(self, "shadows", value)
 
     @property
     def gain(self) -> float:
@@ -104,7 +104,7 @@ class ColorValues:
 
     @gain.setter
     def gain(self, value: float) -> None:
-        object.__setattr__(self, 'highlights', value)
+        object.__setattr__(self, "highlights", value)
 
     @property
     def exposure(self) -> float:
@@ -113,7 +113,7 @@ class ColorValues:
 
     @exposure.setter
     def exposure(self, value: float) -> None:
-        object.__setattr__(self, 'brightness', value)
+        object.__setattr__(self, "brightness", value)
 
     @property
     def midtones(self) -> float:
@@ -122,7 +122,7 @@ class ColorValues:
 
     @midtones.setter
     def midtones(self, value: float) -> None:
-        object.__setattr__(self, 'gamma', value)
+        object.__setattr__(self, "gamma", value)
 
     @property
     def vibrancy(self) -> float:
@@ -131,7 +131,7 @@ class ColorValues:
 
     @vibrancy.setter
     def vibrancy(self, value: float) -> None:
-        object.__setattr__(self, 'vibrance', value)
+        object.__setattr__(self, "vibrance", value)
 
     @property
     def blacks(self) -> float:
@@ -140,7 +140,7 @@ class ColorValues:
 
     @blacks.setter
     def blacks(self, value: float) -> None:
-        object.__setattr__(self, 'shadows', value)
+        object.__setattr__(self, "shadows", value)
 
     @property
     def whites(self) -> float:
@@ -149,7 +149,7 @@ class ColorValues:
 
     @whites.setter
     def whites(self, value: float) -> None:
-        object.__setattr__(self, 'highlights', value)
+        object.__setattr__(self, "highlights", value)
 
     def __add__(self, other: ColorValues) -> ColorValues:
         """Merge using composition rules."""
@@ -172,7 +172,8 @@ class ColorValues:
             # Split toning (additive)
             shadow_tint_hue=(self.shadow_tint_hue + other.shadow_tint_hue + 180) % 360 - 180,
             shadow_tint_sat=self.shadow_tint_sat + other.shadow_tint_sat,
-            highlight_tint_hue=(self.highlight_tint_hue + other.highlight_tint_hue + 180) % 360 - 180,
+            highlight_tint_hue=(self.highlight_tint_hue + other.highlight_tint_hue + 180) % 360
+            - 180,
             highlight_tint_sat=self.highlight_tint_sat + other.highlight_tint_sat,
             # Additive with wrap to [-180, 180]
             hue_shift=(self.hue_shift + other.hue_shift + 180) % 360 - 180,
@@ -228,7 +229,7 @@ class ColorValues:
             and self.hue_shift == 0.0
         )
 
-    def learn(self, *params: str) -> "LearnableColor":
+    def learn(self, *params: str) -> LearnableColor:
         """Create learnable nn.Module from these values.
 
         Args:
@@ -317,7 +318,7 @@ class FilterValues:
     max_scale: float = 100.0  # lower = stricter
 
     # Spatial filtering - sphere
-    sphere_radius: float = float('inf')  # smaller = stricter
+    sphere_radius: float = float("inf")  # smaller = stricter
     sphere_center: tuple[float, float, float] = (0.0, 0.0, 0.0)
 
     # Spatial filtering - box
@@ -377,7 +378,9 @@ class FilterValues:
         ellipsoid_rotation = None
         if self.ellipsoid_radii is not None and other.ellipsoid_radii is not None:
             self_vol = self.ellipsoid_radii[0] * self.ellipsoid_radii[1] * self.ellipsoid_radii[2]
-            other_vol = other.ellipsoid_radii[0] * other.ellipsoid_radii[1] * other.ellipsoid_radii[2]
+            other_vol = (
+                other.ellipsoid_radii[0] * other.ellipsoid_radii[1] * other.ellipsoid_radii[2]
+            )
             if self_vol <= other_vol:
                 ellipsoid_center = self.ellipsoid_center
                 ellipsoid_radii = self.ellipsoid_radii
@@ -489,14 +492,13 @@ class FilterValues:
             and self.max_opacity >= 1.0
             and self.min_scale == 0.0
             and self.max_scale >= 100.0
-            and self.sphere_radius == float('inf')
+            and self.sphere_radius == float("inf")
             and self.box_min is None
             and self.ellipsoid_radii is None
             and self.frustum_position is None
         )
 
-
-    def learn(self, *params: str) -> "LearnableFilter":
+    def learn(self, *params: str) -> LearnableFilter:
         """Create learnable nn.Module from these values.
 
         Args:
@@ -595,7 +597,7 @@ class TransformValues:
             and self.translation == (0.0, 0.0, 0.0)
         )
 
-    def learn(self, *params: str) -> "LearnableTransform":
+    def learn(self, *params: str) -> LearnableTransform:
         """Create learnable nn.Module from these values.
 
         Args:
@@ -675,9 +677,7 @@ class TransformValues:
     # Radian unit aliases
 
     @classmethod
-    def from_euler_rad(
-        cls, rx: float, ry: float, rz: float
-    ) -> TransformValues:
+    def from_euler_rad(cls, rx: float, ry: float, rz: float) -> TransformValues:
         """Create rotation transform from Euler angles in radians.
 
         :param rx: X rotation in radians
@@ -692,9 +692,7 @@ class TransformValues:
         return cls(rotation=tuple(quat.tolist()))
 
     @classmethod
-    def from_axis_angle_rad(
-        cls, axis: tuple[float, float, float], angle: float
-    ) -> TransformValues:
+    def from_axis_angle_rad(cls, axis: tuple[float, float, float], angle: float) -> TransformValues:
         """Create rotation transform from axis-angle with angle in radians.
 
         :param axis: Rotation axis [x, y, z]

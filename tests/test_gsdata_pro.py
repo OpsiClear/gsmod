@@ -1,22 +1,21 @@
 """Tests for GSDataPro simplified API."""
 
 import numpy as np
-import pytest
 
 from gsmod import (
-    GSDataPro,
+    CINEMATIC,
+    DOUBLE_SIZE,
+    STRICT_FILTER,
+    WARM,
     ColorValues,
     FilterValues,
+    GSDataPro,
     TransformValues,
-    CINEMATIC,
-    WARM,
-    STRICT_FILTER,
-    DOUBLE_SIZE,
 )
 from gsmod.config.presets import (
-    get_color_preset,
     color_from_dict,
     filter_from_dict,
+    get_color_preset,
     transform_from_dict,
 )
 
@@ -242,8 +241,7 @@ class TestChaining:
         data = create_test_data()
 
         result = (
-            data
-            .color(ColorValues(brightness=1.1))
+            data.color(ColorValues(brightness=1.1))
             .filter(FilterValues(min_opacity=0.3))
             .transform(TransformValues.from_scale(2.0))
         )

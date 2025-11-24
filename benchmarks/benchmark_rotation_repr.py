@@ -5,17 +5,17 @@ import time
 
 import torch
 
-logging.basicConfig(level=logging.INFO, format='%(message)s')
+from gsmod.torch.learn import LearnableTransform, TransformConfig
+
+logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
 
 if not torch.cuda.is_available():
     logger.error("CUDA not available. Benchmarks require GPU.")
     exit(1)
 
-from gsmod.torch.learn import LearnableTransform, TransformConfig
 
-
-def create_test_tensors(n: int, device: str = 'cuda'):
+def create_test_tensors(n: int, device: str = "cuda"):
     """Create test tensors."""
     means = torch.randn(n, 3, device=device, dtype=torch.float32)
     scales = torch.rand(n, 3, device=device, dtype=torch.float32) * 0.1
@@ -52,16 +52,12 @@ def run_benchmarks():
 
     # Axis-angle representation
     config_aa = TransformConfig(
-        rotation_repr='axis_angle',
-        learnable=['translation', 'scale', 'rotation']
+        rotation_repr="axis_angle", learnable=["translation", "scale", "rotation"]
     )
     model_aa = LearnableTransform(config_aa).cuda()
 
     # 6D representation
-    config_6d = TransformConfig(
-        rotation_repr='6d',
-        learnable=['translation', 'scale', 'rotation']
-    )
+    config_6d = TransformConfig(rotation_repr="6d", learnable=["translation", "scale", "rotation"])
     model_6d = LearnableTransform(config_6d).cuda()
 
     # Forward benchmarks
@@ -80,7 +76,7 @@ def run_benchmarks():
     if ratio > 1:
         logger.info(f"\n6D is {ratio:.2f}x faster than axis-angle")
     else:
-        logger.info(f"\nAxis-angle is {1/ratio:.2f}x faster than 6D")
+        logger.info(f"\nAxis-angle is {1 / ratio:.2f}x faster than 6D")
 
     # Forward + Backward benchmarks
     logger.info("\n" + "-" * 70)
@@ -113,7 +109,7 @@ def run_benchmarks():
     if ratio > 1:
         logger.info(f"\n6D is {ratio:.2f}x faster than axis-angle")
     else:
-        logger.info(f"\nAxis-angle is {1/ratio:.2f}x faster than 6D")
+        logger.info(f"\nAxis-angle is {1 / ratio:.2f}x faster than 6D")
 
     logger.info("\n" + "=" * 70)
 

@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 from gsply import GSData
+
 from gsmod import Color
 from gsmod.torch import ColorGPU, GSTensorPro
 

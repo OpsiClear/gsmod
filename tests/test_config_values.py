@@ -7,7 +7,6 @@ Tests the mathematically correct composition semantics:
 """
 
 import numpy as np
-import pytest
 
 from gsmod.config.values import ColorValues, FilterValues, TransformValues
 
@@ -602,7 +601,7 @@ class TestEdgeCases:
     def test_filter_all_zero_passthrough(self):
         """Test that permissive filters pass through."""
         # Use float('inf') for sphere_radius as it's the new neutral value
-        permissive = FilterValues(min_opacity=0.0, max_scale=100.0, sphere_radius=float('inf'))
+        permissive = FilterValues(min_opacity=0.0, max_scale=100.0, sphere_radius=float("inf"))
         assert permissive.is_neutral()
 
     def test_transform_identity_composition(self):

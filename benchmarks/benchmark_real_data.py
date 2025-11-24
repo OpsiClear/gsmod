@@ -1,11 +1,12 @@
 """Benchmark GPU operations with real PLY data."""
 
 import time
-import os
 from pathlib import Path
+
+import gsply
 import numpy as np
 import torch
-import gsply
+
 from gsmod.torch import GSTensorPro, PipelineGPU
 
 
@@ -22,7 +23,7 @@ def benchmark_real_file(file_path):
     print(f"Gaussians: {len(data):,}")
 
     # Check GPU
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # Transfer to GPU
     start = time.perf_counter()
@@ -49,13 +50,13 @@ def benchmark_real_file(file_path):
 
     # Warmup
     _ = pipeline(gstensor.clone(), inplace=False)
-    if device == 'cuda':
+    if device == "cuda":
         torch.cuda.synchronize()
 
     # Benchmark pipeline
     start = time.perf_counter()
     result = pipeline(gstensor.clone(), inplace=False)
-    if device == 'cuda':
+    if device == "cuda":
         torch.cuda.synchronize()
     pipeline_time = time.perf_counter() - start
 
@@ -67,17 +68,17 @@ def benchmark_real_file(file_path):
     print(f"Throughput: {throughput:.1f} M Gaussians/sec")
 
     # Memory usage
-    if device == 'cuda':
+    if device == "cuda":
         mem_allocated = torch.cuda.memory_allocated() / 1024**2
         mem_reserved = torch.cuda.memory_reserved() / 1024**2
         print(f"GPU Memory: {mem_allocated:.1f} MB allocated, {mem_reserved:.1f} MB reserved")
 
     return {
-        'file': file_path.name,
-        'gaussians': len(data),
-        'output': len(result),
-        'time': pipeline_time,
-        'throughput': throughput
+        "file": file_path.name,
+        "gaussians": len(data),
+        "output": len(result),
+        "time": pipeline_time,
+        "throughput": throughput,
     }
 
 
@@ -150,9 +151,9 @@ def main():
         print("SUMMARY")
         print("=" * 60)
 
-        total_gaussians = sum(r['gaussians'] for r in results)
-        total_output = sum(r['output'] for r in results)
-        total_time = sum(r['time'] for r in results)
+        total_gaussians = sum(r["gaussians"] for r in results)
+        total_output = sum(r["output"] for r in results)
+        total_time = sum(r["time"] for r in results)
         avg_throughput = total_gaussians / total_time / 1e6
 
         print(f"\nProcessed files: {len(results)}")
@@ -163,8 +164,10 @@ def main():
 
         print("\nPer-file results:")
         for r in results:
-            print(f"  {r['file']:30} {r['gaussians']:10,} -> {r['output']:10,} "
-                  f"({r['time']*1000:6.1f} ms, {r['throughput']:5.1f} M/s)")
+            print(
+                f"  {r['file']:30} {r['gaussians']:10,} -> {r['output']:10,} "
+                f"({r['time']*1000:6.1f} ms, {r['throughput']:5.1f} M/s)"
+            )
 
 
 if __name__ == "__main__":

@@ -148,7 +148,7 @@ class TestHistogramResultLearnFrom:
         """Test basic learn_from functionality."""
         learned = target_histogram.learn_from(
             source_colors,
-            params=['brightness'],
+            params=["brightness"],
             n_epochs=50,
             lr=0.05,
         )
@@ -161,7 +161,7 @@ class TestHistogramResultLearnFrom:
         """Test learning multiple parameters."""
         learned = target_histogram.learn_from(
             source_colors,
-            params=['brightness', 'contrast', 'gamma'],
+            params=["brightness", "contrast", "gamma"],
             n_epochs=50,
             lr=0.05,
         )
@@ -173,13 +173,14 @@ class TestHistogramResultLearnFrom:
         # Learn color values (on CPU)
         learned = target_histogram.learn_from(
             source_colors.cpu(),  # Ensure CPU
-            params=['brightness', 'gamma'],
+            params=["brightness", "gamma"],
             n_epochs=100,
             lr=0.05,
         )
 
         # Apply learned values (on CPU)
         from gsmod.torch.learn import LearnableColor
+
         model = LearnableColor.from_values(learned, None).cpu()
         adjusted = model(source_colors.cpu())
 
@@ -195,6 +196,7 @@ class TestHistogramResultLearnFrom:
 # GPU tests
 try:
     import torch
+
     CUDA_AVAILABLE = torch.cuda.is_available()
 except ImportError:
     CUDA_AVAILABLE = False
@@ -212,29 +214,29 @@ class TestHistogramLearningGPU:
 
     def test_soft_histogram_gpu(self):
         """Test soft histogram on GPU."""
-        x = torch.rand(1000, device='cuda')
+        x = torch.rand(1000, device="cuda")
         hist = soft_histogram(x, n_bins=32)
 
-        assert hist.device.type == 'cuda'
+        assert hist.device.type == "cuda"
         assert abs(hist.sum().item() - 1.0) < 1e-5
 
     def test_loss_gpu(self, target_histogram):
         """Test moment matching loss on GPU."""
-        source = torch.rand(500, 3, device='cuda')
+        source = torch.rand(500, 3, device="cuda")
         loss_fn = MomentMatchingLoss().cuda()
 
         loss = loss_fn(source, target_histogram)
 
-        assert loss.device.type == 'cuda'
+        assert loss.device.type == "cuda"
         assert loss.item() >= 0
 
     def test_learn_from_gpu(self, target_histogram):
         """Test learn_from on GPU."""
-        source = torch.rand(1000, 3, device='cuda') * 0.5
+        source = torch.rand(1000, 3, device="cuda") * 0.5
 
         learned = target_histogram.learn_from(
             source,
-            params=['brightness', 'contrast'],
+            params=["brightness", "contrast"],
             n_epochs=50,
             lr=0.05,
         )
@@ -260,13 +262,14 @@ class TestEndToEndHistogramMatching:
         source_tensor = torch.tensor(source_colors)
         learned = reference_hist.learn_from(
             source_tensor,
-            params=['brightness', 'contrast', 'gamma'],
+            params=["brightness", "contrast", "gamma"],
             n_epochs=100,
             lr=0.05,
         )
 
         # 4. Apply and verify (ensure CPU)
         from gsmod.torch.learn import LearnableColor
+
         model = LearnableColor.from_values(learned, None).cpu()
         adjusted = model(source_tensor.cpu()).detach().numpy()
 

@@ -5,7 +5,8 @@ import pytest
 import torch
 from gsply import GSData
 from gsply.gsdata import DataFormat
-from gsmod.torch import GSTensorPro, ColorGPU, TransformGPU, FilterGPU
+
+from gsmod.torch import ColorGPU, GSTensorPro
 
 
 def create_test_data(n: int = 100, device: str = "cuda") -> GSTensorPro:
@@ -153,7 +154,7 @@ class TestColorGPUFormatHandling:
         """Test that data already in RGB doesn't get converted again."""
         # Convert to RGB first
         gstensor.to_rgb(inplace=True)
-        original_sh0 = gstensor.sh0.clone()
+        gstensor.sh0.clone()
 
         # Run pipeline with saturation (needs RGB)
         pipeline = ColorGPU().saturation(1.3)
@@ -184,7 +185,7 @@ class TestFormatConsistency:
         mask[50:] = False
         sliced = gstensor[mask]
         # Check that sliced result maintains format tracking
-        if hasattr(sliced, '_format'):
+        if hasattr(sliced, "_format"):
             assert sliced._format.get("sh0") == DataFormat.SH0_RGB
 
     def test_transform_preserves_format(self, gstensor):

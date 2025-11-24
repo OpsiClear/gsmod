@@ -43,4 +43,3 @@ Add any other context about the problem here.
 
 **Files**
 If applicable, attach a minimal PLY file that reproduces the issue.
-

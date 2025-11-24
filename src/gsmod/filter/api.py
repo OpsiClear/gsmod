@@ -22,7 +22,6 @@ from gsmod.filter.config import (
 
 # Import Numba kernels for optimization
 from gsmod.filter.kernels import (
-    cuboid_filter_numba,
     ellipsoid_filter_numba,
     frustum_filter_numba,
     rotated_cuboid_filter_numba,
@@ -342,11 +341,9 @@ def _axis_angle_to_rotation_matrix(
     axis = axis_angle / angle
 
     # Rodrigues' rotation formula
-    K = np.array([
-        [0, -axis[2], axis[1]],
-        [axis[2], 0, -axis[0]],
-        [-axis[1], axis[0], 0]
-    ], dtype=np.float32)
+    K = np.array(
+        [[0, -axis[2], axis[1]], [axis[2], 0, -axis[0]], [-axis[1], axis[0], 0]], dtype=np.float32
+    )
 
     # R = I + sin(angle) * K + (1 - cos(angle)) * K^2
     R = np.eye(3, dtype=np.float32) + np.sin(angle) * K + (1 - np.cos(angle)) * (K @ K)
@@ -381,8 +378,7 @@ def _apply_ellipsoid_filter(
     ellipsoid_filter_numba(positions, center, radii, rotation_matrix, mask)
 
     logger.debug(
-        f"Ellipsoid filter: kept {mask.sum()}/{len(mask)} "
-        f"(center={center}, radii={radii})"
+        f"Ellipsoid filter: kept {mask.sum()}/{len(mask)} " f"(center={center}, radii={radii})"
     )
 
     return mask

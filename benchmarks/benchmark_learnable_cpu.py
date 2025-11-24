@@ -5,9 +5,6 @@ import time
 
 import torch
 
-logging.basicConfig(level=logging.INFO, format='%(message)s')
-logger = logging.getLogger(__name__)
-
 from gsmod.torch.learn import (
     ColorGradingConfig,
     LearnableColor,
@@ -17,8 +14,11 @@ from gsmod.torch.learn import (
     TransformConfig,
 )
 
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+logger = logging.getLogger(__name__)
 
-def create_test_tensors(n: int, device: str = 'cpu'):
+
+def create_test_tensors(n: int, device: str = "cpu"):
     """Create test tensors."""
     means = torch.randn(n, 3, device=device, dtype=torch.float32)
     scales = torch.rand(n, 3, device=device, dtype=torch.float32) * 0.1
@@ -55,12 +55,11 @@ def run_benchmarks():
         logger.info(f"\nDataset size: {n:,} Gaussians")
         logger.info("-" * 70)
 
-        means, scales, quats, opacities, sh0 = create_test_tensors(n, device='cpu')
+        means, scales, quats, opacities, sh0 = create_test_tensors(n, device="cpu")
 
         # LearnableColor
         config = ColorGradingConfig(
-            learnable=['brightness', 'saturation', 'contrast'],
-            device='cpu'
+            learnable=["brightness", "saturation", "contrast"], device="cpu"
         )
         model = LearnableColor(config)
 
@@ -69,10 +68,7 @@ def run_benchmarks():
         logger.info(f"LearnableColor:    {fwd_ms:.2f} ms ({throughput:.1f}M/sec)")
 
         # LearnableTransform
-        config = TransformConfig(
-            learnable=['translation', 'scale', 'rotation'],
-            device='cpu'
-        )
+        config = TransformConfig(learnable=["translation", "scale", "rotation"], device="cpu")
         model = LearnableTransform(config)
 
         fwd_ms = benchmark(lambda: model(means, scales, quats))
@@ -83,8 +79,8 @@ def run_benchmarks():
         config = LearnableFilterConfig(
             opacity_threshold=0.3,
             sphere_radius=5.0,
-            learnable=['opacity_threshold', 'sphere_radius'],
-            device='cpu'
+            learnable=["opacity_threshold", "sphere_radius"],
+            device="cpu",
         )
         model = LearnableFilter(config)
 

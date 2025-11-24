@@ -8,12 +8,12 @@ from __future__ import annotations
 
 import numpy as np
 
-from gsmod.config.values import ColorValues
 from gsmod.color.kernels import (
+    apply_lut_only_interleaved_numba,
     fused_color_pipeline_interleaved_lut_numba,
     fused_color_pipeline_skip_lut_numba,
-    apply_lut_only_interleaved_numba,
 )
+from gsmod.config.values import ColorValues
 
 
 def apply_color_values(sh0: np.ndarray, values: ColorValues) -> np.ndarray:
@@ -31,7 +31,7 @@ def apply_color_values(sh0: np.ndarray, values: ColorValues) -> np.ndarray:
     # Ensure input is float32 and contiguous
     if sh0.dtype != np.float32:
         sh0 = sh0.astype(np.float32)
-    if not sh0.flags['C_CONTIGUOUS']:
+    if not sh0.flags["C_CONTIGUOUS"]:
         sh0 = np.ascontiguousarray(sh0)
 
     N = sh0.shape[0]
@@ -75,11 +75,7 @@ def apply_color_values(sh0: np.ndarray, values: ColorValues) -> np.ndarray:
     if skip_lut and can_use_simple_phase2:
         # Fast path: Simple Phase 2 only (saturation, shadows, highlights)
         fused_color_pipeline_skip_lut_numba(
-            sh0,
-            values.saturation,
-            values.shadows,
-            values.highlights,
-            out
+            sh0, values.saturation, values.shadows, values.highlights, out
         )
     elif skip_phase2:
         # Fast path: LUT only
@@ -105,12 +101,24 @@ def apply_color_values(sh0: np.ndarray, values: ColorValues) -> np.ndarray:
             values.shadows,
             values.highlights,
             out,
-            m[0, 0], m[0, 1], m[0, 2],
-            m[1, 0], m[1, 1], m[1, 2],
-            m[2, 0], m[2, 1], m[2, 2],
+            m[0, 0],
+            m[0, 1],
+            m[0, 2],
+            m[1, 0],
+            m[1, 1],
+            m[1, 2],
+            m[2, 0],
+            m[2, 1],
+            m[2, 2],
             values.fade,
-            shadow_r, shadow_g, shadow_b, values.shadow_tint_sat,
-            highlight_r, highlight_g, highlight_b, values.highlight_tint_sat,
+            shadow_r,
+            shadow_g,
+            shadow_b,
+            values.shadow_tint_sat,
+            highlight_r,
+            highlight_g,
+            highlight_b,
+            values.highlight_tint_sat,
         )
 
     return out
@@ -192,8 +200,23 @@ def _compute_hue_rotation_matrix(hue_shift_deg: float) -> np.ndarray:
     # Rodrigues' rotation formula around (1,1,1)/sqrt(3)
     sqrt3 = np.sqrt(3.0)
 
-    return np.array([
-        [cos_a + (1 - cos_a) / 3, (1 - cos_a) / 3 - sin_a / sqrt3, (1 - cos_a) / 3 + sin_a / sqrt3],
-        [(1 - cos_a) / 3 + sin_a / sqrt3, cos_a + (1 - cos_a) / 3, (1 - cos_a) / 3 - sin_a / sqrt3],
-        [(1 - cos_a) / 3 - sin_a / sqrt3, (1 - cos_a) / 3 + sin_a / sqrt3, cos_a + (1 - cos_a) / 3],
-    ], dtype=np.float32)
+    return np.array(
+        [
+            [
+                cos_a + (1 - cos_a) / 3,
+                (1 - cos_a) / 3 - sin_a / sqrt3,
+                (1 - cos_a) / 3 + sin_a / sqrt3,
+            ],
+            [
+                (1 - cos_a) / 3 + sin_a / sqrt3,
+                cos_a + (1 - cos_a) / 3,
+                (1 - cos_a) / 3 - sin_a / sqrt3,
+            ],
+            [
+                (1 - cos_a) / 3 - sin_a / sqrt3,
+                (1 - cos_a) / 3 + sin_a / sqrt3,
+                cos_a + (1 - cos_a) / 3,
+            ],
+        ],
+        dtype=np.float32,
+    )

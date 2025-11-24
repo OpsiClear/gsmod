@@ -1,12 +1,11 @@
 """Test equivalence between CPU and GPU operations."""
 
 import numpy as np
-import pytest
 import torch
 from gsply import GSData
 from gsply.gsdata import DataFormat
 
-from gsmod import Color, Transform, GSDataPro, ColorValues, FilterValues, TransformValues
+from gsmod import Color, FilterValues, GSDataPro, Transform
 from gsmod.torch import ColorGPU, FilterGPU, GSTensorPro, PipelineGPU, TransformGPU
 from gsmod.verification import FormatVerifier
 
@@ -36,15 +35,15 @@ def create_test_data(n_gaussians=1000, seed=42, format_rgb=True):
     # Initialize format tracking
     # For color tests, use RGB format since sh0 values are in [0, 1] range
     # This ensures both CPU and GPU see the same input format
-    if not hasattr(data, '_format'):
+    if not hasattr(data, "_format"):
         data._format = {}
 
     if format_rgb:
         # sh0 values [0, 1] are already RGB format
-        data._format['sh0'] = DataFormat.SH0_RGB
+        data._format["sh0"] = DataFormat.SH0_RGB
     else:
         # Treat as SH format (for testing conversion)
-        data._format['sh0'] = DataFormat.SH0_SH
+        data._format["sh0"] = DataFormat.SH0_SH
 
     return data
 
@@ -296,9 +295,9 @@ class TestFilterEquivalence:
         gpu_data = gpu_result.to_gsdata()
 
         # Compare lengths first
-        assert len(cpu_data) == len(gpu_data), (
-            f"Different number of filtered points: CPU={len(cpu_data)}, GPU={len(gpu_data)}"
-        )
+        assert len(cpu_data) == len(
+            gpu_data
+        ), f"Different number of filtered points: CPU={len(cpu_data)}, GPU={len(gpu_data)}"
 
         # Compare filtered positions
         np.testing.assert_allclose(
@@ -327,9 +326,9 @@ class TestFilterEquivalence:
         gpu_data = gpu_result.to_gsdata()
 
         # Compare lengths
-        assert len(cpu_data) == len(gpu_data), (
-            f"Different number of filtered points: CPU={len(cpu_data)}, GPU={len(gpu_data)}"
-        )
+        assert len(cpu_data) == len(
+            gpu_data
+        ), f"Different number of filtered points: CPU={len(cpu_data)}, GPU={len(gpu_data)}"
 
         # Compare filtered opacities
         np.testing.assert_allclose(
@@ -357,9 +356,9 @@ class TestFilterEquivalence:
         gpu_data = gpu_result.to_gsdata()
 
         # Compare lengths
-        assert len(cpu_data) == len(gpu_data), (
-            f"Different number of filtered points: CPU={len(cpu_data)}, GPU={len(gpu_data)}"
-        )
+        assert len(cpu_data) == len(
+            gpu_data
+        ), f"Different number of filtered points: CPU={len(cpu_data)}, GPU={len(gpu_data)}"
 
         # If we have any results, compare them
         if len(cpu_data) > 0:
@@ -383,11 +382,9 @@ class TestFullPipelineEquivalence:
         # radius=6.0 captures most points (3 sigma for data with std=2)
         cpu_result = GSDataPro.from_gsdata(data.copy())
         cpu_result.filter(FilterValues(sphere_radius=6.0, min_opacity=0.2))
-        cpu_result = (
-            Transform()
-            .translate([0.5, 0, 0])
-            .rotate_axis_angle([0, 0, 1], np.pi / 8)
-        )(cpu_result, inplace=True)
+        cpu_result = (Transform().translate([0.5, 0, 0]).rotate_axis_angle([0, 0, 1], np.pi / 8))(
+            cpu_result, inplace=True
+        )
         cpu_result = Color().brightness(1.1).saturation(1.2)(cpu_result, inplace=True)
 
         # GPU pipeline
@@ -406,9 +403,9 @@ class TestFullPipelineEquivalence:
         gpu_data = gpu_result.to_gsdata()
 
         # Compare lengths
-        assert len(cpu_result) == len(gpu_data), (
-            f"Different output sizes: CPU={len(cpu_result)}, GPU={len(gpu_data)}"
-        )
+        assert len(cpu_result) == len(
+            gpu_data
+        ), f"Different output sizes: CPU={len(cpu_result)}, GPU={len(gpu_data)}"
 
         # Compare all fields with appropriate tolerances
         if len(cpu_result) > 0:

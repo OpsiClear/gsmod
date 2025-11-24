@@ -1,8 +1,8 @@
 """Benchmark learnable module performance."""
 
 import time
+
 import torch
-import numpy as np
 
 # Check CUDA availability
 if not torch.cuda.is_available():
@@ -20,7 +20,7 @@ from gsmod.torch.learn import (
 )
 
 
-def create_test_tensors(n: int, device: str = 'cuda'):
+def create_test_tensors(n: int, device: str = "cuda"):
     """Create test tensors for benchmarking."""
     means = torch.randn(n, 3, device=device, dtype=torch.float32)
     scales = torch.rand(n, 3, device=device, dtype=torch.float32) * 0.1
@@ -95,7 +95,7 @@ def run_benchmarks():
         # =====================================================================
         print("\n[LearnableColor]")
 
-        config = ColorGradingConfig(learnable=['brightness', 'saturation', 'contrast'])
+        config = ColorGradingConfig(learnable=["brightness", "saturation", "contrast"])
         model = LearnableColor(config).cuda()
 
         # Forward only
@@ -115,18 +115,20 @@ def run_benchmarks():
             loss = output.sum()
             loss.backward()
 
-        fwd_bwd_ms = benchmark_forward_backward(color_forward_grad, color_backward, "LearnableColor fwd+bwd")
+        fwd_bwd_ms = benchmark_forward_backward(
+            color_forward_grad, color_backward, "LearnableColor fwd+bwd"
+        )
         throughput = (n / fwd_bwd_ms) * 1000 / 1e6
         print(f"  Forward+Backward: {fwd_bwd_ms:.3f} ms ({throughput:.1f}M Gaussians/sec)")
 
-        results.append(('LearnableColor', n, fwd_ms, fwd_bwd_ms))
+        results.append(("LearnableColor", n, fwd_ms, fwd_bwd_ms))
 
         # =====================================================================
         # LearnableTransform Benchmarks
         # =====================================================================
         print("\n[LearnableTransform]")
 
-        config = TransformConfig(learnable=['translation', 'scale'])
+        config = TransformConfig(learnable=["translation", "scale"])
         model = LearnableTransform(config).cuda()
 
         means_grad = means.clone().requires_grad_(True)
@@ -149,11 +151,13 @@ def run_benchmarks():
             loss = new_means.sum() + new_scales.sum()
             loss.backward()
 
-        fwd_bwd_ms = benchmark_forward_backward(transform_forward_grad, transform_backward, "LearnableTransform fwd+bwd")
+        fwd_bwd_ms = benchmark_forward_backward(
+            transform_forward_grad, transform_backward, "LearnableTransform fwd+bwd"
+        )
         throughput = (n / fwd_bwd_ms) * 1000 / 1e6
         print(f"  Forward+Backward: {fwd_bwd_ms:.3f} ms ({throughput:.1f}M Gaussians/sec)")
 
-        results.append(('LearnableTransform', n, fwd_ms, fwd_bwd_ms))
+        results.append(("LearnableTransform", n, fwd_ms, fwd_bwd_ms))
 
         # =====================================================================
         # LearnableFilter Benchmarks
@@ -163,7 +167,7 @@ def run_benchmarks():
         config = LearnableFilterConfig(
             opacity_threshold=0.3,
             sphere_radius=5.0,
-            learnable=['opacity_threshold', 'sphere_radius']
+            learnable=["opacity_threshold", "sphere_radius"],
         )
         model = LearnableFilter(config).cuda()
 
@@ -186,11 +190,13 @@ def run_benchmarks():
             loss = output.sum()
             loss.backward()
 
-        fwd_bwd_ms = benchmark_forward_backward(filter_forward_grad, filter_backward, "LearnableFilter fwd+bwd")
+        fwd_bwd_ms = benchmark_forward_backward(
+            filter_forward_grad, filter_backward, "LearnableFilter fwd+bwd"
+        )
         throughput = (n / fwd_bwd_ms) * 1000 / 1e6
         print(f"  Forward+Backward: {fwd_bwd_ms:.3f} ms ({throughput:.1f}M Gaussians/sec)")
 
-        results.append(('LearnableFilter', n, fwd_ms, fwd_bwd_ms))
+        results.append(("LearnableFilter", n, fwd_ms, fwd_bwd_ms))
 
         # =====================================================================
         # LearnableGSTensor Chained Operations
@@ -221,11 +227,13 @@ def run_benchmarks():
             loss = output.sh0.sum()
             loss.backward()
 
-        fwd_bwd_ms = benchmark_forward_backward(chain_forward_grad, chain_backward, "Chained fwd+bwd")
+        fwd_bwd_ms = benchmark_forward_backward(
+            chain_forward_grad, chain_backward, "Chained fwd+bwd"
+        )
         throughput = (n / fwd_bwd_ms) * 1000 / 1e6
         print(f"  Forward+Backward: {fwd_bwd_ms:.3f} ms ({throughput:.1f}M Gaussians/sec)")
 
-        results.append(('Chained (Transform+Color)', n, fwd_ms, fwd_bwd_ms))
+        results.append(("Chained (Transform+Color)", n, fwd_ms, fwd_bwd_ms))
 
         # =====================================================================
         # Training Step (with optimizer)
@@ -234,9 +242,9 @@ def run_benchmarks():
 
         sh0_grad = sh0.clone().requires_grad_(True)
         data_grad = LearnableGSTensor(means, scales, quats, opacities, sh0_grad)
-        target = torch.rand(n, 3, device='cuda')
+        target = torch.rand(n, 3, device="cuda")
 
-        config = ColorGradingConfig(learnable=['brightness', 'contrast', 'saturation'])
+        config = ColorGradingConfig(learnable=["brightness", "contrast", "saturation"])
         model = LearnableColor(config).cuda()
         optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 
@@ -265,7 +273,7 @@ def run_benchmarks():
         throughput = (n / step_ms) * 1000 / 1e6
         print(f"  Training step:    {step_ms:.3f} ms ({throughput:.1f}M Gaussians/sec)")
 
-        results.append(('Training Step', n, step_ms, step_ms))
+        results.append(("Training Step", n, step_ms, step_ms))
 
     # =========================================================================
     # Summary Table

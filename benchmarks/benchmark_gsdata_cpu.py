@@ -5,10 +5,10 @@ import time
 
 import numpy as np
 
-logging.basicConfig(level=logging.INFO, format='%(message)s')
-logger = logging.getLogger(__name__)
+from gsmod import ColorValues, FilterValues, GSDataPro, TransformValues
 
-from gsmod import GSDataPro, ColorValues, FilterValues, TransformValues
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+logger = logging.getLogger(__name__)
 
 
 def create_test_data(n: int) -> GSDataPro:

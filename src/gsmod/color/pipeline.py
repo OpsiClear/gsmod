@@ -37,7 +37,6 @@ import numpy as np
 from gsply import GSData
 
 from gsmod.color.kernels import fused_color_pipeline_interleaved_lut_numba
-from gsmod.config import COLOR_CONFIG
 from gsmod.constants import (
     DEFAULT_LUT_SIZE,
     MAX_LUT_SIZE,
@@ -795,7 +794,9 @@ class Color:
 
         # Weighted average of hues by saturation
         weighted_hue = 0.0
-        for hue, sat in zip(self._highlight_tint_hue_operations, self._highlight_tint_sat_operations):
+        for hue, sat in zip(
+            self._highlight_tint_hue_operations, self._highlight_tint_sat_operations
+        ):
             weighted_hue += hue * sat
         avg_hue = weighted_hue / total_sat
 
@@ -887,8 +888,12 @@ class Color:
         self._cached_fade = self._optimize_fade_operations()
 
         # Cache shadow/highlight tint
-        self._cached_shadow_tint_hue, self._cached_shadow_tint_sat = self._optimize_shadow_tint_operations()
-        self._cached_highlight_tint_hue, self._cached_highlight_tint_sat = self._optimize_highlight_tint_operations()
+        self._cached_shadow_tint_hue, self._cached_shadow_tint_sat = (
+            self._optimize_shadow_tint_operations()
+        )
+        self._cached_highlight_tint_hue, self._cached_highlight_tint_sat = (
+            self._optimize_highlight_tint_operations()
+        )
 
         # Pre-compute RGB offsets for shadow/highlight tinting
         # Convert hue (degrees) to RGB offset vector centered at gray
@@ -901,8 +906,12 @@ class Color:
             b = np.cos(hue_rad - 4.0 * np.pi / 3.0) * 0.5
             return float(r), float(g), float(b)
 
-        self._shadow_tint_r, self._shadow_tint_g, self._shadow_tint_b = hue_to_rgb_offset(self._cached_shadow_tint_hue)
-        self._highlight_tint_r, self._highlight_tint_g, self._highlight_tint_b = hue_to_rgb_offset(self._cached_highlight_tint_hue)
+        self._shadow_tint_r, self._shadow_tint_g, self._shadow_tint_b = hue_to_rgb_offset(
+            self._cached_shadow_tint_hue
+        )
+        self._highlight_tint_r, self._highlight_tint_g, self._highlight_tint_b = hue_to_rgb_offset(
+            self._cached_highlight_tint_hue
+        )
 
         # Pre-compute hue rotation matrix (OPTIMIZATION #8: 8-12% speedup for hue ops)
         # This eliminates 2 trig functions + 9 FP operations per frame
@@ -1186,7 +1195,7 @@ class Color:
         if not inplace:
             data = data.copy()
             # Deep copy _format since gsply.copy() does shallow copy
-            if hasattr(data, '_format'):
+            if hasattr(data, "_format"):
                 data._format = data._format.copy()
 
         # ALWAYS convert to RGB for color operations (ensures CPU/GPU equivalence)

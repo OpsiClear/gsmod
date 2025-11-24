@@ -17,23 +17,22 @@ from typing import Self
 
 import numpy as np
 import torch
-import torch.nn.functional as F
-
-from gsmod.config.values import ColorValues, FilterValues, HistogramConfig, TransformValues
-from gsmod.histogram.result import HistogramResult
 
 # Import GSTensor from gsply
 from gsply.torch import GSTensor
 
+from gsmod.config.values import ColorValues, FilterValues, HistogramConfig, TransformValues
+from gsmod.histogram.result import HistogramResult
+
 # Try to import GPU I/O functions if available
 try:
     from gsply.torch import plyread_gpu, plywrite_gpu
+
     GPU_IO_AVAILABLE = True
 except ImportError:
     GPU_IO_AVAILABLE = False
 
 # Import GSData for conversions
-from gsply import GSData
 
 # Import DataFormat enum for format tracking
 from gsply.gsdata import DataFormat
@@ -74,11 +73,11 @@ class GSTensorPro(GSTensor):
         """Initialize GSTensorPro with format tracking."""
         super().__init__(*args, **kwargs)
         # Initialize format tracking - check if parent already has it
-        if not hasattr(self, '_format'):
+        if not hasattr(self, "_format"):
             self._format = {}
 
     @classmethod
-    def from_gsdata(cls, data, device='cuda', dtype=None, requires_grad=False):
+    def from_gsdata(cls, data, device="cuda", dtype=None, requires_grad=False):
         """Convert GSData to GSTensorPro.
 
         Overrides GSTensor.from_gsdata to return GSTensorPro instead of GSTensor.
@@ -94,18 +93,18 @@ class GSTensorPro(GSTensor):
             opacities=base_tensor.opacities,
             sh0=base_tensor.sh0,
             shN=base_tensor.shN,
-            masks=base_tensor.masks if hasattr(base_tensor, 'masks') else None,
-            _base=base_tensor._base if hasattr(base_tensor, '_base') else None,
+            masks=base_tensor.masks if hasattr(base_tensor, "masks") else None,
+            _base=base_tensor._base if hasattr(base_tensor, "_base") else None,
         )
 
         # Copy format tracking from base if it exists
-        if hasattr(base_tensor, '_format'):
+        if hasattr(base_tensor, "_format"):
             result._format = base_tensor._format.copy()
 
         return result
 
     @classmethod
-    def load(cls, file_path: str | Path, device: str = 'cuda'):
+    def load(cls, file_path: str | Path, device: str = "cuda"):
         """Load PLY file directly to GPU using GPU-accelerated I/O.
 
         Uses gsply's GPU decompression for maximum performance.
@@ -127,6 +126,7 @@ class GSTensorPro(GSTensor):
         else:
             # Fallback to CPU loading + GPU transfer
             from gsply import plyread
+
             data = plyread(file_path)
             base_tensor = GSTensor.from_gsdata(data, device=device)
 
@@ -138,11 +138,11 @@ class GSTensorPro(GSTensor):
             opacities=base_tensor.opacities,
             sh0=base_tensor.sh0,
             shN=base_tensor.shN,
-            masks=base_tensor.masks if hasattr(base_tensor, 'masks') else None,
-            _base=base_tensor._base if hasattr(base_tensor, '_base') else None,
+            masks=base_tensor.masks if hasattr(base_tensor, "masks") else None,
+            _base=base_tensor._base if hasattr(base_tensor, "_base") else None,
         )
 
-        if hasattr(base_tensor, '_format'):
+        if hasattr(base_tensor, "_format"):
             result._format = base_tensor._format.copy()
 
         return result
@@ -163,15 +163,15 @@ class GSTensorPro(GSTensor):
             opacities=base_clone.opacities,
             sh0=base_clone.sh0,
             shN=base_clone.shN,
-            masks=base_clone.masks if hasattr(base_clone, 'masks') else None,
-            _base=base_clone._base if hasattr(base_clone, '_base') else None,
+            masks=base_clone.masks if hasattr(base_clone, "masks") else None,
+            _base=base_clone._base if hasattr(base_clone, "_base") else None,
         )
 
         # Copy format tracking
-        if hasattr(self, '_format'):
+        if hasattr(self, "_format"):
             result._format = self._format.copy()
         else:
-            result._format = {'sh0': 'sh', 'scales': 'linear', 'opacities': 'linear'}
+            result._format = {"sh0": "sh", "scales": "linear", "opacities": "linear"}
 
         return result
 
@@ -197,13 +197,14 @@ class GSTensorPro(GSTensor):
             # Convert to GSData and use CPU path for uncompressed
             data = self.to_gsdata()
             from gsply import plywrite
+
             plywrite(file_path, data)
 
     # ==========================================================================
     # Unified Processing Methods (New API)
     # ==========================================================================
 
-    def color(self, values: "ColorValues", inplace: bool = True) -> Self:
+    def color(self, values: ColorValues, inplace: bool = True) -> Self:
         """Apply color transformation.
 
         :param values: Color parameters
@@ -214,7 +215,6 @@ class GSTensorPro(GSTensor):
             >>> tensor.color(ColorValues(brightness=1.2, saturation=1.3))
             >>> tensor.color(ColorValues.from_k(3200) + ColorValues(contrast=1.1))
         """
-        from gsmod.config.values import ColorValues
 
         if not inplace:
             result = self.clone()
@@ -281,8 +281,7 @@ class GSTensorPro(GSTensor):
         """
         # Calculate luminance
         luminance = torch.sum(
-            self.sh0 * torch.tensor([0.299, 0.587, 0.114], device=self.device),
-            dim=-1, keepdim=True
+            self.sh0 * torch.tensor([0.299, 0.587, 0.114], device=self.device), dim=-1, keepdim=True
         )
 
         # Create masks for shadows and highlights
@@ -307,8 +306,7 @@ class GSTensorPro(GSTensor):
 
         # Calculate luminance
         luminance = torch.sum(
-            self.sh0 * torch.tensor([0.299, 0.587, 0.114], device=self.device),
-            dim=-1, keepdim=True
+            self.sh0 * torch.tensor([0.299, 0.587, 0.114], device=self.device), dim=-1, keepdim=True
         )
 
         # Shadow mask: strong in dark areas, fades in mid-tones
@@ -337,8 +335,7 @@ class GSTensorPro(GSTensor):
 
         # Calculate luminance
         luminance = torch.sum(
-            self.sh0 * torch.tensor([0.299, 0.587, 0.114], device=self.device),
-            dim=-1, keepdim=True
+            self.sh0 * torch.tensor([0.299, 0.587, 0.114], device=self.device), dim=-1, keepdim=True
         )
 
         # Highlight mask: strong in bright areas, fades in mid-tones
@@ -357,7 +354,7 @@ class GSTensorPro(GSTensor):
         self.sh0[:, 2] = self.sh0[:, 2] + tint_b * tint_strength.squeeze(-1)
         self.sh0.clamp_(0, 1)
 
-    def filter(self, values: "FilterValues", inplace: bool = True) -> Self:
+    def filter(self, values: FilterValues, inplace: bool = True) -> Self:
         """Filter Gaussians based on criteria.
 
         Changes array sizes (N -> M where M <= N).
@@ -373,7 +370,6 @@ class GSTensorPro(GSTensor):
             ...     ellipsoid_radii=(2.0, 1.0, 1.5)
             ... ))
         """
-        from gsmod.config.values import FilterValues
 
         if not inplace:
             result = self.clone()
@@ -421,7 +417,7 @@ class GSTensorPro(GSTensor):
                 mask &= max_scales <= values.max_scale
 
         # Sphere filtering
-        if values.sphere_radius < float('inf'):
+        if values.sphere_radius < float("inf"):
             center = torch.tensor(values.sphere_center, dtype=self.dtype, device=self.device)
             distances = torch.norm(self.means - center, dim=1)
             mask &= distances <= values.sphere_radius
@@ -441,17 +437,22 @@ class GSTensorPro(GSTensor):
             # Get rotation matrix
             if values.ellipsoid_rotation is not None:
                 # Convert axis-angle to rotation matrix
-                axis_angle = torch.tensor(values.ellipsoid_rotation, dtype=self.dtype, device=self.device)
+                axis_angle = torch.tensor(
+                    values.ellipsoid_rotation, dtype=self.dtype, device=self.device
+                )
                 angle = torch.norm(axis_angle)
                 if angle > 1e-8:
                     axis = axis_angle / angle
-                    K = torch.tensor([
-                        [0, -axis[2], axis[1]],
-                        [axis[2], 0, -axis[0]],
-                        [-axis[1], axis[0], 0]
-                    ], dtype=self.dtype, device=self.device)
-                    rot_matrix = torch.eye(3, dtype=self.dtype, device=self.device) + \
-                                 torch.sin(angle) * K + (1 - torch.cos(angle)) * (K @ K)
+                    K = torch.tensor(
+                        [[0, -axis[2], axis[1]], [axis[2], 0, -axis[0]], [-axis[1], axis[0], 0]],
+                        dtype=self.dtype,
+                        device=self.device,
+                    )
+                    rot_matrix = (
+                        torch.eye(3, dtype=self.dtype, device=self.device)
+                        + torch.sin(angle) * K
+                        + (1 - torch.cos(angle)) * (K @ K)
+                    )
                     rot_matrix = rot_matrix.T  # Transpose for world-to-local
                 else:
                     rot_matrix = torch.eye(3, dtype=self.dtype, device=self.device)
@@ -462,7 +463,7 @@ class GSTensorPro(GSTensor):
             delta = self.means - center
             local = delta @ rot_matrix.T
             normalized = local / radii
-            dist_sq = torch.sum(normalized ** 2, dim=1)
+            dist_sq = torch.sum(normalized**2, dim=1)
             mask &= dist_sq <= 1.0
 
         # Frustum filtering
@@ -471,17 +472,22 @@ class GSTensorPro(GSTensor):
 
             # Get rotation matrix
             if values.frustum_rotation is not None:
-                axis_angle = torch.tensor(values.frustum_rotation, dtype=self.dtype, device=self.device)
+                axis_angle = torch.tensor(
+                    values.frustum_rotation, dtype=self.dtype, device=self.device
+                )
                 angle = torch.norm(axis_angle)
                 if angle > 1e-8:
                     axis = axis_angle / angle
-                    K = torch.tensor([
-                        [0, -axis[2], axis[1]],
-                        [axis[2], 0, -axis[0]],
-                        [-axis[1], axis[0], 0]
-                    ], dtype=self.dtype, device=self.device)
-                    rot_matrix = torch.eye(3, dtype=self.dtype, device=self.device) + \
-                                 torch.sin(angle) * K + (1 - torch.cos(angle)) * (K @ K)
+                    K = torch.tensor(
+                        [[0, -axis[2], axis[1]], [axis[2], 0, -axis[0]], [-axis[1], axis[0], 0]],
+                        dtype=self.dtype,
+                        device=self.device,
+                    )
+                    rot_matrix = (
+                        torch.eye(3, dtype=self.dtype, device=self.device)
+                        + torch.sin(angle) * K
+                        + (1 - torch.cos(angle)) * (K @ K)
+                    )
                     rot_matrix = rot_matrix.T  # Transpose for world-to-camera
                 else:
                     rot_matrix = torch.eye(3, dtype=self.dtype, device=self.device)
@@ -512,12 +518,12 @@ class GSTensorPro(GSTensor):
         self.sh0 = self.sh0[mask]
         if self.shN is not None:
             self.shN = self.shN[mask]
-        if hasattr(self, '_base') and self._base is not None:
+        if hasattr(self, "_base") and self._base is not None:
             self._base = self._base[mask]
 
         return self
 
-    def transform(self, values: "TransformValues", inplace: bool = True) -> Self:
+    def transform(self, values: TransformValues, inplace: bool = True) -> Self:
         """Apply geometric transformation.
 
         :param values: Transform parameters
@@ -531,7 +537,6 @@ class GSTensorPro(GSTensor):
             ...     TransformValues.from_rotation_euler(0, 45, 0)
             ... )
         """
-        from gsmod.config.values import TransformValues
 
         if not inplace:
             result = self.clone()
@@ -570,6 +575,7 @@ class GSTensorPro(GSTensor):
         :return: GSDataPro instance on CPU
         """
         from gsmod.gsdata_pro import GSDataPro
+
         return GSDataPro.from_gsdata(self.to_gsdata())
 
     # ==========================================================================
@@ -592,8 +598,8 @@ class GSTensorPro(GSTensor):
             SH_C0 = 0.28209479177387814
             self.sh0 = self.sh0 * SH_C0 + 0.5
             self.sh0.clamp_(0, 1)
-            self._format['sh0'] = DataFormat.SH0_RGB
-            if hasattr(self, '_base'):
+            self._format["sh0"] = DataFormat.SH0_RGB
+            if hasattr(self, "_base"):
                 self._base = None
             return self
 
@@ -615,8 +621,8 @@ class GSTensorPro(GSTensor):
             # SH_C0 = 1 / (2 * sqrt(pi)) = 0.28209479177387814
             SH_C0 = 0.28209479177387814
             self.sh0 = (self.sh0 - 0.5) / SH_C0
-            self._format['sh0'] = DataFormat.SH0_SH
-            if hasattr(self, '_base'):
+            self._format["sh0"] = DataFormat.SH0_SH
+            if hasattr(self, "_base"):
                 self._base = None
             return self
 
@@ -636,11 +642,11 @@ class GSTensorPro(GSTensor):
             opacities=result.opacities,
             sh0=result.sh0,
             shN=result.shN,
-            masks=result.masks if hasattr(result, 'masks') else None,
-            _base=result._base if hasattr(result, '_base') else None,
+            masks=result.masks if hasattr(result, "masks") else None,
+            _base=result._base if hasattr(result, "_base") else None,
         )
 
-        if hasattr(result, '_format'):
+        if hasattr(result, "_format"):
             wrapped._format = result._format.copy()
 
         return wrapped
@@ -723,7 +729,11 @@ class GSTensorPro(GSTensor):
                 self.to_rgb(inplace=True)
 
             # Compute grayscale (luminance)
-            gray = torch.sum(self.sh0 * torch.tensor([0.299, 0.587, 0.114], device=self.device), dim=-1, keepdim=True)
+            gray = torch.sum(
+                self.sh0 * torch.tensor([0.299, 0.587, 0.114], device=self.device),
+                dim=-1,
+                keepdim=True,
+            )
 
             # Interpolate between grayscale and color
             self.sh0 = gray * (1 - factor) + self.sh0 * factor
@@ -829,7 +839,11 @@ class GSTensorPro(GSTensor):
             saturation = max_rgb - min_rgb
 
             # Calculate luminance
-            luminance = torch.sum(self.sh0 * torch.tensor([0.299, 0.587, 0.114], device=self.device), dim=-1, keepdim=True)
+            luminance = torch.sum(
+                self.sh0 * torch.tensor([0.299, 0.587, 0.114], device=self.device),
+                dim=-1,
+                keepdim=True,
+            )
 
             # Vibrance: boost less-saturated colors more
             boost = (1.0 - saturation) * (factor - 1.0) + 1.0
@@ -872,11 +886,26 @@ class GSTensorPro(GSTensor):
 
             # Hue rotation matrix (approximation in RGB space)
             # This is a simplified version - full HSV conversion would be more accurate
-            mat = torch.tensor([
-                [0.299 + 0.701*cos_a + 0.168*sin_a, 0.587 - 0.587*cos_a + 0.330*sin_a, 0.114 - 0.114*cos_a - 0.497*sin_a],
-                [0.299 - 0.299*cos_a - 0.328*sin_a, 0.587 + 0.413*cos_a + 0.035*sin_a, 0.114 - 0.114*cos_a + 0.292*sin_a],
-                [0.299 - 0.300*cos_a + 1.250*sin_a, 0.587 - 0.588*cos_a - 1.050*sin_a, 0.114 + 0.886*cos_a - 0.203*sin_a]
-            ], device=self.device)
+            mat = torch.tensor(
+                [
+                    [
+                        0.299 + 0.701 * cos_a + 0.168 * sin_a,
+                        0.587 - 0.587 * cos_a + 0.330 * sin_a,
+                        0.114 - 0.114 * cos_a - 0.497 * sin_a,
+                    ],
+                    [
+                        0.299 - 0.299 * cos_a - 0.328 * sin_a,
+                        0.587 + 0.413 * cos_a + 0.035 * sin_a,
+                        0.114 - 0.114 * cos_a + 0.292 * sin_a,
+                    ],
+                    [
+                        0.299 - 0.300 * cos_a + 1.250 * sin_a,
+                        0.587 - 0.588 * cos_a - 1.050 * sin_a,
+                        0.114 + 0.886 * cos_a - 0.203 * sin_a,
+                    ],
+                ],
+                device=self.device,
+            )
 
             # Apply transformation
             self.sh0 = torch.matmul(self.sh0, mat.T)
@@ -916,7 +945,7 @@ class GSTensorPro(GSTensor):
             tint_offset_rb = value * 0.05
 
             self.sh0[..., 0] += tint_offset_rb  # R
-            self.sh0[..., 1] += tint_offset_g   # G
+            self.sh0[..., 1] += tint_offset_g  # G
             self.sh0[..., 2] += tint_offset_rb  # B
             self.sh0.clamp_(0, 1)
             self._base = None
@@ -958,7 +987,9 @@ class GSTensorPro(GSTensor):
     # Transform Operations (GPU-Optimized)
     # ==========================================================================
 
-    def translate(self, translation: list[float] | np.ndarray | torch.Tensor, inplace: bool = False) -> GSTensorPro:
+    def translate(
+        self, translation: list[float] | np.ndarray | torch.Tensor, inplace: bool = False
+    ) -> GSTensorPro:
         """Translate Gaussian positions (GPU-optimized).
 
         :param translation: Translation vector [x, y, z]
@@ -1008,7 +1039,9 @@ class GSTensorPro(GSTensor):
         result = self.clone()
         return result.scale_uniform(scale, inplace=True)
 
-    def scale_nonuniform(self, scale: list[float] | np.ndarray | torch.Tensor, inplace: bool = False) -> GSTensorPro:
+    def scale_nonuniform(
+        self, scale: list[float] | np.ndarray | torch.Tensor, inplace: bool = False
+    ) -> GSTensorPro:
         """Scale Gaussians non-uniformly (GPU-optimized).
 
         :param scale: Scale factors [sx, sy, sz]
@@ -1040,7 +1073,9 @@ class GSTensorPro(GSTensor):
         result = self.clone()
         return result.scale_nonuniform(scale, inplace=True)
 
-    def rotate_quaternion(self, quaternion: np.ndarray | torch.Tensor, inplace: bool = False) -> GSTensorPro:
+    def rotate_quaternion(
+        self, quaternion: np.ndarray | torch.Tensor, inplace: bool = False
+    ) -> GSTensorPro:
         """Rotate Gaussians using quaternion (GPU-optimized).
 
         :param quaternion: Rotation quaternion [w, x, y, z]
@@ -1075,7 +1110,12 @@ class GSTensorPro(GSTensor):
         result = self.clone()
         return result.rotate_quaternion(quaternion, inplace=True)
 
-    def rotate_euler(self, angles: list[float] | np.ndarray | torch.Tensor, order: str = "XYZ", inplace: bool = False) -> GSTensorPro:
+    def rotate_euler(
+        self,
+        angles: list[float] | np.ndarray | torch.Tensor,
+        order: str = "XYZ",
+        inplace: bool = False,
+    ) -> GSTensorPro:
         """Rotate using Euler angles (GPU-optimized).
 
         :param angles: Euler angles [x, y, z] in radians
@@ -1098,7 +1138,9 @@ class GSTensorPro(GSTensor):
         quaternion = euler_to_quaternion(angles)
         return self.rotate_quaternion(quaternion, inplace=inplace)
 
-    def rotate_axis_angle(self, axis: list[float] | np.ndarray | torch.Tensor, angle: float, inplace: bool = False) -> GSTensorPro:
+    def rotate_axis_angle(
+        self, axis: list[float] | np.ndarray | torch.Tensor, angle: float, inplace: bool = False
+    ) -> GSTensorPro:
         """Rotate around axis by angle (GPU-optimized).
 
         :param axis: Rotation axis [x, y, z]
@@ -1135,7 +1177,9 @@ class GSTensorPro(GSTensor):
         quaternion = np.array([w, x, y, z], dtype=np.float32)
         return self.rotate_quaternion(quaternion, inplace=inplace)
 
-    def transform_matrix(self, matrix: np.ndarray | torch.Tensor, inplace: bool = False) -> GSTensorPro:
+    def transform_matrix(
+        self, matrix: np.ndarray | torch.Tensor, inplace: bool = False
+    ) -> GSTensorPro:
         """Apply 4x4 transformation matrix (GPU-optimized).
 
         :param matrix: 4x4 homogeneous transformation matrix
@@ -1159,7 +1203,7 @@ class GSTensorPro(GSTensor):
         if inplace:
             # Extract rotation, translation, scale
             rotation = matrix[:3, :3]
-            translation = matrix[:3, 3]
+            matrix[:3, 3]
 
             # Apply to positions (homogeneous coordinates)
             ones = torch.ones((len(self), 1), dtype=self.dtype, device=self.device)
@@ -1168,10 +1212,11 @@ class GSTensorPro(GSTensor):
 
             # Apply rotation to quaternions
             from gsmod.transform.api import rotation_matrix_to_quaternion
+
             rot_quat = rotation_matrix_to_quaternion(rotation.cpu().numpy())
             self.quats = self._quaternion_multiply(
                 torch.tensor(rot_quat, dtype=self.dtype, device=self.device).unsqueeze(0),
-                self.quats
+                self.quats,
             )
 
             self._base = None
@@ -1184,8 +1229,12 @@ class GSTensorPro(GSTensor):
     # Filtering Operations (GPU-Optimized with Mask Layer Support)
     # ==========================================================================
 
-    def filter_within_sphere(self, center: list[float] | np.ndarray | torch.Tensor = None, radius: float = 1.0,
-                           save_mask: str = None) -> torch.Tensor:
+    def filter_within_sphere(
+        self,
+        center: list[float] | np.ndarray | torch.Tensor = None,
+        radius: float = 1.0,
+        save_mask: str = None,
+    ) -> torch.Tensor:
         """Filter Gaussians within sphere (GPU-optimized).
 
         :param center: Sphere center [x, y, z] (default: origin [0, 0, 0])
@@ -1212,13 +1261,16 @@ class GSTensorPro(GSTensor):
         mask = distances <= radius
 
         # Save mask as layer if requested
-        if save_mask and hasattr(self, 'add_mask_layer'):
+        if save_mask and hasattr(self, "add_mask_layer"):
             self.add_mask_layer(save_mask, mask)
 
         return mask
 
-    def filter_within_box(self, min_bounds: list[float] | np.ndarray | torch.Tensor,
-                         max_bounds: list[float] | np.ndarray | torch.Tensor) -> torch.Tensor:
+    def filter_within_box(
+        self,
+        min_bounds: list[float] | np.ndarray | torch.Tensor,
+        max_bounds: list[float] | np.ndarray | torch.Tensor,
+    ) -> torch.Tensor:
         """Filter Gaussians within axis-aligned box (GPU-optimized).
 
         :param min_bounds: Minimum bounds [x, y, z]
@@ -1288,7 +1340,9 @@ class GSTensorPro(GSTensor):
     # Helper Methods (GPU-Optimized)
     # ==========================================================================
 
-    def _rotate_points_by_quaternion(self, points: torch.Tensor, quaternion: torch.Tensor) -> torch.Tensor:
+    def _rotate_points_by_quaternion(
+        self, points: torch.Tensor, quaternion: torch.Tensor
+    ) -> torch.Tensor:
         """Rotate points using quaternion (GPU-optimized).
 
         :param points: Points tensor (N, 3)
@@ -1299,11 +1353,15 @@ class GSTensorPro(GSTensor):
         w, x, y, z = quaternion
 
         # Compute rotation matrix from quaternion
-        rotation_matrix = torch.tensor([
-            [1 - 2*(y*y + z*z), 2*(x*y - w*z), 2*(x*z + w*y)],
-            [2*(x*y + w*z), 1 - 2*(x*x + z*z), 2*(y*z - w*x)],
-            [2*(x*z - w*y), 2*(y*z + w*x), 1 - 2*(x*x + y*y)]
-        ], dtype=self.dtype, device=self.device)
+        rotation_matrix = torch.tensor(
+            [
+                [1 - 2 * (y * y + z * z), 2 * (x * y - w * z), 2 * (x * z + w * y)],
+                [2 * (x * y + w * z), 1 - 2 * (x * x + z * z), 2 * (y * z - w * x)],
+                [2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y)],
+            ],
+            dtype=self.dtype,
+            device=self.device,
+        )
 
         # Apply rotation
         return torch.matmul(points, rotation_matrix.T)
@@ -1320,10 +1378,10 @@ class GSTensorPro(GSTensor):
         w2, x2, y2, z2 = q2[..., 0], q2[..., 1], q2[..., 2], q2[..., 3]
 
         # Quaternion multiplication formula
-        w = w1*w2 - x1*x2 - y1*y2 - z1*z2
-        x = w1*x2 + x1*w2 + y1*z2 - z1*y2
-        y = w1*y2 - x1*z2 + y1*w2 + z1*x2
-        z = w1*z2 + x1*y2 - y1*x2 + z1*w2
+        w = w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2
+        x = w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2
+        y = w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2
+        z = w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2
 
         return torch.stack([w, x, y, z], dim=-1)
 
@@ -1352,7 +1410,9 @@ class GSTensorPro(GSTensor):
     # Convenience Methods
     # ==========================================================================
 
-    def apply_color_preset(self, preset: str, strength: float = 1.0, inplace: bool = False) -> GSTensorPro:
+    def apply_color_preset(
+        self, preset: str, strength: float = 1.0, inplace: bool = False
+    ) -> GSTensorPro:
         """Apply a color preset (GPU-optimized).
 
         :param preset: Preset name ("cinematic", "warm", "cool", "vibrant", "muted", "dramatic")
@@ -1370,38 +1430,13 @@ class GSTensorPro(GSTensor):
                 "contrast": 1.15,
                 "saturation": 0.95,
                 "gamma": 0.92,
-                "temperature": 0.05
+                "temperature": 0.05,
             },
-            "warm": {
-                "brightness": 1.1,
-                "temperature": 0.3,
-                "saturation": 1.1,
-                "vibrance": 1.2
-            },
-            "cool": {
-                "brightness": 0.95,
-                "temperature": -0.2,
-                "saturation": 0.9,
-                "contrast": 1.05
-            },
-            "vibrant": {
-                "saturation": 1.3,
-                "vibrance": 1.4,
-                "contrast": 1.1,
-                "brightness": 1.05
-            },
-            "muted": {
-                "saturation": 0.7,
-                "contrast": 0.9,
-                "brightness": 0.95,
-                "gamma": 1.1
-            },
-            "dramatic": {
-                "contrast": 1.3,
-                "saturation": 1.15,
-                "gamma": 0.85,
-                "vibrance": 1.2
-            }
+            "warm": {"brightness": 1.1, "temperature": 0.3, "saturation": 1.1, "vibrance": 1.2},
+            "cool": {"brightness": 0.95, "temperature": -0.2, "saturation": 0.9, "contrast": 1.05},
+            "vibrant": {"saturation": 1.3, "vibrance": 1.4, "contrast": 1.1, "brightness": 1.05},
+            "muted": {"saturation": 0.7, "contrast": 0.9, "brightness": 0.95, "gamma": 1.1},
+            "dramatic": {"contrast": 1.3, "saturation": 1.15, "gamma": 0.85, "vibrance": 1.2},
         }
 
         if preset not in presets:

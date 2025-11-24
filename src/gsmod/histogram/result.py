@@ -227,7 +227,7 @@ class HistogramResult:
 
     def learn_from(
         self,
-        source_colors: "torch.Tensor",
+        source_colors: torch.Tensor,
         params: list[str] | None = None,
         n_epochs: int = 100,
         lr: float = 0.02,
@@ -272,7 +272,7 @@ class HistogramResult:
 
         # Create learnable model
         if params is None:
-            params = ['brightness', 'contrast', 'gamma', 'saturation']
+            params = ["brightness", "contrast", "gamma", "saturation"]
 
         model = LearnableColor.from_values(ColorValues(), params).to(device)
 
@@ -283,7 +283,7 @@ class HistogramResult:
         optimizer = optim.Adam(model.parameters(), lr=lr)
 
         # Training loop
-        best_loss = float('inf')
+        best_loss = float("inf")
         best_values = None
 
         for epoch in range(n_epochs):

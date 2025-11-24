@@ -7,14 +7,14 @@ Tests early returns for neutral values and skip conditions across:
 """
 
 import time
+
 import numpy as np
 import torch
 from gsply import GSData
 
-from gsmod import GSDataPro, ColorValues
-from gsmod.color.pipeline import Color
+from gsmod import ColorValues, GSDataPro
 from gsmod.torch import GSTensorPro
-from gsmod.torch.learn import LearnableColor, ColorGradingConfig
+from gsmod.torch.learn import ColorGradingConfig, LearnableColor
 
 
 def create_test_data(n: int) -> GSData:
@@ -60,7 +60,7 @@ def benchmark_cpu_color(n_gaussians: int, n_iterations: int = 100):
 
     neutral_time = elapsed / n_iterations * 1000
     neutral_throughput = n_gaussians / (elapsed / n_iterations) / 1e6
-    print(f"\nNeutral values (all skipped):")
+    print("\nNeutral values (all skipped):")
     print(f"  Time: {neutral_time:.3f} ms")
     print(f"  Throughput: {neutral_throughput:.1f} M/s")
 
@@ -74,7 +74,7 @@ def benchmark_cpu_color(n_gaussians: int, n_iterations: int = 100):
 
     single_time = elapsed / n_iterations * 1000
     single_throughput = n_gaussians / (elapsed / n_iterations) / 1e6
-    print(f"\nSingle operation (brightness=1.2):")
+    print("\nSingle operation (brightness=1.2):")
     print(f"  Time: {single_time:.3f} ms")
     print(f"  Throughput: {single_throughput:.1f} M/s")
 
@@ -104,7 +104,7 @@ def benchmark_cpu_color(n_gaussians: int, n_iterations: int = 100):
 
     full_time = elapsed / n_iterations * 1000
     full_throughput = n_gaussians / (elapsed / n_iterations) / 1e6
-    print(f"\nFull pipeline (15 operations):")
+    print("\nFull pipeline (15 operations):")
     print(f"  Time: {full_time:.3f} ms")
     print(f"  Throughput: {full_throughput:.1f} M/s")
 
@@ -146,7 +146,7 @@ def benchmark_gpu_tensor(n_gaussians: int, n_iterations: int = 100):
     elapsed = time.perf_counter() - start
 
     neutral_time = elapsed / n_iterations * 1000
-    print(f"\nNeutral brightness (early return):")
+    print("\nNeutral brightness (early return):")
     print(f"  Time: {neutral_time:.4f} ms")
 
     # Test 2: Active brightness
@@ -159,7 +159,7 @@ def benchmark_gpu_tensor(n_gaussians: int, n_iterations: int = 100):
 
     active_time = elapsed / n_iterations * 1000
     throughput = n_gaussians / (elapsed / n_iterations) / 1e6
-    print(f"\nActive brightness (factor=1.2):")
+    print("\nActive brightness (factor=1.2):")
     print(f"  Time: {active_time:.4f} ms")
     print(f"  Throughput: {throughput:.1f} M/s")
 
@@ -174,7 +174,7 @@ def benchmark_gpu_tensor(n_gaussians: int, n_iterations: int = 100):
     elapsed = time.perf_counter() - start
 
     neutral_color_time = elapsed / n_iterations * 1000
-    print(f"\nColorValues neutral (all skipped):")
+    print("\nColorValues neutral (all skipped):")
     print(f"  Time: {neutral_color_time:.4f} ms")
 
     # Test 4: Full ColorValues
@@ -197,7 +197,7 @@ def benchmark_gpu_tensor(n_gaussians: int, n_iterations: int = 100):
 
     full_time = elapsed / n_iterations * 1000
     full_throughput = n_gaussians / (elapsed / n_iterations) / 1e6
-    print(f"\nFull ColorValues (7 operations):")
+    print("\nFull ColorValues (7 operations):")
     print(f"  Time: {full_time:.4f} ms")
     print(f"  Throughput: {full_throughput:.1f} M/s")
 
@@ -249,7 +249,7 @@ def benchmark_learnable(n_gaussians: int, n_iterations: int = 100):
 
     all_learnable_time = elapsed / n_iterations * 1000
     throughput = n_gaussians / (elapsed / n_iterations) / 1e6
-    print(f"\nAll parameters learnable (15 ops, no skipping):")
+    print("\nAll parameters learnable (15 ops, no skipping):")
     print(f"  Time: {all_learnable_time:.3f} ms")
     print(f"  Throughput: {throughput:.1f} M/s")
 
@@ -268,7 +268,7 @@ def benchmark_learnable(n_gaussians: int, n_iterations: int = 100):
 
     one_learnable_time = elapsed / n_iterations * 1000
     throughput = n_gaussians / (elapsed / n_iterations) / 1e6
-    print(f"\nOnly brightness learnable (14 ops skipped):")
+    print("\nOnly brightness learnable (14 ops skipped):")
     print(f"  Time: {one_learnable_time:.3f} ms")
     print(f"  Throughput: {throughput:.1f} M/s")
 
@@ -287,7 +287,7 @@ def benchmark_learnable(n_gaussians: int, n_iterations: int = 100):
 
     none_learnable_time = elapsed / n_iterations * 1000
     throughput = n_gaussians / (elapsed / n_iterations) / 1e6
-    print(f"\nNo parameters learnable (all 15 ops skipped):")
+    print("\nNo parameters learnable (all 15 ops skipped):")
     print(f"  Time: {none_learnable_time:.3f} ms")
     print(f"  Throughput: {throughput:.1f} M/s")
 
@@ -307,7 +307,7 @@ def benchmark_learnable(n_gaussians: int, n_iterations: int = 100):
     elapsed = time.perf_counter() - start
 
     grad_time = elapsed / n_iterations * 1000
-    print(f"\nWith gradient computation (3 learnable):")
+    print("\nWith gradient computation (3 learnable):")
     print(f"  Time: {grad_time:.3f} ms")
 
     # Summary

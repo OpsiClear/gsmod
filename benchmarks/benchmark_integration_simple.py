@@ -2,11 +2,12 @@
 
 import time
 from pathlib import Path
+
 import numpy as np
 import torch
 
 # Import gsply components
-from gsply import GSData, plywrite, plyread
+from gsply import GSData, plyread, plywrite
 from gsply.torch import GSTensor
 
 # Import our enhanced GSTensorPro
@@ -50,21 +51,21 @@ def benchmark_comparison():
 
         # Load to GPU with both methods
         start = time.perf_counter()
-        gstensor = GSTensor.from_gsdata(data, device='cuda')
+        GSTensor.from_gsdata(data, device="cuda")
         torch.cuda.synchronize()
         gs_load_time = time.perf_counter() - start
 
         start = time.perf_counter()
-        gstensor_pro = GSTensorPro.from_gsdata(data, device='cuda')
+        gstensor_pro = GSTensorPro.from_gsdata(data, device="cuda")
         torch.cuda.synchronize()
         pro_load_time = time.perf_counter() - start
 
-        print(f"Load time:")
+        print("Load time:")
         print(f"  GSTensor:    {gs_load_time*1000:.2f} ms")
         print(f"  GSTensorPro: {pro_load_time*1000:.2f} ms")
 
         # Test basic operations
-        print(f"\nOperations:")
+        print("\nOperations:")
 
         # GSTensor doesn't have these operations
         print("  GSTensor:    No color/transform ops")
@@ -114,7 +115,7 @@ def benchmark_pipeline():
         start_total = time.perf_counter()
 
         data = plyread(file_path)
-        gstensor = GSTensorPro.from_gsdata(data, device='cuda')
+        gstensor = GSTensorPro.from_gsdata(data, device="cuda")
 
         print(f"Gaussians: {len(gstensor):,}")
 
@@ -128,7 +129,7 @@ def benchmark_pipeline():
             # Transforms
             .center_at_origin()
             .normalize_scale(2.0)
-            .rotate_axis_angle([0, 1, 0], np.pi/8)
+            .rotate_axis_angle([0, 1, 0], np.pi / 8)
             # Colors
             .brightness(1.1)
             .contrast(1.05)
@@ -186,11 +187,11 @@ def benchmark_memory():
 
         # Create and load data
         data = create_test_data(n)
-        gstensor = GSTensorPro.from_gsdata(data, device='cuda')
+        gstensor = GSTensorPro.from_gsdata(data, device="cuda")
 
         # Check memory
         allocated = torch.cuda.memory_allocated() / 1024**2  # MB
-        reserved = torch.cuda.memory_reserved() / 1024**2    # MB
+        reserved = torch.cuda.memory_reserved() / 1024**2  # MB
 
         print(f"  Allocated: {allocated:.1f} MB")
         print(f"  Reserved:  {reserved:.1f} MB")

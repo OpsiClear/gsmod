@@ -104,9 +104,6 @@ from gsmod.config.presets import (
 # Config values and presets
 from gsmod.config.values import ColorValues, FilterValues, HistogramConfig, TransformValues
 
-# Histogram computation
-from gsmod.histogram import HistogramResult
-
 # Filtering utilities
 from gsmod.filter.bounds import (
     SceneBounds,
@@ -116,6 +113,9 @@ from gsmod.filter.bounds import (
 
 # New simplified API
 from gsmod.gsdata_pro import GSDataPro
+
+# Histogram computation
+from gsmod.histogram import HistogramResult
 
 # Parameterized pipelines
 from gsmod.params import Param
@@ -156,16 +156,36 @@ __all__ = [
     # Histogram
     "HistogramResult",
     # Color presets
-    "WARM", "COOL", "NEUTRAL", "CINEMATIC", "VIBRANT", "MUTED",
-    "DRAMATIC", "VINTAGE", "GOLDEN_HOUR", "MOONLIGHT",
+    "WARM",
+    "COOL",
+    "NEUTRAL",
+    "CINEMATIC",
+    "VIBRANT",
+    "MUTED",
+    "DRAMATIC",
+    "VINTAGE",
+    "GOLDEN_HOUR",
+    "MOONLIGHT",
     # Filter presets
-    "STRICT_FILTER", "QUALITY_FILTER", "CLEANUP_FILTER",
+    "STRICT_FILTER",
+    "QUALITY_FILTER",
+    "CLEANUP_FILTER",
     # Transform presets
-    "DOUBLE_SIZE", "HALF_SIZE", "FLIP_X", "FLIP_Y", "FLIP_Z",
+    "DOUBLE_SIZE",
+    "HALF_SIZE",
+    "FLIP_X",
+    "FLIP_Y",
+    "FLIP_Z",
     # Preset loading functions
-    "get_color_preset", "get_filter_preset", "get_transform_preset",
-    "color_from_dict", "filter_from_dict", "transform_from_dict",
-    "load_color_json", "load_filter_json", "load_transform_json",
+    "get_color_preset",
+    "get_filter_preset",
+    "get_transform_preset",
+    "color_from_dict",
+    "filter_from_dict",
+    "transform_from_dict",
+    "load_color_json",
+    "load_filter_json",
+    "load_transform_json",
     # Core pipeline classes (advanced)
     "Color",
     "ColorPreset",

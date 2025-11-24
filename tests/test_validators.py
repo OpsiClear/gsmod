@@ -11,10 +11,10 @@ import numpy as np
 import pytest
 
 from gsmod.validators import (
-    validate_range,
-    validate_positive,
-    validate_type,
     validate_choices,
+    validate_positive,
+    validate_range,
+    validate_type,
 )
 
 
@@ -23,6 +23,7 @@ class TestValidateRange:
 
     def test_valid_value(self):
         """Test decorator passes valid values."""
+
         @validate_range(0.0, 1.0, "opacity")
         def set_opacity(self, opacity: float) -> float:
             return opacity
@@ -32,6 +33,7 @@ class TestValidateRange:
 
     def test_boundary_values(self):
         """Test decorator accepts boundary values."""
+
         @validate_range(0.0, 1.0, "value")
         def func(self, value: float) -> float:
             return value
@@ -43,6 +45,7 @@ class TestValidateRange:
 
     def test_below_range_raises(self):
         """Test decorator raises for values below range."""
+
         @validate_range(0.0, 1.0, "opacity")
         def func(self, opacity: float) -> float:
             return opacity
@@ -52,6 +55,7 @@ class TestValidateRange:
 
     def test_above_range_raises(self):
         """Test decorator raises for values above range."""
+
         @validate_range(0.0, 1.0, "opacity")
         def func(self, opacity: float) -> float:
             return opacity
@@ -61,6 +65,7 @@ class TestValidateRange:
 
     def test_non_numeric_raises(self):
         """Test decorator raises for non-numeric values."""
+
         @validate_range(0.0, 1.0, "value")
         def func(self, value: float) -> float:
             return value
@@ -70,6 +75,7 @@ class TestValidateRange:
 
     def test_kwarg_validation(self):
         """Test decorator validates keyword arguments."""
+
         @validate_range(0.0, 1.0, "opacity")
         def func(self, opacity: float = 0.5) -> float:
             return opacity
@@ -83,6 +89,7 @@ class TestValidateRange:
 
     def test_suggestion_for_opacity(self):
         """Test error includes suggestion for opacity parameters."""
+
         @validate_range(0.0, 1.0, "opacity")
         def func(self, opacity: float) -> float:
             return opacity
@@ -92,6 +99,7 @@ class TestValidateRange:
 
     def test_suggestion_for_brightness(self):
         """Test error includes suggestion for brightness parameters."""
+
         @validate_range(0.1, 3.0, "brightness")
         def func(self, brightness: float) -> float:
             return brightness
@@ -101,6 +109,7 @@ class TestValidateRange:
 
     def test_suggestion_for_temperature(self):
         """Test error includes suggestion for temperature parameters."""
+
         @validate_range(0.0, 1.0, "temperature")
         def func(self, temperature: float) -> float:
             return temperature
@@ -110,6 +119,7 @@ class TestValidateRange:
 
     def test_suggestion_for_lut_size(self):
         """Test error includes suggestion for lut_size parameters."""
+
         @validate_range(16, 4096, "lut_size")
         def func(self, lut_size: int) -> int:
             return lut_size
@@ -119,6 +129,7 @@ class TestValidateRange:
 
     def test_no_value_provided(self):
         """Test decorator passes through when no value provided."""
+
         @validate_range(0.0, 1.0, "opacity")
         def func(self) -> str:
             return "no args"
@@ -132,6 +143,7 @@ class TestValidatePositive:
 
     def test_valid_positive_value(self):
         """Test decorator passes positive values."""
+
         @validate_positive("gamma")
         def set_gamma(self, gamma: float) -> float:
             return gamma
@@ -141,6 +153,7 @@ class TestValidatePositive:
 
     def test_zero_raises(self):
         """Test decorator raises for zero values."""
+
         @validate_positive("scale")
         def func(self, scale: float) -> float:
             return scale
@@ -150,6 +163,7 @@ class TestValidatePositive:
 
     def test_negative_raises(self):
         """Test decorator raises for negative values."""
+
         @validate_positive("gamma")
         def func(self, gamma: float) -> float:
             return gamma
@@ -159,6 +173,7 @@ class TestValidatePositive:
 
     def test_non_numeric_raises(self):
         """Test decorator raises for non-numeric values."""
+
         @validate_positive("scale")
         def func(self, scale: float) -> float:
             return scale
@@ -168,6 +183,7 @@ class TestValidatePositive:
 
     def test_suggestion_for_gamma(self):
         """Test error includes suggestion for gamma parameters."""
+
         @validate_positive("gamma")
         def func(self, gamma: float) -> float:
             return gamma
@@ -177,6 +193,7 @@ class TestValidatePositive:
 
     def test_suggestion_for_scale(self):
         """Test error includes suggestion for scale parameters."""
+
         @validate_positive("scale")
         def func(self, scale: float) -> float:
             return scale
@@ -186,6 +203,7 @@ class TestValidatePositive:
 
     def test_kwarg_validation(self):
         """Test decorator validates keyword arguments."""
+
         @validate_positive("scale")
         def func(self, scale: float = 1.0) -> float:
             return scale
@@ -200,6 +218,7 @@ class TestValidateType:
 
     def test_valid_single_type(self):
         """Test decorator passes valid single type."""
+
         @validate_type(np.ndarray, "vector")
         def func(self, vector: np.ndarray) -> np.ndarray:
             return vector
@@ -210,6 +229,7 @@ class TestValidateType:
 
     def test_valid_tuple_of_types(self):
         """Test decorator passes valid value from tuple of types."""
+
         @validate_type((int, float), "value")
         def func(self, value) -> float:
             return float(value)
@@ -219,6 +239,7 @@ class TestValidateType:
 
     def test_invalid_single_type_raises(self):
         """Test decorator raises for invalid single type."""
+
         @validate_type(np.ndarray, "vector")
         def func(self, vector: np.ndarray) -> np.ndarray:
             return vector
@@ -228,6 +249,7 @@ class TestValidateType:
 
     def test_invalid_tuple_types_raises(self):
         """Test decorator raises for invalid value from tuple types."""
+
         @validate_type((int, float), "value")
         def func(self, value) -> float:
             return float(value)
@@ -237,6 +259,7 @@ class TestValidateType:
 
     def test_kwarg_validation(self):
         """Test decorator validates keyword arguments."""
+
         @validate_type(str, "name")
         def func(self, name: str = "default") -> str:
             return name
@@ -251,6 +274,7 @@ class TestValidateChoices:
 
     def test_valid_choice(self):
         """Test decorator passes valid choices."""
+
         @validate_choices({"quaternion", "matrix", "euler"}, "format")
         def func(self, format: str) -> str:
             return format
@@ -261,6 +285,7 @@ class TestValidateChoices:
 
     def test_invalid_choice_raises(self):
         """Test decorator raises for invalid choice."""
+
         @validate_choices({"a", "b", "c"}, "option")
         def func(self, option: str) -> str:
             return option
@@ -270,6 +295,7 @@ class TestValidateChoices:
 
     def test_error_shows_valid_options(self):
         """Test error message shows all valid options."""
+
         @validate_choices({"red", "green", "blue"}, "color")
         def func(self, color: str) -> str:
             return color
@@ -281,6 +307,7 @@ class TestValidateChoices:
 
     def test_kwarg_validation(self):
         """Test decorator validates keyword arguments."""
+
         @validate_choices({"yes", "no"}, "confirm")
         def func(self, confirm: str = "no") -> str:
             return confirm
@@ -295,6 +322,7 @@ class TestValidatorCombinations:
 
     def test_multiple_decorators(self):
         """Test multiple decorators on same function."""
+
         @validate_range(0.0, 1.0, "opacity", param_index=1)
         @validate_positive("scale", param_index=2)
         def func(self, opacity: float, scale: float) -> tuple[float, float]:
@@ -305,6 +333,7 @@ class TestValidatorCombinations:
 
     def test_decorator_with_different_param_indices(self):
         """Test decorators with custom param indices."""
+
         @validate_range(0.0, 1.0, "alpha", param_index=2)
         def func(self, name: str, alpha: float) -> float:
             return alpha

@@ -22,9 +22,8 @@ WARM = ColorValues.from_k(3200)
 COOL = ColorValues.from_k(8500)
 NEUTRAL = ColorValues()
 
-CINEMATIC = (
-    ColorValues.from_k(4500)
-    + ColorValues(contrast=1.1, saturation=0.9, shadows=0.1, highlights=-0.05)
+CINEMATIC = ColorValues.from_k(4500) + ColorValues(
+    contrast=1.1, saturation=0.9, shadows=0.1, highlights=-0.05
 )
 
 VIBRANT = ColorValues(saturation=1.3, vibrance=1.2, brightness=1.05)
@@ -33,20 +32,11 @@ MUTED = ColorValues(saturation=0.7, vibrance=0.8, contrast=0.95)
 
 DRAMATIC = ColorValues(contrast=1.25, shadows=0.15, highlights=-0.1)
 
-VINTAGE = (
-    ColorValues.from_k(4000)
-    + ColorValues(saturation=0.8, contrast=0.9, gamma=1.1)
-)
+VINTAGE = ColorValues.from_k(4000) + ColorValues(saturation=0.8, contrast=0.9, gamma=1.1)
 
-GOLDEN_HOUR = (
-    ColorValues.from_k(3000)
-    + ColorValues(brightness=1.1, saturation=1.1, shadows=0.05)
-)
+GOLDEN_HOUR = ColorValues.from_k(3000) + ColorValues(brightness=1.1, saturation=1.1, shadows=0.05)
 
-MOONLIGHT = (
-    ColorValues.from_k(9000)
-    + ColorValues(brightness=0.8, contrast=1.1, saturation=0.85)
-)
+MOONLIGHT = ColorValues.from_k(9000) + ColorValues(brightness=0.8, contrast=1.1, saturation=0.85)
 
 # ============================================================================
 # Filter Presets
@@ -163,8 +153,15 @@ def color_from_dict(d: dict) -> ColorValues:
         >>> values = color_from_dict(d)
     """
     valid_fields = {
-        "brightness", "contrast", "gamma", "saturation", "vibrance",
-        "temperature", "shadows", "highlights", "hue_shift"
+        "brightness",
+        "contrast",
+        "gamma",
+        "saturation",
+        "vibrance",
+        "temperature",
+        "shadows",
+        "highlights",
+        "hue_shift",
     }
     kwargs = {k: v for k, v in d.items() if k in valid_fields}
     return ColorValues(**kwargs)
@@ -177,8 +174,14 @@ def filter_from_dict(d: dict) -> FilterValues:
     :return: FilterValues instance
     """
     valid_fields = {
-        "min_opacity", "max_opacity", "min_scale", "max_scale",
-        "sphere_radius", "sphere_center", "box_min", "box_max"
+        "min_opacity",
+        "max_opacity",
+        "min_scale",
+        "max_scale",
+        "sphere_radius",
+        "sphere_center",
+        "box_min",
+        "box_max",
     }
     kwargs = {}
     for k, v in d.items():

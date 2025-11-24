@@ -11,22 +11,22 @@ import pytest
 from gsply import GSData
 
 from gsmod.filter.api import (
-    apply_geometry_filter,
-    _apply_filter,
-    _apply_sphere_filter,
     _apply_ellipsoid_filter,
-    _apply_rotated_cuboid_filter,
+    _apply_filter,
     _apply_frustum_filter,
+    _apply_rotated_cuboid_filter,
+    _apply_sphere_filter,
     _axis_angle_to_rotation_matrix,
+    apply_geometry_filter,
 )
 from gsmod.filter.config import (
-    SphereFilter,
     BoxFilter,
     EllipsoidFilter,
     FrustumFilter,
     QualityFilter,
+    SphereFilter,
 )
-from gsmod.utils import linear_interp_1d, nearest_neighbor_1d, multiply_opacity
+from gsmod.utils import linear_interp_1d, multiply_opacity, nearest_neighbor_1d
 
 
 @pytest.fixture
@@ -220,11 +220,14 @@ class TestFrustumFilter:
     def test_frustum_narrow_fov(self):
         """Test frustum with narrow field of view."""
         # Create points at varying angles from +Z
-        positions = np.array([
-            [0, 0, 10],   # On axis
-            [3, 0, 10],   # Off axis
-            [5, 0, 10],   # Further off axis
-        ], dtype=np.float32)
+        positions = np.array(
+            [
+                [0, 0, 10],  # On axis
+                [3, 0, 10],  # Off axis
+                [5, 0, 10],  # Further off axis
+            ],
+            dtype=np.float32,
+        )
 
         wide_mask = _apply_frustum_filter(
             positions,
@@ -244,10 +247,13 @@ class TestFrustumFilter:
     def test_frustum_with_rotation(self):
         """Test frustum filter with camera rotation."""
         # Create points to the right (+X)
-        positions = np.array([
-            [10, 0, 0],  # To the right
-            [0, 0, 10],  # Forward
-        ], dtype=np.float32)
+        positions = np.array(
+            [
+                [10, 0, 0],  # To the right
+                [0, 0, 10],  # Forward
+            ],
+            dtype=np.float32,
+        )
 
         # Camera looking at +X (rotated 90 deg around Y)
         mask = _apply_frustum_filter(
@@ -303,6 +309,7 @@ class TestApplyGeometryFilter:
 
     def test_unknown_filter_type_raises(self, sample_positions):
         """Test that unknown filter type raises error."""
+
         class UnknownFilter:
             pass
 

@@ -300,7 +300,7 @@ class TestColor:
 
         # Valid range
         pipeline.tint(-1.0)  # Max green
-        pipeline.tint(1.0)   # Max magenta
+        pipeline.tint(1.0)  # Max magenta
 
         # Invalid range
         with pytest.raises(ValueError):

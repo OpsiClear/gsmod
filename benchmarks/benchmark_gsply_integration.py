@@ -1,14 +1,14 @@
 """Benchmark GSTensorPro with latest gsply features."""
 
 import time
-import os
 from pathlib import Path
+
 import numpy as np
 import torch
 
 # Import gsply components
-from gsply import GSData, plywrite, plyread
-from gsply.torch import GSTensor, plyread_gpu, plywrite_gpu
+from gsply import GSData, plyread, plywrite
+from gsply.torch import GSTensor, plyread_gpu
 
 # Import our enhanced GSTensorPro
 from gsmod.torch import GSTensorPro, PipelineGPU
@@ -45,19 +45,19 @@ def benchmark_gpu_io(data, temp_file="temp_test.ply"):
     # Benchmark CPU load -> GPU transfer
     start = time.perf_counter()
     data_cpu = plyread(temp_file)
-    gstensor_cpu = GSTensor.from_gsdata(data_cpu, device='cuda')
+    GSTensor.from_gsdata(data_cpu, device="cuda")
     torch.cuda.synchronize()
     cpu_path_time = time.perf_counter() - start
 
     # Benchmark direct GPU load
     start = time.perf_counter()
-    gstensor_gpu = plyread_gpu(temp_file, device='cuda')
+    plyread_gpu(temp_file, device="cuda")
     torch.cuda.synchronize()
     gpu_path_time = time.perf_counter() - start
 
     # Benchmark GSTensorPro.load
     start = time.perf_counter()
-    gstensor_pro = GSTensorPro.load(temp_file, device='cuda')
+    gstensor_pro = GSTensorPro.load(temp_file, device="cuda")
     torch.cuda.synchronize()
     pro_load_time = time.perf_counter() - start
 
@@ -86,7 +86,7 @@ def benchmark_mask_layers(gstensor):
     gstensor.add_mask_layer("small_scale", torch.max(gstensor.scales, dim=1)[0] < 0.1)
 
     # Combine masks
-    combined_mask = gstensor.combine_masks(mode="and")
+    gstensor.combine_masks(mode="and")
 
     torch.cuda.synchronize()
     mask_create_time = time.perf_counter() - start
@@ -230,7 +230,7 @@ def main():
         gstensor = benchmark_gpu_io(data)
 
         # Mask layer benchmarks
-        filtered = benchmark_mask_layers(gstensor)
+        benchmark_mask_layers(gstensor)
 
         # Format conversions
         benchmark_format_conversions(gstensor)
@@ -255,7 +255,7 @@ def main():
 
             # Load with GSTensorPro
             start = time.perf_counter()
-            gstensor = GSTensorPro.load(file_path, device='cuda')
+            gstensor = GSTensorPro.load(file_path, device="cuda")
             torch.cuda.synchronize()
             load_time = time.perf_counter() - start
 

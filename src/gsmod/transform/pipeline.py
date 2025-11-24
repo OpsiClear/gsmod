@@ -106,7 +106,7 @@ class Transform:
         :param vector: Translation vector [3] or list/tuple
         :return: Self for method chaining
         """
-        if not isinstance(vector, (np.ndarray, list, tuple)):
+        if not isinstance(vector, np.ndarray | list | tuple):
             raise TypeError(f"vector must be array-like, got {type(vector)}")
 
         self._transforms.append(("translate", {"translation": vector}))
@@ -222,7 +222,7 @@ class Transform:
         :param center: Center point [3]
         :return: Self for method chaining
         """
-        if not isinstance(center, (np.ndarray, list, tuple)):
+        if not isinstance(center, np.ndarray | list | tuple):
             raise TypeError(f"center must be array-like, got {type(center)}")
 
         self._center = np.asarray(center, dtype=np.float32)
@@ -307,7 +307,7 @@ class Transform:
                 center = params.get("center", self._center)
 
                 # Convert to scale vector
-                if isinstance(scale_factor, (int, float)):
+                if isinstance(scale_factor, int | float):
                     scale_vec = np.array(
                         [scale_factor, scale_factor, scale_factor], dtype=np.float32
                     )
@@ -470,7 +470,7 @@ class Transform:
                 return data
             result = data.copy()
             # Deep copy _format since gsply.copy() does shallow copy
-            if hasattr(result, '_format'):
+            if hasattr(result, "_format"):
                 result._format = result._format.copy()
             return result
 
@@ -499,7 +499,7 @@ class Transform:
         # This is more efficient and idiomatic than manual field copying
         transformed_data = data.copy()
         # Deep copy _format since gsply.copy() does shallow copy
-        if hasattr(transformed_data, '_format'):
+        if hasattr(transformed_data, "_format"):
             transformed_data._format = transformed_data._format.copy()
         transformed_data.means = transformed_means
         transformed_data.scales = transformed_scales

@@ -147,4 +147,3 @@ Only maintainers can create releases:
 ## License
 
 By contributing, you agree that your contributions will be licensed under the MIT License.
-

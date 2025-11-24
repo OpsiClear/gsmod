@@ -11,10 +11,9 @@ import pytest
 import torch
 from gsply import GSData
 
-from gsmod import GSDataPro, ColorValues
-from gsmod.color.pipeline import Color
+from gsmod import ColorValues, GSDataPro
 from gsmod.torch import GSTensorPro
-from gsmod.torch.learn import LearnableColor, ColorGradingConfig
+from gsmod.torch.learn import ColorGradingConfig, LearnableColor
 
 
 @pytest.fixture
@@ -93,8 +92,8 @@ class TestCPUColorSkipLogic:
         # Mix of neutral and non-neutral
         values = ColorValues(
             brightness=1.0,  # neutral - should skip
-            contrast=1.2,    # active - should apply
-            gamma=1.0,       # neutral - should skip
+            contrast=1.2,  # active - should apply
+            gamma=1.0,  # neutral - should skip
             saturation=1.3,  # active - should apply
         )
         data.color(values, inplace=True)
@@ -157,8 +156,9 @@ class TestGPUSkipLogic:
 
             # Data should be unchanged
             torch.testing.assert_close(
-                gpu_data.sh0, original,
-                msg=f"{method_name}({neutral_value}) modified data when it should skip"
+                gpu_data.sh0,
+                original,
+                msg=f"{method_name}({neutral_value}) modified data when it should skip",
             )
 
     def test_new_operations_apply_on_gpu(self, gpu_data):
@@ -203,7 +203,7 @@ class TestLearnableColorSkipLogic:
     def test_all_learnable_no_skip(self, device):
         """Test that learnable parameters are always applied."""
         sh0 = torch.rand(100, 3, device=device)
-        original = sh0.clone()
+        sh0.clone()
 
         # All parameters learnable (at neutral values but should still apply for gradients)
         config = ColorGradingConfig()
@@ -238,7 +238,7 @@ class TestLearnableColorSkipLogic:
         config = ColorGradingConfig(learnable=["brightness"])
         model = LearnableColor(config).to(device)
 
-        output = model(sh0)
+        model(sh0)
 
         # Should still compute brightness (for gradient flow)
         # Even though brightness=1.0, it should be in computation graph
@@ -251,7 +251,7 @@ class TestLearnableColorSkipLogic:
         # Set non-neutral non-learnable value
         config = ColorGradingConfig(
             brightness=1.5,
-            learnable=[]  # None learnable
+            learnable=[],  # None learnable
         )
         model = LearnableColor(config).to(device)
 
@@ -319,8 +319,8 @@ class TestSkipLogicEdgeCases:
         original = data.sh0.copy()
 
         # Chain multiple neutral operations
-        (data
-            .color(ColorValues(brightness=1.0), inplace=True)
+        (
+            data.color(ColorValues(brightness=1.0), inplace=True)
             .color(ColorValues(contrast=1.0), inplace=True)
             .color(ColorValues(saturation=1.0), inplace=True)
         )

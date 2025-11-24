@@ -7,14 +7,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-logging.basicConfig(level=logging.INFO, format='%(message)s')
-logger = logging.getLogger(__name__)
-
-# Check CUDA availability
-if not torch.cuda.is_available():
-    logger.error("CUDA not available. Benchmarks require GPU.")
-    exit(1)
-
 from gsmod.torch.learn import (
     ColorGradingConfig,
     LearnableColor,
@@ -22,8 +14,16 @@ from gsmod.torch.learn import (
     TransformConfig,
 )
 
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+logger = logging.getLogger(__name__)
 
-def create_test_tensors(n: int, device: str = 'cuda'):
+# Check CUDA availability
+if not torch.cuda.is_available():
+    logger.error("CUDA not available. Benchmarks require GPU.")
+    exit(1)
+
+
+def create_test_tensors(n: int, device: str = "cuda"):
     """Create test tensors for benchmarking."""
     means = torch.randn(n, 3, device=device, dtype=torch.float32)
     scales = torch.rand(n, 3, device=device, dtype=torch.float32) * 0.1
@@ -65,9 +65,15 @@ class LearnableColorOpt1(nn.Module):
         self.config = config
 
         param_defaults = {
-            'brightness': 1.0, 'contrast': 1.0, 'saturation': 1.0,
-            'gamma': 1.0, 'temperature': 0.0, 'vibrance': 1.0,
-            'shadows': 0.0, 'highlights': 0.0, 'hue_shift': 0.0,
+            "brightness": 1.0,
+            "contrast": 1.0,
+            "saturation": 1.0,
+            "gamma": 1.0,
+            "temperature": 0.0,
+            "vibrance": 1.0,
+            "shadows": 0.0,
+            "highlights": 0.0,
+            "hue_shift": 0.0,
         }
 
         for name, default in param_defaults.items():
@@ -79,7 +85,7 @@ class LearnableColorOpt1(nn.Module):
                 self.register_buffer(name, tensor)
 
         # OPTIMIZATION: Register luminance weights once
-        self.register_buffer('lum_weights', torch.tensor([0.299, 0.587, 0.114]))
+        self.register_buffer("lum_weights", torch.tensor([0.299, 0.587, 0.114]))
 
         self.to(config.device)
 
@@ -91,11 +97,7 @@ class LearnableColorOpt1(nn.Module):
 
         r_factor = 1.0 + self.temperature * 0.3
         b_factor = 1.0 - self.temperature * 0.3
-        x = torch.stack([
-            x[..., 0] * r_factor,
-            x[..., 1],
-            x[..., 2] * b_factor
-        ], dim=-1)
+        x = torch.stack([x[..., 0] * r_factor, x[..., 1], x[..., 2] * b_factor], dim=-1)
 
         # Use cached luminance weights
         gray = (x * self.lum_weights).sum(-1, keepdim=True)
@@ -109,8 +111,10 @@ class LearnableColorOpt1(nn.Module):
             gray = (x * self.lum_weights).sum(-1, keepdim=True)
             x = gray + (x - gray) * boost
 
-        if not (torch.equal(self.shadows, torch.tensor(0.0, device=x.device)) and
-                torch.equal(self.highlights, torch.tensor(0.0, device=x.device))):
+        if not (
+            torch.equal(self.shadows, torch.tensor(0.0, device=x.device))
+            and torch.equal(self.highlights, torch.tensor(0.0, device=x.device))
+        ):
             lum = (x * self.lum_weights).sum(-1, keepdim=True)
             shadow_mask = torch.sigmoid((0.5 - lum) * 10.0)
             highlight_mask = 1.0 - shadow_mask
@@ -122,11 +126,27 @@ class LearnableColorOpt1(nn.Module):
             angle = self.hue_shift * np.pi / 180.0
             cos_a = torch.cos(angle)
             sin_a = torch.sin(angle)
-            rot_matrix = torch.tensor([
-                [0.299 + 0.701*cos_a + 0.168*sin_a, 0.587 - 0.587*cos_a + 0.330*sin_a, 0.114 - 0.114*cos_a - 0.497*sin_a],
-                [0.299 - 0.299*cos_a - 0.328*sin_a, 0.587 + 0.413*cos_a + 0.035*sin_a, 0.114 - 0.114*cos_a + 0.292*sin_a],
-                [0.299 - 0.300*cos_a + 1.250*sin_a, 0.587 - 0.588*cos_a - 1.050*sin_a, 0.114 + 0.886*cos_a - 0.203*sin_a]
-            ], device=x.device, dtype=x.dtype)
+            rot_matrix = torch.tensor(
+                [
+                    [
+                        0.299 + 0.701 * cos_a + 0.168 * sin_a,
+                        0.587 - 0.587 * cos_a + 0.330 * sin_a,
+                        0.114 - 0.114 * cos_a - 0.497 * sin_a,
+                    ],
+                    [
+                        0.299 - 0.299 * cos_a - 0.328 * sin_a,
+                        0.587 + 0.413 * cos_a + 0.035 * sin_a,
+                        0.114 - 0.114 * cos_a + 0.292 * sin_a,
+                    ],
+                    [
+                        0.299 - 0.300 * cos_a + 1.250 * sin_a,
+                        0.587 - 0.588 * cos_a - 1.050 * sin_a,
+                        0.114 + 0.886 * cos_a - 0.203 * sin_a,
+                    ],
+                ],
+                device=x.device,
+                dtype=x.dtype,
+            )
             x = torch.matmul(x, rot_matrix.T)
 
         return torch.clamp(x, 0, 1)
@@ -141,9 +161,15 @@ class LearnableColorOpt2(nn.Module):
         self.config = config
 
         param_defaults = {
-            'brightness': 1.0, 'contrast': 1.0, 'saturation': 1.0,
-            'gamma': 1.0, 'temperature': 0.0, 'vibrance': 1.0,
-            'shadows': 0.0, 'highlights': 0.0, 'hue_shift': 0.0,
+            "brightness": 1.0,
+            "contrast": 1.0,
+            "saturation": 1.0,
+            "gamma": 1.0,
+            "temperature": 0.0,
+            "vibrance": 1.0,
+            "shadows": 0.0,
+            "highlights": 0.0,
+            "hue_shift": 0.0,
         }
 
         for name, default in param_defaults.items():
@@ -154,7 +180,7 @@ class LearnableColorOpt2(nn.Module):
             else:
                 self.register_buffer(name, tensor)
 
-        self.register_buffer('lum_weights', torch.tensor([0.299, 0.587, 0.114]))
+        self.register_buffer("lum_weights", torch.tensor([0.299, 0.587, 0.114]))
         self.to(config.device)
 
     def forward(self, sh0: torch.Tensor) -> torch.Tensor:
@@ -165,11 +191,7 @@ class LearnableColorOpt2(nn.Module):
 
         r_factor = 1.0 + self.temperature * 0.3
         b_factor = 1.0 - self.temperature * 0.3
-        x = torch.stack([
-            x[..., 0] * r_factor,
-            x[..., 1],
-            x[..., 2] * b_factor
-        ], dim=-1)
+        x = torch.stack([x[..., 0] * r_factor, x[..., 1], x[..., 2] * b_factor], dim=-1)
 
         gray = (x * self.lum_weights).sum(-1, keepdim=True)
         x = gray + (x - gray) * self.saturation
@@ -194,11 +216,27 @@ class LearnableColorOpt2(nn.Module):
         angle = self.hue_shift * np.pi / 180.0
         cos_a = torch.cos(angle)
         sin_a = torch.sin(angle)
-        rot_matrix = torch.tensor([
-            [0.299 + 0.701*cos_a + 0.168*sin_a, 0.587 - 0.587*cos_a + 0.330*sin_a, 0.114 - 0.114*cos_a - 0.497*sin_a],
-            [0.299 - 0.299*cos_a - 0.328*sin_a, 0.587 + 0.413*cos_a + 0.035*sin_a, 0.114 - 0.114*cos_a + 0.292*sin_a],
-            [0.299 - 0.300*cos_a + 1.250*sin_a, 0.587 - 0.588*cos_a - 1.050*sin_a, 0.114 + 0.886*cos_a - 0.203*sin_a]
-        ], device=x.device, dtype=x.dtype)
+        rot_matrix = torch.tensor(
+            [
+                [
+                    0.299 + 0.701 * cos_a + 0.168 * sin_a,
+                    0.587 - 0.587 * cos_a + 0.330 * sin_a,
+                    0.114 - 0.114 * cos_a - 0.497 * sin_a,
+                ],
+                [
+                    0.299 - 0.299 * cos_a - 0.328 * sin_a,
+                    0.587 + 0.413 * cos_a + 0.035 * sin_a,
+                    0.114 - 0.114 * cos_a + 0.292 * sin_a,
+                ],
+                [
+                    0.299 - 0.300 * cos_a + 1.250 * sin_a,
+                    0.587 - 0.588 * cos_a - 1.050 * sin_a,
+                    0.114 + 0.886 * cos_a - 0.203 * sin_a,
+                ],
+            ],
+            device=x.device,
+            dtype=x.dtype,
+        )
         x = torch.matmul(x, rot_matrix.T)
 
         return torch.clamp(x, 0, 1)
@@ -213,9 +251,15 @@ class LearnableColorOpt3(nn.Module):
         self.config = config
 
         param_defaults = {
-            'brightness': 1.0, 'contrast': 1.0, 'saturation': 1.0,
-            'gamma': 1.0, 'temperature': 0.0, 'vibrance': 1.0,
-            'shadows': 0.0, 'highlights': 0.0, 'hue_shift': 0.0,
+            "brightness": 1.0,
+            "contrast": 1.0,
+            "saturation": 1.0,
+            "gamma": 1.0,
+            "temperature": 0.0,
+            "vibrance": 1.0,
+            "shadows": 0.0,
+            "highlights": 0.0,
+            "hue_shift": 0.0,
         }
 
         for name, default in param_defaults.items():
@@ -226,7 +270,7 @@ class LearnableColorOpt3(nn.Module):
             else:
                 self.register_buffer(name, tensor)
 
-        self.register_buffer('lum_weights', torch.tensor([0.299, 0.587, 0.114]))
+        self.register_buffer("lum_weights", torch.tensor([0.299, 0.587, 0.114]))
         self.to(config.device)
 
     def forward(self, sh0: torch.Tensor) -> torch.Tensor:
@@ -236,11 +280,13 @@ class LearnableColorOpt3(nn.Module):
         x = torch.pow(torch.clamp(x, min=1e-8), self.gamma)
 
         # OPTIMIZATION: Use broadcasting instead of stack
-        temp_factors = torch.stack([
-            1.0 + self.temperature * 0.3,
-            torch.ones_like(self.temperature),
-            1.0 - self.temperature * 0.3
-        ])
+        temp_factors = torch.stack(
+            [
+                1.0 + self.temperature * 0.3,
+                torch.ones_like(self.temperature),
+                1.0 - self.temperature * 0.3,
+            ]
+        )
         x = x * temp_factors
 
         gray = (x * self.lum_weights).sum(-1, keepdim=True)
@@ -263,11 +309,27 @@ class LearnableColorOpt3(nn.Module):
         angle = self.hue_shift * np.pi / 180.0
         cos_a = torch.cos(angle)
         sin_a = torch.sin(angle)
-        rot_matrix = torch.tensor([
-            [0.299 + 0.701*cos_a + 0.168*sin_a, 0.587 - 0.587*cos_a + 0.330*sin_a, 0.114 - 0.114*cos_a - 0.497*sin_a],
-            [0.299 - 0.299*cos_a - 0.328*sin_a, 0.587 + 0.413*cos_a + 0.035*sin_a, 0.114 - 0.114*cos_a + 0.292*sin_a],
-            [0.299 - 0.300*cos_a + 1.250*sin_a, 0.587 - 0.588*cos_a - 1.050*sin_a, 0.114 + 0.886*cos_a - 0.203*sin_a]
-        ], device=x.device, dtype=x.dtype)
+        rot_matrix = torch.tensor(
+            [
+                [
+                    0.299 + 0.701 * cos_a + 0.168 * sin_a,
+                    0.587 - 0.587 * cos_a + 0.330 * sin_a,
+                    0.114 - 0.114 * cos_a - 0.497 * sin_a,
+                ],
+                [
+                    0.299 - 0.299 * cos_a - 0.328 * sin_a,
+                    0.587 + 0.413 * cos_a + 0.035 * sin_a,
+                    0.114 - 0.114 * cos_a + 0.292 * sin_a,
+                ],
+                [
+                    0.299 - 0.300 * cos_a + 1.250 * sin_a,
+                    0.587 - 0.588 * cos_a - 1.050 * sin_a,
+                    0.114 + 0.886 * cos_a - 0.203 * sin_a,
+                ],
+            ],
+            device=x.device,
+            dtype=x.dtype,
+        )
         x = torch.matmul(x, rot_matrix.T)
 
         return torch.clamp(x, 0, 1)
@@ -282,9 +344,15 @@ class LearnableColorOpt4(nn.Module):
         self.config = config
 
         param_defaults = {
-            'brightness': 1.0, 'contrast': 1.0, 'saturation': 1.0,
-            'gamma': 1.0, 'temperature': 0.0, 'vibrance': 1.0,
-            'shadows': 0.0, 'highlights': 0.0, 'hue_shift': 0.0,
+            "brightness": 1.0,
+            "contrast": 1.0,
+            "saturation": 1.0,
+            "gamma": 1.0,
+            "temperature": 0.0,
+            "vibrance": 1.0,
+            "shadows": 0.0,
+            "highlights": 0.0,
+            "hue_shift": 0.0,
         }
 
         for name, default in param_defaults.items():
@@ -295,7 +363,7 @@ class LearnableColorOpt4(nn.Module):
             else:
                 self.register_buffer(name, tensor)
 
-        self.register_buffer('lum_weights', torch.tensor([0.299, 0.587, 0.114]))
+        self.register_buffer("lum_weights", torch.tensor([0.299, 0.587, 0.114]))
         self.to(config.device)
 
     def forward(self, sh0: torch.Tensor) -> torch.Tensor:
@@ -308,11 +376,13 @@ class LearnableColorOpt4(nn.Module):
         x = (x - 0.5) * self.contrast + 0.5
         x = torch.pow(torch.clamp(x, min=1e-8), self.gamma)
 
-        temp_factors = torch.stack([
-            1.0 + self.temperature * 0.3,
-            torch.ones_like(self.temperature),
-            1.0 - self.temperature * 0.3
-        ])
+        temp_factors = torch.stack(
+            [
+                1.0 + self.temperature * 0.3,
+                torch.ones_like(self.temperature),
+                1.0 - self.temperature * 0.3,
+            ]
+        )
         x = x * temp_factors
 
         gray = (x * self.lum_weights).sum(-1, keepdim=True)
@@ -335,11 +405,27 @@ class LearnableColorOpt4(nn.Module):
         angle = self.hue_shift * np.pi / 180.0
         cos_a = torch.cos(angle)
         sin_a = torch.sin(angle)
-        rot_matrix = torch.tensor([
-            [0.299 + 0.701*cos_a + 0.168*sin_a, 0.587 - 0.587*cos_a + 0.330*sin_a, 0.114 - 0.114*cos_a - 0.497*sin_a],
-            [0.299 - 0.299*cos_a - 0.328*sin_a, 0.587 + 0.413*cos_a + 0.035*sin_a, 0.114 - 0.114*cos_a + 0.292*sin_a],
-            [0.299 - 0.300*cos_a + 1.250*sin_a, 0.587 - 0.588*cos_a - 1.050*sin_a, 0.114 + 0.886*cos_a - 0.203*sin_a]
-        ], device=x.device, dtype=x.dtype)
+        rot_matrix = torch.tensor(
+            [
+                [
+                    0.299 + 0.701 * cos_a + 0.168 * sin_a,
+                    0.587 - 0.587 * cos_a + 0.330 * sin_a,
+                    0.114 - 0.114 * cos_a - 0.497 * sin_a,
+                ],
+                [
+                    0.299 - 0.299 * cos_a - 0.328 * sin_a,
+                    0.587 + 0.413 * cos_a + 0.035 * sin_a,
+                    0.114 - 0.114 * cos_a + 0.292 * sin_a,
+                ],
+                [
+                    0.299 - 0.300 * cos_a + 1.250 * sin_a,
+                    0.587 - 0.588 * cos_a - 1.050 * sin_a,
+                    0.114 + 0.886 * cos_a - 0.203 * sin_a,
+                ],
+            ],
+            device=x.device,
+            dtype=x.dtype,
+        )
         x = torch.matmul(x, rot_matrix.T)
 
         return torch.clamp(x, 0, 1)
@@ -360,28 +446,28 @@ class LearnableTransformOpt1(nn.Module):
         self.rotation_repr = config.rotation_repr
 
         learnable = list(config.learnable)
-        if 'rotation' in learnable:
-            learnable.remove('rotation')
-            learnable.append('rotation_axis_angle')
+        if "rotation" in learnable:
+            learnable.remove("rotation")
+            learnable.append("rotation_axis_angle")
 
         translation = torch.tensor(config.translation, dtype=torch.float32)
-        if 'translation' in learnable:
+        if "translation" in learnable:
             self.translation = nn.Parameter(translation)
         else:
-            self.register_buffer('translation', translation)
+            self.register_buffer("translation", translation)
 
         scale = torch.tensor(config.scale, dtype=torch.float32)
-        if 'scale' in learnable:
+        if "scale" in learnable:
             self.scale = nn.Parameter(scale)
         else:
-            self.register_buffer('scale', scale)
+            self.register_buffer("scale", scale)
 
-        if self.rotation_repr == 'axis_angle':
+        if self.rotation_repr == "axis_angle":
             rotation = torch.tensor(config.rotation_axis_angle, dtype=torch.float32)
-            if 'rotation_axis_angle' in learnable:
+            if "rotation_axis_angle" in learnable:
                 self.rotation_axis_angle = nn.Parameter(rotation)
             else:
-                self.register_buffer('rotation_axis_angle', rotation)
+                self.register_buffer("rotation_axis_angle", rotation)
 
         self.to(config.device)
 
@@ -409,17 +495,19 @@ class LearnableTransformOpt1(nn.Module):
 
         # Rodrigues formula
         k = axis_angle / (angle + 1e-12)
-        K = torch.stack([
-            torch.stack([torch.zeros_like(angle), -k[2], k[1]]),
-            torch.stack([k[2], torch.zeros_like(angle), -k[0]]),
-            torch.stack([-k[1], k[0], torch.zeros_like(angle)])
-        ])
+        K = torch.stack(
+            [
+                torch.stack([torch.zeros_like(angle), -k[2], k[1]]),
+                torch.stack([k[2], torch.zeros_like(angle), -k[0]]),
+                torch.stack([-k[1], k[0], torch.zeros_like(angle)]),
+            ]
+        )
 
         sin_angle = torch.sin(angle)
         cos_angle = torch.cos(angle)
-        I = torch.eye(3, device=axis_angle.device, dtype=axis_angle.dtype)
+        identity_matrix = torch.eye(3, device=axis_angle.device, dtype=axis_angle.dtype)
 
-        return I + sin_angle * K + (1 - cos_angle) * (K @ K)
+        return identity_matrix + sin_angle * K + (1 - cos_angle) * (K @ K)
 
     def _rotation_matrix_to_quat(self, R):
         """Convert rotation matrix to quaternion."""
@@ -458,10 +546,10 @@ class LearnableTransformOpt1(nn.Module):
         w1, x1, y1, z1 = q1[..., 0], q1[..., 1], q1[..., 2], q1[..., 3]
         w2, x2, y2, z2 = q2[..., 0], q2[..., 1], q2[..., 2], q2[..., 3]
 
-        w = w1*w2 - x1*x2 - y1*y2 - z1*z2
-        x = w1*x2 + x1*w2 + y1*z2 - z1*y2
-        y = w1*y2 - x1*z2 + y1*w2 + z1*x2
-        z = w1*z2 + x1*y2 - y1*x2 + z1*w2
+        w = w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2
+        x = w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2
+        y = w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2
+        z = w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2
 
         return torch.stack([w, x, y, z], dim=-1)
 
@@ -476,28 +564,28 @@ class LearnableTransformOpt2(nn.Module):
         self.rotation_repr = config.rotation_repr
 
         learnable = list(config.learnable)
-        if 'rotation' in learnable:
-            learnable.remove('rotation')
-            learnable.append('rotation_axis_angle')
+        if "rotation" in learnable:
+            learnable.remove("rotation")
+            learnable.append("rotation_axis_angle")
 
         translation = torch.tensor(config.translation, dtype=torch.float32)
-        if 'translation' in learnable:
+        if "translation" in learnable:
             self.translation = nn.Parameter(translation)
         else:
-            self.register_buffer('translation', translation)
+            self.register_buffer("translation", translation)
 
         scale = torch.tensor(config.scale, dtype=torch.float32)
-        if 'scale' in learnable:
+        if "scale" in learnable:
             self.scale = nn.Parameter(scale)
         else:
-            self.register_buffer('scale', scale)
+            self.register_buffer("scale", scale)
 
-        if self.rotation_repr == 'axis_angle':
+        if self.rotation_repr == "axis_angle":
             rotation = torch.tensor(config.rotation_axis_angle, dtype=torch.float32)
-            if 'rotation_axis_angle' in learnable:
+            if "rotation_axis_angle" in learnable:
                 self.rotation_axis_angle = nn.Parameter(rotation)
             else:
-                self.register_buffer('rotation_axis_angle', rotation)
+                self.register_buffer("rotation_axis_angle", rotation)
 
         self.to(config.device)
 
@@ -522,17 +610,19 @@ class LearnableTransformOpt2(nn.Module):
         angle = torch.sqrt(angle_sq + 1e-12)
 
         k = axis_angle / (angle + 1e-12)
-        K = torch.stack([
-            torch.stack([torch.zeros_like(angle), -k[2], k[1]]),
-            torch.stack([k[2], torch.zeros_like(angle), -k[0]]),
-            torch.stack([-k[1], k[0], torch.zeros_like(angle)])
-        ])
+        K = torch.stack(
+            [
+                torch.stack([torch.zeros_like(angle), -k[2], k[1]]),
+                torch.stack([k[2], torch.zeros_like(angle), -k[0]]),
+                torch.stack([-k[1], k[0], torch.zeros_like(angle)]),
+            ]
+        )
 
         sin_angle = torch.sin(angle)
         cos_angle = torch.cos(angle)
-        I = torch.eye(3, device=axis_angle.device, dtype=axis_angle.dtype)
+        identity_matrix = torch.eye(3, device=axis_angle.device, dtype=axis_angle.dtype)
 
-        return I + sin_angle * K + (1 - cos_angle) * (K @ K)
+        return identity_matrix + sin_angle * K + (1 - cos_angle) * (K @ K)
 
     def _rotation_matrix_to_quat(self, R):
         trace = R[0, 0] + R[1, 1] + R[2, 2]
@@ -569,10 +659,10 @@ class LearnableTransformOpt2(nn.Module):
         w1, x1, y1, z1 = q1[..., 0], q1[..., 1], q1[..., 2], q1[..., 3]
         w2, x2, y2, z2 = q2[..., 0], q2[..., 1], q2[..., 2], q2[..., 3]
 
-        w = w1*w2 - x1*x2 - y1*y2 - z1*z2
-        x = w1*x2 + x1*w2 + y1*z2 - z1*y2
-        y = w1*y2 - x1*z2 + y1*w2 + z1*x2
-        z = w1*z2 + x1*y2 - y1*x2 + z1*w2
+        w = w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2
+        x = w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2
+        y = w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2
+        z = w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2
 
         return torch.stack([w, x, y, z], dim=-1)
 
@@ -600,7 +690,7 @@ def run_benchmarks():
     logger.info("LearnableColor Optimizations")
     logger.info("=" * 70)
 
-    config = ColorGradingConfig(learnable=['brightness', 'saturation', 'contrast'])
+    config = ColorGradingConfig(learnable=["brightness", "saturation", "contrast"])
 
     # Baseline
     baseline = LearnableColor(config).cuda()
@@ -614,7 +704,9 @@ def run_benchmarks():
     opt1_throughput = (n / opt1_ms) * 1000 / 1e6
     speedup = baseline_ms / opt1_ms
     status = "[OK]" if speedup > 1.05 else "[--]"
-    logger.info(f"Opt1 (lum buffer):  {opt1_ms:.3f} ms ({opt1_throughput:.1f}M/sec) {speedup:.2f}x {status}")
+    logger.info(
+        f"Opt1 (lum buffer):  {opt1_ms:.3f} ms ({opt1_throughput:.1f}M/sec) {speedup:.2f}x {status}"
+    )
 
     # Opt2: Remove conditionals
     opt2 = LearnableColorOpt2(config).cuda()
@@ -622,7 +714,9 @@ def run_benchmarks():
     opt2_throughput = (n / opt2_ms) * 1000 / 1e6
     speedup = baseline_ms / opt2_ms
     status = "[OK]" if speedup > 1.05 else "[--]"
-    logger.info(f"Opt2 (no cond):     {opt2_ms:.3f} ms ({opt2_throughput:.1f}M/sec) {speedup:.2f}x {status}")
+    logger.info(
+        f"Opt2 (no cond):     {opt2_ms:.3f} ms ({opt2_throughput:.1f}M/sec) {speedup:.2f}x {status}"
+    )
 
     # Opt3: Temperature optimization
     opt3 = LearnableColorOpt3(config).cuda()
@@ -630,7 +724,9 @@ def run_benchmarks():
     opt3_throughput = (n / opt3_ms) * 1000 / 1e6
     speedup = baseline_ms / opt3_ms
     status = "[OK]" if speedup > 1.05 else "[--]"
-    logger.info(f"Opt3 (temp bcast):  {opt3_ms:.3f} ms ({opt3_throughput:.1f}M/sec) {speedup:.2f}x {status}")
+    logger.info(
+        f"Opt3 (temp bcast):  {opt3_ms:.3f} ms ({opt3_throughput:.1f}M/sec) {speedup:.2f}x {status}"
+    )
 
     # Opt4: torch.compile
     try:
@@ -643,7 +739,9 @@ def run_benchmarks():
         opt4_throughput = (n / opt4_ms) * 1000 / 1e6
         speedup = baseline_ms / opt4_ms
         status = "[OK]" if speedup > 1.05 else "[--]"
-        logger.info(f"Opt4 (compile):     {opt4_ms:.3f} ms ({opt4_throughput:.1f}M/sec) {speedup:.2f}x {status}")
+        logger.info(
+            f"Opt4 (compile):     {opt4_ms:.3f} ms ({opt4_throughput:.1f}M/sec) {speedup:.2f}x {status}"
+        )
     except Exception as e:
         logger.info(f"Opt4 (compile):     FAILED - {e}")
 
@@ -654,7 +752,7 @@ def run_benchmarks():
     logger.info("LearnableTransform Optimizations")
     logger.info("=" * 70)
 
-    config = TransformConfig(learnable=['translation', 'scale'])
+    config = TransformConfig(learnable=["translation", "scale"])
 
     # Baseline
     baseline = LearnableTransform(config).cuda()
@@ -668,7 +766,9 @@ def run_benchmarks():
     opt1_throughput = (n / opt1_ms) * 1000 / 1e6
     speedup = baseline_ms / opt1_ms
     status = "[OK]" if speedup > 1.05 else "[--]"
-    logger.info(f"Opt1 (rot cache):   {opt1_ms:.3f} ms ({opt1_throughput:.1f}M/sec) {speedup:.2f}x {status}")
+    logger.info(
+        f"Opt1 (rot cache):   {opt1_ms:.3f} ms ({opt1_throughput:.1f}M/sec) {speedup:.2f}x {status}"
+    )
 
     # Opt2: torch.compile
     try:
@@ -681,7 +781,9 @@ def run_benchmarks():
         opt2_throughput = (n / opt2_ms) * 1000 / 1e6
         speedup = baseline_ms / opt2_ms
         status = "[OK]" if speedup > 1.05 else "[--]"
-        logger.info(f"Opt2 (compile):     {opt2_ms:.3f} ms ({opt2_throughput:.1f}M/sec) {speedup:.2f}x {status}")
+        logger.info(
+            f"Opt2 (compile):     {opt2_ms:.3f} ms ({opt2_throughput:.1f}M/sec) {speedup:.2f}x {status}"
+        )
     except Exception as e:
         logger.info(f"Opt2 (compile):     FAILED - {e}")
 

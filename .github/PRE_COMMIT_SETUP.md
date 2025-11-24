@@ -146,4 +146,3 @@ Pre-commit runs automatically in CI on all pull requests. The same checks that r
 
 - [Pre-commit documentation](https://pre-commit.com/)
 - [Ruff documentation](https://docs.astral.sh/ruff/)
-

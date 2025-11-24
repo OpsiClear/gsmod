@@ -56,7 +56,7 @@ class TransformGPU:
             >>> pipeline = TransformGPU().scale(2.0)  # Uniform
             >>> pipeline = TransformGPU().scale([1, 2, 0.5])  # Non-uniform
         """
-        if isinstance(scale, (int, float)):
+        if isinstance(scale, int | float):
             self._operations.append(("scale_uniform", scale))
         else:
             self._operations.append(("scale_nonuniform", scale))
@@ -76,7 +76,9 @@ class TransformGPU:
         self._operations.append(("rotate_quaternion", quaternion))
         return self
 
-    def rotate_euler(self, angles: list[float] | np.ndarray | torch.Tensor, order: str = "XYZ") -> TransformGPU:
+    def rotate_euler(
+        self, angles: list[float] | np.ndarray | torch.Tensor, order: str = "XYZ"
+    ) -> TransformGPU:
         """Add rotation by Euler angles.
 
         :param angles: Euler angles [x, y, z] in radians
@@ -89,7 +91,9 @@ class TransformGPU:
         self._operations.append(("rotate_euler", (angles, order)))
         return self
 
-    def rotate_axis_angle(self, axis: list[float] | np.ndarray | torch.Tensor, angle: float) -> TransformGPU:
+    def rotate_axis_angle(
+        self, axis: list[float] | np.ndarray | torch.Tensor, angle: float
+    ) -> TransformGPU:
         """Add rotation around axis.
 
         :param axis: Rotation axis [x, y, z]
@@ -189,6 +193,7 @@ class TransformGPU:
             elif op_name == "rotate_matrix":
                 # Convert rotation matrix to quaternion
                 from gsmod.transform.api import rotation_matrix_to_quaternion
+
                 if isinstance(op_value, torch.Tensor):
                     matrix_np = op_value.cpu().numpy()
                 else:
@@ -280,17 +285,20 @@ class TransformGPU:
                     quat = op_value.to(dtype=torch.float32)
                 quat = quat / torch.norm(quat)
                 w, x, y, z = quat
-                R = torch.tensor([
-                    [1 - 2*(y*y + z*z), 2*(x*y - w*z), 2*(x*z + w*y), 0],
-                    [2*(x*y + w*z), 1 - 2*(x*x + z*z), 2*(y*z - w*x), 0],
-                    [2*(x*z - w*y), 2*(y*z + w*x), 1 - 2*(x*x + y*y), 0],
-                    [0, 0, 0, 1]
-                ])
+                R = torch.tensor(
+                    [
+                        [1 - 2 * (y * y + z * z), 2 * (x * y - w * z), 2 * (x * z + w * y), 0],
+                        [2 * (x * y + w * z), 1 - 2 * (x * x + z * z), 2 * (y * z - w * x), 0],
+                        [2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y), 0],
+                        [0, 0, 0, 1],
+                    ]
+                )
                 matrix = torch.matmul(matrix, R)
 
             elif op_name == "rotate_euler":
                 # Convert Euler angles to quaternion
                 from gsmod.transform.api import euler_to_quaternion
+
                 angles, order = op_value
                 if isinstance(angles, torch.Tensor):
                     angles_np = angles.cpu().numpy()
@@ -301,17 +309,20 @@ class TransformGPU:
                 quat = torch.tensor(quat, dtype=torch.float32)
                 quat = quat / torch.norm(quat)
                 w, x, y, z = quat
-                R = torch.tensor([
-                    [1 - 2*(y*y + z*z), 2*(x*y - w*z), 2*(x*z + w*y), 0],
-                    [2*(x*y + w*z), 1 - 2*(x*x + z*z), 2*(y*z - w*x), 0],
-                    [2*(x*z - w*y), 2*(y*z + w*x), 1 - 2*(x*x + y*y), 0],
-                    [0, 0, 0, 1]
-                ])
+                R = torch.tensor(
+                    [
+                        [1 - 2 * (y * y + z * z), 2 * (x * y - w * z), 2 * (x * z + w * y), 0],
+                        [2 * (x * y + w * z), 1 - 2 * (x * x + z * z), 2 * (y * z - w * x), 0],
+                        [2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y), 0],
+                        [0, 0, 0, 1],
+                    ]
+                )
                 matrix = torch.matmul(matrix, R)
 
             elif op_name == "rotate_axis_angle":
                 # Convert axis-angle to quaternion
                 from gsmod.transform.api import axis_angle_to_quaternion
+
                 axis, angle = op_value
                 if isinstance(axis, torch.Tensor):
                     axis_np = axis.cpu().numpy()
@@ -322,12 +333,14 @@ class TransformGPU:
                 quat = torch.tensor(quat, dtype=torch.float32)
                 quat = quat / torch.norm(quat)
                 w, x, y, z = quat
-                R = torch.tensor([
-                    [1 - 2*(y*y + z*z), 2*(x*y - w*z), 2*(x*z + w*y), 0],
-                    [2*(x*y + w*z), 1 - 2*(x*x + z*z), 2*(y*z - w*x), 0],
-                    [2*(x*z - w*y), 2*(y*z + w*x), 1 - 2*(x*x + y*y), 0],
-                    [0, 0, 0, 1]
-                ])
+                R = torch.tensor(
+                    [
+                        [1 - 2 * (y * y + z * z), 2 * (x * y - w * z), 2 * (x * z + w * y), 0],
+                        [2 * (x * y + w * z), 1 - 2 * (x * x + z * z), 2 * (y * z - w * x), 0],
+                        [2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y), 0],
+                        [0, 0, 0, 1],
+                    ]
+                )
                 matrix = torch.matmul(matrix, R)
 
             elif op_name == "transform_matrix":

@@ -68,6 +68,7 @@ class ColorGradingConfig:
         ...     device='cuda'
         ... )
     """
+
     brightness: float = 1.0
     contrast: float = 1.0
     saturation: float = 1.0
@@ -85,15 +86,26 @@ class ColorGradingConfig:
     highlight_tint_sat: float = 0.0
 
     learnable: list[str] | None = None
-    device: str = 'cuda'  # 'cuda:0', 'cuda:1', 'cpu', etc.
+    device: str = "cuda"  # 'cuda:0', 'cuda:1', 'cpu', etc.
 
     def __post_init__(self):
         if self.learnable is None:
             self.learnable = [
-                'brightness', 'contrast', 'saturation', 'gamma',
-                'temperature', 'tint', 'vibrance', 'shadows', 'highlights',
-                'fade', 'hue_shift', 'shadow_tint_hue', 'shadow_tint_sat',
-                'highlight_tint_hue', 'highlight_tint_sat'
+                "brightness",
+                "contrast",
+                "saturation",
+                "gamma",
+                "temperature",
+                "tint",
+                "vibrance",
+                "shadows",
+                "highlights",
+                "fade",
+                "hue_shift",
+                "shadow_tint_hue",
+                "shadow_tint_sat",
+                "highlight_tint_hue",
+                "highlight_tint_sat",
             ]
 
 
@@ -116,16 +128,17 @@ class TransformConfig:
         ...     learnable=['translation', 'scale', 'rotation']
         ... )
     """
+
     translation: tuple[float, float, float] = (0.0, 0.0, 0.0)
     scale: float = 1.0
     rotation: tuple[float, float, float] = (0.0, 0.0, 0.0)
 
     learnable: list[str] | None = None
-    device: str = 'cuda'  # 'cuda:0', 'cuda:1', 'cpu', etc.
+    device: str = "cuda"  # 'cuda:0', 'cuda:1', 'cpu', etc.
 
     def __post_init__(self):
         if self.learnable is None:
-            self.learnable = ['translation', 'scale', 'rotation']
+            self.learnable = ["translation", "scale", "rotation"]
 
 
 @dataclass
@@ -162,8 +175,9 @@ class LearnableFilterConfig:
         ...     learnable=['ellipsoid_radii', 'ellipsoid_rotation']
         ... )
     """
+
     # Geometry filter selection
-    geometry_type: str = 'sphere'  # 'sphere', 'ellipsoid', 'box', 'none'
+    geometry_type: str = "sphere"  # 'sphere', 'ellipsoid', 'box', 'none'
 
     # Attribute filters
     opacity_threshold: float = 0.0
@@ -172,7 +186,7 @@ class LearnableFilterConfig:
     scale_sharpness: float = 10.0
 
     # Sphere filter
-    sphere_radius: float = float('inf')
+    sphere_radius: float = float("inf")
     sphere_center: tuple[float, float, float] = (0.0, 0.0, 0.0)
     sphere_sharpness: float = 10.0
 
@@ -180,32 +194,44 @@ class LearnableFilterConfig:
     ellipsoid_radii: tuple[float, float, float] = (1.0, 1.0, 1.0)
     ellipsoid_center: tuple[float, float, float] = (0.0, 0.0, 0.0)
     ellipsoid_rotation: tuple[float, float, float] = (0.0, 0.0, 0.0)
-    ellipsoid_rotation_repr: str = 'axis_angle'  # 'axis_angle' or '6d'
+    ellipsoid_rotation_repr: str = "axis_angle"  # 'axis_angle' or '6d'
     ellipsoid_sharpness: float = 10.0
 
     # Box filter (with rotation)
     box_extents: tuple[float, float, float] = (1.0, 1.0, 1.0)
     box_center: tuple[float, float, float] = (0.0, 0.0, 0.0)
     box_rotation: tuple[float, float, float] = (0.0, 0.0, 0.0)
-    box_rotation_repr: str = 'axis_angle'  # 'axis_angle' or '6d'
+    box_rotation_repr: str = "axis_angle"  # 'axis_angle' or '6d'
     box_sharpness: float = 10.0
 
     learnable: list[str] | None = None
-    device: str = 'cuda'  # 'cuda:0', 'cuda:1', 'cpu', etc.
+    device: str = "cuda"  # 'cuda:0', 'cuda:1', 'cpu', etc.
 
     def __post_init__(self):
-        if self.geometry_type not in ('sphere', 'ellipsoid', 'box', 'none'):
-            raise ValueError(f"geometry_type must be 'sphere', 'ellipsoid', 'box', or 'none', got {self.geometry_type}")
-        if self.ellipsoid_rotation_repr not in ('axis_angle', '6d'):
-            raise ValueError(f"ellipsoid_rotation_repr must be 'axis_angle' or '6d', got {self.ellipsoid_rotation_repr}")
-        if self.box_rotation_repr not in ('axis_angle', '6d'):
-            raise ValueError(f"box_rotation_repr must be 'axis_angle' or '6d', got {self.box_rotation_repr}")
+        if self.geometry_type not in ("sphere", "ellipsoid", "box", "none"):
+            raise ValueError(
+                f"geometry_type must be 'sphere', 'ellipsoid', 'box', or 'none', got {self.geometry_type}"
+            )
+        if self.ellipsoid_rotation_repr not in ("axis_angle", "6d"):
+            raise ValueError(
+                f"ellipsoid_rotation_repr must be 'axis_angle' or '6d', got {self.ellipsoid_rotation_repr}"
+            )
+        if self.box_rotation_repr not in ("axis_angle", "6d"):
+            raise ValueError(
+                f"box_rotation_repr must be 'axis_angle' or '6d', got {self.box_rotation_repr}"
+            )
         if self.learnable is None:
             self.learnable = [
-                'opacity_threshold', 'scale_threshold',
-                'sphere_radius', 'sphere_center',
-                'ellipsoid_radii', 'ellipsoid_center', 'ellipsoid_rotation',
-                'box_extents', 'box_center', 'box_rotation'
+                "opacity_threshold",
+                "scale_threshold",
+                "sphere_radius",
+                "sphere_center",
+                "ellipsoid_radii",
+                "ellipsoid_center",
+                "ellipsoid_rotation",
+                "box_extents",
+                "box_center",
+                "box_rotation",
             ]
 
 
@@ -239,21 +265,21 @@ class LearnableColor(nn.Module):
 
         # Parameter names and their neutral values
         param_defaults = {
-            'brightness': 1.0,
-            'contrast': 1.0,
-            'saturation': 1.0,
-            'gamma': 1.0,
-            'temperature': 0.0,
-            'tint': 0.0,
-            'vibrance': 1.0,
-            'shadows': 0.0,
-            'highlights': 0.0,
-            'fade': 0.0,
-            'hue_shift': 0.0,
-            'shadow_tint_hue': 0.0,
-            'shadow_tint_sat': 0.0,
-            'highlight_tint_hue': 0.0,
-            'highlight_tint_sat': 0.0,
+            "brightness": 1.0,
+            "contrast": 1.0,
+            "saturation": 1.0,
+            "gamma": 1.0,
+            "temperature": 0.0,
+            "tint": 0.0,
+            "vibrance": 1.0,
+            "shadows": 0.0,
+            "highlights": 0.0,
+            "fade": 0.0,
+            "hue_shift": 0.0,
+            "shadow_tint_hue": 0.0,
+            "shadow_tint_sat": 0.0,
+            "highlight_tint_hue": 0.0,
+            "highlight_tint_sat": 0.0,
         }
 
         # Register each parameter as learnable or fixed buffer
@@ -267,7 +293,7 @@ class LearnableColor(nn.Module):
                 self.register_buffer(name, tensor)
 
         # Register luminance weights as buffer (avoids recreating tensor each forward)
-        self.register_buffer('lum_weights', torch.tensor([0.299, 0.587, 0.114]))
+        self.register_buffer("lum_weights", torch.tensor([0.299, 0.587, 0.114]))
 
         # Move to device
         self.to(config.device)
@@ -285,44 +311,39 @@ class LearnableColor(nn.Module):
         learnable = self.config.learnable
 
         # Brightness (multiplicative) - skip only if not learnable and neutral
-        if 'brightness' in learnable or self.brightness.item() != 1.0:
+        if "brightness" in learnable or self.brightness.item() != 1.0:
             x = x * self.brightness
 
         # Contrast (around 0.5 midpoint) - skip only if not learnable and neutral
-        if 'contrast' in learnable or self.contrast.item() != 1.0:
+        if "contrast" in learnable or self.contrast.item() != 1.0:
             x = (x - 0.5) * self.contrast + 0.5
 
         # Gamma correction - skip only if not learnable and neutral
-        if 'gamma' in learnable or self.gamma.item() != 1.0:
+        if "gamma" in learnable or self.gamma.item() != 1.0:
             x = torch.pow(torch.clamp(x, min=1e-8), self.gamma)
 
         # Temperature (R/B balance) - skip only if not learnable and neutral
-        if 'temperature' in learnable or self.temperature.item() != 0.0:
+        if "temperature" in learnable or self.temperature.item() != 0.0:
             r_factor = 1.0 + self.temperature * 0.3
             b_factor = 1.0 - self.temperature * 0.3
-            x = torch.stack([
-                x[..., 0] * r_factor,
-                x[..., 1],
-                x[..., 2] * b_factor
-            ], dim=-1)
+            x = torch.stack([x[..., 0] * r_factor, x[..., 1], x[..., 2] * b_factor], dim=-1)
 
         # Tint (G/M balance) - skip only if not learnable and neutral
-        if 'tint' in learnable or self.tint.item() != 0.0:
+        if "tint" in learnable or self.tint.item() != 0.0:
             tint_offset_g = -self.tint * 0.1
             tint_offset_rb = self.tint * 0.05
-            x = torch.stack([
-                x[..., 0] + tint_offset_rb,
-                x[..., 1] + tint_offset_g,
-                x[..., 2] + tint_offset_rb
-            ], dim=-1)
+            x = torch.stack(
+                [x[..., 0] + tint_offset_rb, x[..., 1] + tint_offset_g, x[..., 2] + tint_offset_rb],
+                dim=-1,
+            )
 
         # Saturation - skip only if not learnable and neutral
-        if 'saturation' in learnable or self.saturation.item() != 1.0:
+        if "saturation" in learnable or self.saturation.item() != 1.0:
             gray = (x * self.lum_weights).sum(-1, keepdim=True)
             x = gray + (x - gray) * self.saturation
 
         # Vibrance (selective saturation) - skip only if not learnable and neutral
-        if 'vibrance' in learnable or self.vibrance.item() != 1.0:
+        if "vibrance" in learnable or self.vibrance.item() != 1.0:
             max_rgb = x.max(dim=-1, keepdim=True)[0]
             min_rgb = x.min(dim=-1, keepdim=True)[0]
             current_sat = max_rgb - min_rgb
@@ -331,8 +352,8 @@ class LearnableColor(nn.Module):
             x = gray + (x - gray) * boost
 
         # Shadows/Highlights (luminance-based) - skip only if not learnable and both neutral
-        shadows_active = 'shadows' in learnable or self.shadows.item() != 0.0
-        highlights_active = 'highlights' in learnable or self.highlights.item() != 0.0
+        shadows_active = "shadows" in learnable or self.shadows.item() != 0.0
+        highlights_active = "highlights" in learnable or self.highlights.item() != 0.0
         if shadows_active or highlights_active:
             lum = (x * self.lum_weights).sum(-1, keepdim=True)
             # Soft threshold at 0.5 luminance
@@ -344,39 +365,48 @@ class LearnableColor(nn.Module):
             x = x + x * (shadow_factor + highlight_factor)
 
         # Fade (black point lift) - skip only if not learnable and neutral
-        if 'fade' in learnable or self.fade.item() != 0.0:
+        if "fade" in learnable or self.fade.item() != 0.0:
             x = self.fade + x * (1.0 - self.fade)
 
         # Hue shift (rotation in RGB space) - skip only if not learnable and neutral
-        if 'hue_shift' in learnable or self.hue_shift.item() != 0.0:
+        if "hue_shift" in learnable or self.hue_shift.item() != 0.0:
             angle = self.hue_shift * np.pi / 180.0
             cos_a = torch.cos(angle)
             sin_a = torch.sin(angle)
 
             # Hue rotation matrix (simplified RGB rotation)
             # Use torch.stack to avoid UserWarning about requires_grad tensor conversion
-            row0 = torch.stack([
-                0.299 + 0.701*cos_a + 0.168*sin_a,
-                0.587 - 0.587*cos_a + 0.330*sin_a,
-                0.114 - 0.114*cos_a - 0.497*sin_a
-            ])
-            row1 = torch.stack([
-                0.299 - 0.299*cos_a - 0.328*sin_a,
-                0.587 + 0.413*cos_a + 0.035*sin_a,
-                0.114 - 0.114*cos_a + 0.292*sin_a
-            ])
-            row2 = torch.stack([
-                0.299 - 0.300*cos_a + 1.250*sin_a,
-                0.587 - 0.588*cos_a - 1.050*sin_a,
-                0.114 + 0.886*cos_a - 0.203*sin_a
-            ])
+            row0 = torch.stack(
+                [
+                    0.299 + 0.701 * cos_a + 0.168 * sin_a,
+                    0.587 - 0.587 * cos_a + 0.330 * sin_a,
+                    0.114 - 0.114 * cos_a - 0.497 * sin_a,
+                ]
+            )
+            row1 = torch.stack(
+                [
+                    0.299 - 0.299 * cos_a - 0.328 * sin_a,
+                    0.587 + 0.413 * cos_a + 0.035 * sin_a,
+                    0.114 - 0.114 * cos_a + 0.292 * sin_a,
+                ]
+            )
+            row2 = torch.stack(
+                [
+                    0.299 - 0.300 * cos_a + 1.250 * sin_a,
+                    0.587 - 0.588 * cos_a - 1.050 * sin_a,
+                    0.114 + 0.886 * cos_a - 0.203 * sin_a,
+                ]
+            )
             rot_matrix = torch.stack([row0, row1, row2])
 
             x = torch.matmul(x, rot_matrix.T)
 
         # Shadow tinting (split toning) - skip only if not learnable and saturation is zero
-        shadow_tint_active = ('shadow_tint_hue' in learnable or 'shadow_tint_sat' in learnable
-                              or self.shadow_tint_sat.item() > 0.0)
+        shadow_tint_active = (
+            "shadow_tint_hue" in learnable
+            or "shadow_tint_sat" in learnable
+            or self.shadow_tint_sat.item() > 0.0
+        )
         if shadow_tint_active:
             lum = (x * self.lum_weights).sum(-1, keepdim=True)
             shadow_mask = torch.clamp(1.0 - lum * 2.0, 0.0, 1.0)
@@ -388,15 +418,21 @@ class LearnableColor(nn.Module):
             tint_b = torch.cos(hue_rad - 4.0 * np.pi / 3.0) * 0.5
 
             tint_strength = shadow_mask * self.shadow_tint_sat
-            x = torch.stack([
-                x[..., 0] + tint_r * tint_strength.squeeze(-1),
-                x[..., 1] + tint_g * tint_strength.squeeze(-1),
-                x[..., 2] + tint_b * tint_strength.squeeze(-1)
-            ], dim=-1)
+            x = torch.stack(
+                [
+                    x[..., 0] + tint_r * tint_strength.squeeze(-1),
+                    x[..., 1] + tint_g * tint_strength.squeeze(-1),
+                    x[..., 2] + tint_b * tint_strength.squeeze(-1),
+                ],
+                dim=-1,
+            )
 
         # Highlight tinting (split toning) - skip only if not learnable and saturation is zero
-        highlight_tint_active = ('highlight_tint_hue' in learnable or 'highlight_tint_sat' in learnable
-                                 or self.highlight_tint_sat.item() > 0.0)
+        highlight_tint_active = (
+            "highlight_tint_hue" in learnable
+            or "highlight_tint_sat" in learnable
+            or self.highlight_tint_sat.item() > 0.0
+        )
         if highlight_tint_active:
             lum = (x * self.lum_weights).sum(-1, keepdim=True)
             highlight_mask = torch.clamp(lum * 2.0 - 1.0, 0.0, 1.0)
@@ -408,11 +444,14 @@ class LearnableColor(nn.Module):
             tint_b = torch.cos(hue_rad - 4.0 * np.pi / 3.0) * 0.5
 
             tint_strength = highlight_mask * self.highlight_tint_sat
-            x = torch.stack([
-                x[..., 0] + tint_r * tint_strength.squeeze(-1),
-                x[..., 1] + tint_g * tint_strength.squeeze(-1),
-                x[..., 2] + tint_b * tint_strength.squeeze(-1)
-            ], dim=-1)
+            x = torch.stack(
+                [
+                    x[..., 0] + tint_r * tint_strength.squeeze(-1),
+                    x[..., 1] + tint_g * tint_strength.squeeze(-1),
+                    x[..., 2] + tint_b * tint_strength.squeeze(-1),
+                ],
+                dim=-1,
+            )
 
         return torch.clamp(x, 0, 1)
 
@@ -447,7 +486,7 @@ class LearnableColor(nn.Module):
             shadow_tint_sat=values.shadow_tint_sat,
             highlight_tint_hue=values.highlight_tint_hue,
             highlight_tint_sat=values.highlight_tint_sat,
-            learnable=learnable
+            learnable=learnable,
         )
         return cls(config)
 
@@ -505,33 +544,30 @@ class LearnableTransform(nn.Module):
 
         # Translation
         translation = torch.tensor(config.translation, dtype=torch.float32)
-        if 'translation' in config.learnable:
+        if "translation" in config.learnable:
             self.translation = nn.Parameter(translation)
         else:
-            self.register_buffer('translation', translation)
+            self.register_buffer("translation", translation)
 
         # Scale
         scale = torch.tensor(config.scale, dtype=torch.float32)
-        if 'scale' in config.learnable:
+        if "scale" in config.learnable:
             self.scale = nn.Parameter(scale)
         else:
-            self.register_buffer('scale', scale)
+            self.register_buffer("scale", scale)
 
         # Rotation - always use 6D internally, convert from axis-angle input
         rot_6d = self._axis_angle_to_6d(torch.tensor(config.rotation, dtype=torch.float32))
-        if 'rotation' in config.learnable:
+        if "rotation" in config.learnable:
             self.rotation_6d = nn.Parameter(rot_6d)
         else:
-            self.register_buffer('rotation_6d', rot_6d)
+            self.register_buffer("rotation_6d", rot_6d)
 
         # Move to device
         self.to(config.device)
 
     def forward(
-        self,
-        means: torch.Tensor,
-        scales: torch.Tensor,
-        quats: torch.Tensor
+        self, means: torch.Tensor, scales: torch.Tensor, quats: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Apply transform (fully differentiable).
 
@@ -569,15 +605,17 @@ class LearnableTransform(nn.Module):
 
         # Build skew-symmetric matrix K (gradient-safe, single tensor op)
         zero = torch.zeros_like(kx)
-        K = torch.stack([
-            torch.stack([zero, -kz, ky]),
-            torch.stack([kz, zero, -kx]),
-            torch.stack([-ky, kx, zero])
-        ])
+        K = torch.stack(
+            [
+                torch.stack([zero, -kz, ky]),
+                torch.stack([kz, zero, -kx]),
+                torch.stack([-ky, kx, zero]),
+            ]
+        )
 
         sin_angle = torch.sin(angle)
         cos_angle = torch.cos(angle)
-        I = torch.eye(3, device=axis_angle.device, dtype=axis_angle.dtype)
+        I = torch.eye(3, device=axis_angle.device, dtype=axis_angle.dtype)  # noqa
 
         return I + sin_angle * K + (1 - cos_angle) * (K @ K)
 
@@ -600,47 +638,37 @@ class LearnableTransform(nn.Module):
         xyz = axis_angle * sinc_half
         return torch.cat([w.unsqueeze(0), xyz])
 
-    def _axis_angle_to_quat(
-        self,
-        axis: torch.Tensor,
-        angle: torch.Tensor
-    ) -> torch.Tensor:
+    def _axis_angle_to_quat(self, axis: torch.Tensor, angle: torch.Tensor) -> torch.Tensor:
         """Convert axis-angle to quaternion (differentiable)."""
         half_angle = angle / 2
         w = torch.cos(half_angle)
         xyz = axis * torch.sin(half_angle)
         return torch.cat([w.unsqueeze(0), xyz])
 
-    def _rotate_points(
-        self,
-        points: torch.Tensor,
-        quat: torch.Tensor
-    ) -> torch.Tensor:
+    def _rotate_points(self, points: torch.Tensor, quat: torch.Tensor) -> torch.Tensor:
         """Rotate points by quaternion (differentiable)."""
         w, x, y, z = quat
 
         # Rotation matrix from quaternion
-        rot = torch.stack([
-            torch.stack([1 - 2*(y*y + z*z), 2*(x*y - w*z), 2*(x*z + w*y)]),
-            torch.stack([2*(x*y + w*z), 1 - 2*(x*x + z*z), 2*(y*z - w*x)]),
-            torch.stack([2*(x*z - w*y), 2*(y*z + w*x), 1 - 2*(x*x + y*y)])
-        ])
+        rot = torch.stack(
+            [
+                torch.stack([1 - 2 * (y * y + z * z), 2 * (x * y - w * z), 2 * (x * z + w * y)]),
+                torch.stack([2 * (x * y + w * z), 1 - 2 * (x * x + z * z), 2 * (y * z - w * x)]),
+                torch.stack([2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y)]),
+            ]
+        )
 
         return torch.matmul(points, rot.T)
 
-    def _quat_multiply(
-        self,
-        q1: torch.Tensor,
-        q2: torch.Tensor
-    ) -> torch.Tensor:
+    def _quat_multiply(self, q1: torch.Tensor, q2: torch.Tensor) -> torch.Tensor:
         """Multiply quaternions (differentiable)."""
         w1, x1, y1, z1 = q1[..., 0], q1[..., 1], q1[..., 2], q1[..., 3]
         w2, x2, y2, z2 = q2[..., 0], q2[..., 1], q2[..., 2], q2[..., 3]
 
-        w = w1*w2 - x1*x2 - y1*y2 - z1*z2
-        x = w1*x2 + x1*w2 + y1*z2 - z1*y2
-        y = w1*y2 - x1*z2 + y1*w2 + z1*x2
-        z = w1*z2 + x1*y2 - y1*x2 + z1*w2
+        w = w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2
+        x = w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2
+        y = w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2
+        z = w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2
 
         return torch.stack([w, x, y, z], dim=-1)
 
@@ -651,15 +679,14 @@ class LearnableTransform(nn.Module):
 
         if angle < 1e-8:
             # Identity rotation: first two columns of I
-            return torch.tensor([1., 0., 0., 0., 1., 0.], dtype=torch.float32)
+            return torch.tensor([1.0, 0.0, 0.0, 0.0, 1.0, 0.0], dtype=torch.float32)
 
         # Build rotation matrix from axis-angle
         axis = axis_angle / angle
-        K = torch.tensor([
-            [0, -axis[2], axis[1]],
-            [axis[2], 0, -axis[0]],
-            [-axis[1], axis[0], 0]
-        ], dtype=torch.float32)
+        K = torch.tensor(
+            [[0, -axis[2], axis[1]], [axis[2], 0, -axis[0]], [-axis[1], axis[0], 0]],
+            dtype=torch.float32,
+        )
         R = torch.eye(3) + torch.sin(angle) * K + (1 - torch.cos(angle)) * (K @ K)
 
         # Extract first two columns as 6D
@@ -730,7 +757,7 @@ class LearnableTransform(nn.Module):
             translation=values.translation,
             scale=values.scale,
             rotation=tuple(euler),
-            learnable=learnable
+            learnable=learnable,
         )
         return cls(config)
 
@@ -749,11 +776,7 @@ class LearnableTransform(nn.Module):
             return np.zeros(3)
 
         # Extract axis from skew-symmetric part
-        axis = np.array([
-            R[2, 1] - R[1, 2],
-            R[0, 2] - R[2, 0],
-            R[1, 0] - R[0, 1]
-        ])
+        axis = np.array([R[2, 1] - R[1, 2], R[0, 2] - R[2, 0], R[1, 0] - R[0, 1]])
         axis = axis / (2 * np.sin(angle) + 1e-12)
         axis = axis / (np.linalg.norm(axis) + 1e-12)
 
@@ -800,122 +823,118 @@ class LearnableFilter(nn.Module):
 
         # Opacity threshold
         opacity_threshold = torch.tensor(config.opacity_threshold, dtype=torch.float32)
-        if 'opacity_threshold' in config.learnable:
+        if "opacity_threshold" in config.learnable:
             self.opacity_threshold = nn.Parameter(opacity_threshold)
         else:
-            self.register_buffer('opacity_threshold', opacity_threshold)
+            self.register_buffer("opacity_threshold", opacity_threshold)
 
         # Opacity sharpness (typically fixed)
         self.register_buffer(
-            'opacity_sharpness',
-            torch.tensor(config.opacity_sharpness, dtype=torch.float32)
+            "opacity_sharpness", torch.tensor(config.opacity_sharpness, dtype=torch.float32)
         )
 
         # Scale threshold
         scale_threshold = torch.tensor(config.scale_threshold, dtype=torch.float32)
-        if 'scale_threshold' in config.learnable:
+        if "scale_threshold" in config.learnable:
             self.scale_threshold = nn.Parameter(scale_threshold)
         else:
-            self.register_buffer('scale_threshold', scale_threshold)
+            self.register_buffer("scale_threshold", scale_threshold)
 
         # Scale sharpness
         self.register_buffer(
-            'scale_sharpness',
-            torch.tensor(config.scale_sharpness, dtype=torch.float32)
+            "scale_sharpness", torch.tensor(config.scale_sharpness, dtype=torch.float32)
         )
 
         # Sphere parameters
         sphere_radius = torch.tensor(config.sphere_radius, dtype=torch.float32)
-        if 'sphere_radius' in config.learnable:
+        if "sphere_radius" in config.learnable:
             self.sphere_radius = nn.Parameter(sphere_radius)
         else:
-            self.register_buffer('sphere_radius', sphere_radius)
+            self.register_buffer("sphere_radius", sphere_radius)
 
         sphere_center = torch.tensor(config.sphere_center, dtype=torch.float32)
-        if 'sphere_center' in config.learnable:
+        if "sphere_center" in config.learnable:
             self.sphere_center = nn.Parameter(sphere_center)
         else:
-            self.register_buffer('sphere_center', sphere_center)
+            self.register_buffer("sphere_center", sphere_center)
 
         self.register_buffer(
-            'sphere_sharpness',
-            torch.tensor(config.sphere_sharpness, dtype=torch.float32)
+            "sphere_sharpness", torch.tensor(config.sphere_sharpness, dtype=torch.float32)
         )
 
         # Ellipsoid parameters
         ellipsoid_radii = torch.tensor(config.ellipsoid_radii, dtype=torch.float32)
-        if 'ellipsoid_radii' in config.learnable:
+        if "ellipsoid_radii" in config.learnable:
             self.ellipsoid_radii = nn.Parameter(ellipsoid_radii)
         else:
-            self.register_buffer('ellipsoid_radii', ellipsoid_radii)
+            self.register_buffer("ellipsoid_radii", ellipsoid_radii)
 
         ellipsoid_center = torch.tensor(config.ellipsoid_center, dtype=torch.float32)
-        if 'ellipsoid_center' in config.learnable:
+        if "ellipsoid_center" in config.learnable:
             self.ellipsoid_center = nn.Parameter(ellipsoid_center)
         else:
-            self.register_buffer('ellipsoid_center', ellipsoid_center)
+            self.register_buffer("ellipsoid_center", ellipsoid_center)
 
         # Ellipsoid rotation
         self.ellipsoid_rotation_repr = config.ellipsoid_rotation_repr
-        if self.ellipsoid_rotation_repr == 'axis_angle':
+        if self.ellipsoid_rotation_repr == "axis_angle":
             ellipsoid_rotation = torch.tensor(config.ellipsoid_rotation, dtype=torch.float32)
-            if 'ellipsoid_rotation' in config.learnable:
+            if "ellipsoid_rotation" in config.learnable:
                 self.ellipsoid_rotation = nn.Parameter(ellipsoid_rotation)
             else:
-                self.register_buffer('ellipsoid_rotation', ellipsoid_rotation)
+                self.register_buffer("ellipsoid_rotation", ellipsoid_rotation)
         else:  # '6d'
-            ellipsoid_rot_6d = self._axis_angle_to_6d(torch.tensor(config.ellipsoid_rotation, dtype=torch.float32))
-            if 'ellipsoid_rotation' in config.learnable:
+            ellipsoid_rot_6d = self._axis_angle_to_6d(
+                torch.tensor(config.ellipsoid_rotation, dtype=torch.float32)
+            )
+            if "ellipsoid_rotation" in config.learnable:
                 self.ellipsoid_rotation_6d = nn.Parameter(ellipsoid_rot_6d)
             else:
-                self.register_buffer('ellipsoid_rotation_6d', ellipsoid_rot_6d)
+                self.register_buffer("ellipsoid_rotation_6d", ellipsoid_rot_6d)
 
         self.register_buffer(
-            'ellipsoid_sharpness',
-            torch.tensor(config.ellipsoid_sharpness, dtype=torch.float32)
+            "ellipsoid_sharpness", torch.tensor(config.ellipsoid_sharpness, dtype=torch.float32)
         )
 
         # Box parameters
         box_extents = torch.tensor(config.box_extents, dtype=torch.float32)
-        if 'box_extents' in config.learnable:
+        if "box_extents" in config.learnable:
             self.box_extents = nn.Parameter(box_extents)
         else:
-            self.register_buffer('box_extents', box_extents)
+            self.register_buffer("box_extents", box_extents)
 
         box_center = torch.tensor(config.box_center, dtype=torch.float32)
-        if 'box_center' in config.learnable:
+        if "box_center" in config.learnable:
             self.box_center = nn.Parameter(box_center)
         else:
-            self.register_buffer('box_center', box_center)
+            self.register_buffer("box_center", box_center)
 
         # Box rotation
         self.box_rotation_repr = config.box_rotation_repr
-        if self.box_rotation_repr == 'axis_angle':
+        if self.box_rotation_repr == "axis_angle":
             box_rotation = torch.tensor(config.box_rotation, dtype=torch.float32)
-            if 'box_rotation' in config.learnable:
+            if "box_rotation" in config.learnable:
                 self.box_rotation = nn.Parameter(box_rotation)
             else:
-                self.register_buffer('box_rotation', box_rotation)
+                self.register_buffer("box_rotation", box_rotation)
         else:  # '6d'
-            box_rot_6d = self._axis_angle_to_6d(torch.tensor(config.box_rotation, dtype=torch.float32))
-            if 'box_rotation' in config.learnable:
+            box_rot_6d = self._axis_angle_to_6d(
+                torch.tensor(config.box_rotation, dtype=torch.float32)
+            )
+            if "box_rotation" in config.learnable:
                 self.box_rotation_6d = nn.Parameter(box_rot_6d)
             else:
-                self.register_buffer('box_rotation_6d', box_rot_6d)
+                self.register_buffer("box_rotation_6d", box_rot_6d)
 
         self.register_buffer(
-            'box_sharpness',
-            torch.tensor(config.box_sharpness, dtype=torch.float32)
+            "box_sharpness", torch.tensor(config.box_sharpness, dtype=torch.float32)
         )
 
         # Move to device
         self.to(config.device)
 
     def forward(
-        self,
-        means: torch.Tensor,
-        opacities: torch.Tensor,
-        scales: torch.Tensor
+        self, means: torch.Tensor, opacities: torch.Tensor, scales: torch.Tensor
     ) -> torch.Tensor:
         """Compute soft filter weights (differentiable).
 
@@ -947,21 +966,17 @@ class LearnableFilter(nn.Module):
         # Scale filter (soft threshold on max scale)
         if self.scale_threshold < 100.0:
             max_scales = scales.max(dim=-1)[0]
-            scale_weight = torch.sigmoid(
-                (self.scale_threshold - max_scales) * self.scale_sharpness
-            )
+            scale_weight = torch.sigmoid((self.scale_threshold - max_scales) * self.scale_sharpness)
             weights = weights * scale_weight
 
         # Geometry filter (only one active at a time)
-        if self.geometry_type == 'sphere':
-            if self.sphere_radius < float('inf'):
+        if self.geometry_type == "sphere":
+            if self.sphere_radius < float("inf"):
                 distances = torch.norm(means - self.sphere_center, dim=1)
-                geo_weight = torch.sigmoid(
-                    (self.sphere_radius - distances) * self.sphere_sharpness
-                )
+                geo_weight = torch.sigmoid((self.sphere_radius - distances) * self.sphere_sharpness)
                 weights = weights * geo_weight
 
-        elif self.geometry_type == 'ellipsoid':
+        elif self.geometry_type == "ellipsoid":
             # Get rotation matrix
             rot_matrix = self._get_ellipsoid_rotation_matrix()
             # Transform to local space (inverse rotation)
@@ -969,12 +984,10 @@ class LearnableFilter(nn.Module):
             # Normalized distance in ellipsoid space
             normalized = local_means / self.ellipsoid_radii
             distances = torch.norm(normalized, dim=1)
-            geo_weight = torch.sigmoid(
-                (1.0 - distances) * self.ellipsoid_sharpness
-            )
+            geo_weight = torch.sigmoid((1.0 - distances) * self.ellipsoid_sharpness)
             weights = weights * geo_weight
 
-        elif self.geometry_type == 'box':
+        elif self.geometry_type == "box":
             # Get rotation matrix
             rot_matrix = self._get_box_rotation_matrix()
             # Transform to local space (inverse rotation)
@@ -982,9 +995,7 @@ class LearnableFilter(nn.Module):
             # Max normalized distance (Chebyshev)
             normalized = torch.abs(local_means) / self.box_extents
             distances = normalized.max(dim=1)[0]
-            geo_weight = torch.sigmoid(
-                (1.0 - distances) * self.box_sharpness
-            )
+            geo_weight = torch.sigmoid((1.0 - distances) * self.box_sharpness)
             weights = weights * geo_weight
 
         return weights
@@ -995,14 +1006,13 @@ class LearnableFilter(nn.Module):
         angle = torch.sqrt(angle_sq + 1e-12)
 
         if angle < 1e-8:
-            return torch.tensor([1., 0., 0., 0., 1., 0.], dtype=torch.float32)
+            return torch.tensor([1.0, 0.0, 0.0, 0.0, 1.0, 0.0], dtype=torch.float32)
 
         axis = axis_angle / angle
-        K = torch.tensor([
-            [0, -axis[2], axis[1]],
-            [axis[2], 0, -axis[0]],
-            [-axis[1], axis[0], 0]
-        ], dtype=torch.float32)
+        K = torch.tensor(
+            [[0, -axis[2], axis[1]], [axis[2], 0, -axis[0]], [-axis[1], axis[0], 0]],
+            dtype=torch.float32,
+        )
         R = torch.eye(3) + torch.sin(angle) * K + (1 - torch.cos(angle)) * (K @ K)
         return torch.cat([R[:, 0], R[:, 1]])
 
@@ -1025,30 +1035,32 @@ class LearnableFilter(nn.Module):
             return torch.eye(3, device=axis_angle.device, dtype=axis_angle.dtype)
 
         # Use sinc for numerical stability
-        k = torch.sinc(angle / torch.pi)
-        K = torch.stack([
-            torch.stack([torch.zeros_like(angle), -axis_angle[2], axis_angle[1]]),
-            torch.stack([axis_angle[2], torch.zeros_like(angle), -axis_angle[0]]),
-            torch.stack([-axis_angle[1], axis_angle[0], torch.zeros_like(angle)])
-        ])
+        torch.sinc(angle / torch.pi)
+        K = torch.stack(
+            [
+                torch.stack([torch.zeros_like(angle), -axis_angle[2], axis_angle[1]]),
+                torch.stack([axis_angle[2], torch.zeros_like(angle), -axis_angle[0]]),
+                torch.stack([-axis_angle[1], axis_angle[0], torch.zeros_like(angle)]),
+            ]
+        )
 
         # Rodrigues formula: R = I + sin(θ)K + (1-cos(θ))K²
         sin_angle = torch.sin(angle)
         cos_angle = torch.cos(angle)
-        I = torch.eye(3, device=axis_angle.device, dtype=axis_angle.dtype)
+        I = torch.eye(3, device=axis_angle.device, dtype=axis_angle.dtype)  # noqa
         K_normalized = K / angle
         return I + sin_angle * K_normalized + (1 - cos_angle) * (K_normalized @ K_normalized)
 
     def _get_ellipsoid_rotation_matrix(self) -> torch.Tensor:
         """Get rotation matrix for ellipsoid (returns transpose for inverse)."""
-        if self.ellipsoid_rotation_repr == 'axis_angle':
+        if self.ellipsoid_rotation_repr == "axis_angle":
             return self._axis_angle_to_rotation_matrix(self.ellipsoid_rotation)
         else:
             return self._6d_to_rotation_matrix(self.ellipsoid_rotation_6d)
 
     def _get_box_rotation_matrix(self) -> torch.Tensor:
         """Get rotation matrix for box (returns transpose for inverse)."""
-        if self.box_rotation_repr == 'axis_angle':
+        if self.box_rotation_repr == "axis_angle":
             return self._axis_angle_to_rotation_matrix(self.box_rotation)
         else:
             return self._6d_to_rotation_matrix(self.box_rotation_6d)
@@ -1066,7 +1078,7 @@ class LearnableFilter(nn.Module):
             scale_threshold=values.max_scale,
             sphere_radius=values.sphere_radius,
             sphere_center=values.sphere_center,
-            learnable=learnable
+            learnable=learnable,
         )
         return cls(config)
 
@@ -1130,10 +1142,7 @@ class LearnableGSTensor:
 
     @classmethod
     def from_gstensor_pro(
-        cls,
-        gstensor,
-        requires_grad: bool = True,
-        device: str | None = None
+        cls, gstensor, requires_grad: bool = True, device: str | None = None
     ) -> LearnableGSTensor:
         """Create from GSTensorPro with gradient tracking.
 
@@ -1148,8 +1157,11 @@ class LearnableGSTensor:
             quats=gstensor.quats.clone().requires_grad_(requires_grad),
             opacities=gstensor.opacities.clone().requires_grad_(requires_grad),
             sh0=gstensor.sh0.clone().requires_grad_(requires_grad),
-            shN=(gstensor.shN.clone().requires_grad_(requires_grad)
-                 if gstensor.shN is not None else None),
+            shN=(
+                gstensor.shN.clone().requires_grad_(requires_grad)
+                if gstensor.shN is not None
+                else None
+            ),
         )
         if device is not None:
             result = result.to(device)
@@ -1157,10 +1169,7 @@ class LearnableGSTensor:
 
     @classmethod
     def from_ply(
-        cls,
-        path: str | Path,
-        device: str = 'cuda',
-        requires_grad: bool = True
+        cls, path: str | Path, device: str = "cuda", requires_grad: bool = True
     ) -> LearnableGSTensor:
         """Load from PLY file with gradient tracking.
 
@@ -1170,6 +1179,7 @@ class LearnableGSTensor:
         :return: LearnableGSTensor on device
         """
         from gsmod.torch import GSTensorPro
+
         gstensor = GSTensorPro.load(path, device=device)
         return cls.from_gstensor_pro(gstensor, requires_grad=requires_grad)
 
@@ -1189,10 +1199,7 @@ class LearnableGSTensor:
             shN=self.shN.detach() if self.shN is not None else None,
         )
 
-    def apply_color(
-        self,
-        color_module: LearnableColor
-    ) -> LearnableGSTensor:
+    def apply_color(self, color_module: LearnableColor) -> LearnableGSTensor:
         """Apply learnable color grading (creates new instance).
 
         :param color_module: LearnableColor module
@@ -1208,18 +1215,13 @@ class LearnableGSTensor:
             shN=self.shN,
         )
 
-    def apply_transform(
-        self,
-        transform_module: LearnableTransform
-    ) -> LearnableGSTensor:
+    def apply_transform(self, transform_module: LearnableTransform) -> LearnableGSTensor:
         """Apply learnable transform (creates new instance).
 
         :param transform_module: LearnableTransform module
         :return: New LearnableGSTensor with transformed geometry
         """
-        new_means, new_scales, new_quats = transform_module(
-            self.means, self.scales, self.quats
-        )
+        new_means, new_scales, new_quats = transform_module(self.means, self.scales, self.quats)
         return LearnableGSTensor(
             means=new_means,
             scales=new_scales,
@@ -1230,8 +1232,7 @@ class LearnableGSTensor:
         )
 
     def apply_soft_filter(
-        self,
-        filter_module: LearnableFilter
+        self, filter_module: LearnableFilter
     ) -> tuple[LearnableGSTensor, torch.Tensor]:
         """Apply soft filter, returning weights.
 

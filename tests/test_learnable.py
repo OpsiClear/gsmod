@@ -3,6 +3,7 @@
 import numpy as np
 import pytest
 import torch
+import torch.nn as nn
 
 from gsmod.torch.learn import (
     ColorGradingConfig,
@@ -15,13 +16,10 @@ from gsmod.torch.learn import (
 )
 
 # Skip all tests if CUDA not available
-pytestmark = pytest.mark.skipif(
-    not torch.cuda.is_available(),
-    reason="CUDA not available"
-)
+pytestmark = pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
 
 
-def create_test_tensors(n: int = 100, device: str = 'cuda'):
+def create_test_tensors(n: int = 100, device: str = "cuda"):
     """Create test tensors for learnable module testing."""
     means = torch.randn(n, 3, device=device, dtype=torch.float32)
     scales = torch.rand(n, 3, device=device, dtype=torch.float32) * 0.1
@@ -47,14 +45,11 @@ class TestColorGradingConfig:
 
     def test_partial_learnable(self):
         """Test configuring partial learnable parameters."""
-        config = ColorGradingConfig(
-            brightness=1.2,
-            learnable=['brightness', 'saturation']
-        )
+        config = ColorGradingConfig(brightness=1.2, learnable=["brightness", "saturation"])
         assert config.brightness == 1.2
         assert len(config.learnable) == 2
-        assert 'brightness' in config.learnable
-        assert 'saturation' in config.learnable
+        assert "brightness" in config.learnable
+        assert "saturation" in config.learnable
 
 
 class TestLearnableColor:
@@ -65,13 +60,13 @@ class TestLearnableColor:
         model = LearnableColor().cuda()
 
         # Check all parameters exist
-        assert hasattr(model, 'brightness')
-        assert hasattr(model, 'contrast')
-        assert hasattr(model, 'saturation')
+        assert hasattr(model, "brightness")
+        assert hasattr(model, "contrast")
+        assert hasattr(model, "saturation")
 
     def test_parameter_registration(self):
         """Test that learnable params are registered as nn.Parameter."""
-        config = ColorGradingConfig(learnable=['brightness', 'saturation'])
+        config = ColorGradingConfig(learnable=["brightness", "saturation"])
         model = LearnableColor(config).cuda()
 
         # Check parameter types
@@ -87,7 +82,7 @@ class TestLearnableColor:
     def test_forward_shape(self):
         """Test forward pass preserves shape."""
         model = LearnableColor().cuda()
-        sh0 = torch.rand(100, 3, device='cuda')
+        sh0 = torch.rand(100, 3, device="cuda")
 
         output = model(sh0)
 
@@ -96,9 +91,9 @@ class TestLearnableColor:
 
     def test_gradient_flow(self):
         """Test gradients flow through the model."""
-        config = ColorGradingConfig(learnable=['brightness', 'saturation'])
+        config = ColorGradingConfig(learnable=["brightness", "saturation"])
         model = LearnableColor(config).cuda()
-        sh0 = torch.rand(100, 3, device='cuda', requires_grad=True)
+        sh0 = torch.rand(100, 3, device="cuda", requires_grad=True)
 
         output = model(sh0)
         loss = output.sum()
@@ -115,7 +110,7 @@ class TestLearnableColor:
         # Set extreme brightness
         model.brightness.data = torch.tensor(5.0).cuda()
 
-        sh0 = torch.rand(100, 3, device='cuda')
+        sh0 = torch.rand(100, 3, device="cuda")
         output = model(sh0)
 
         assert output.min() >= 0.0
@@ -126,10 +121,7 @@ class TestLearnableColor:
         from gsmod.config.values import ColorValues
 
         values = ColorValues(brightness=1.5, saturation=1.3)
-        model = LearnableColor.from_values(
-            values,
-            learnable=['brightness']
-        ).cuda()
+        model = LearnableColor.from_values(values, learnable=["brightness"]).cuda()
 
         assert model.brightness.item() == pytest.approx(1.5)
         assert model.saturation.item() == pytest.approx(1.3)
@@ -155,16 +147,16 @@ class TestLearnableTransform:
         """Test module initialization."""
         model = LearnableTransform().cuda()
 
-        assert hasattr(model, 'translation')
-        assert hasattr(model, 'scale')
-        assert hasattr(model, 'rotation_6d')
+        assert hasattr(model, "translation")
+        assert hasattr(model, "scale")
+        assert hasattr(model, "rotation_6d")
 
     def test_rotation_input_output(self):
         """Test rotation axis-angle input and output."""
         # Create with axis-angle input
         config = TransformConfig(
             rotation=(0.0, 0.0, 0.785),  # ~45 degrees around Z
-            learnable=['rotation']
+            learnable=["rotation"],
         )
         model = LearnableTransform(config).cuda()
 
@@ -186,7 +178,7 @@ class TestLearnableTransform:
 
     def test_gradient_flow(self):
         """Test gradients flow through transform."""
-        config = TransformConfig(learnable=['translation', 'scale'])
+        config = TransformConfig(learnable=["translation", "scale"])
         model = LearnableTransform(config).cuda()
         means, scales, quats, _, _ = create_test_tensors(100)
 
@@ -199,19 +191,16 @@ class TestLearnableTransform:
 
     def test_translation(self):
         """Test translation is applied correctly."""
-        config = TransformConfig(
-            translation=(1.0, 2.0, 3.0),
-            learnable=[]
-        )
+        config = TransformConfig(translation=(1.0, 2.0, 3.0), learnable=[])
         model = LearnableTransform(config).cuda()
 
-        means = torch.zeros(10, 3, device='cuda')
-        scales = torch.ones(10, 3, device='cuda')
-        quats = torch.tensor([[1, 0, 0, 0]], device='cuda').expand(10, 4).float()
+        means = torch.zeros(10, 3, device="cuda")
+        scales = torch.ones(10, 3, device="cuda")
+        quats = torch.tensor([[1, 0, 0, 0]], device="cuda").expand(10, 4).float()
 
         new_means, _, _ = model(means, scales, quats)
 
-        expected = torch.tensor([[1.0, 2.0, 3.0]], device='cuda').expand(10, 3)
+        expected = torch.tensor([[1.0, 2.0, 3.0]], device="cuda").expand(10, 3)
         torch.testing.assert_close(new_means, expected)
 
     def test_scale(self):
@@ -219,9 +208,9 @@ class TestLearnableTransform:
         config = TransformConfig(scale=2.0, learnable=[])
         model = LearnableTransform(config).cuda()
 
-        means = torch.ones(10, 3, device='cuda')
-        scales = torch.ones(10, 3, device='cuda')
-        quats = torch.tensor([[1, 0, 0, 0]], device='cuda').expand(10, 4).float()
+        means = torch.ones(10, 3, device="cuda")
+        scales = torch.ones(10, 3, device="cuda")
+        quats = torch.tensor([[1, 0, 0, 0]], device="cuda").expand(10, 4).float()
 
         new_means, new_scales, _ = model(means, scales, quats)
 
@@ -236,8 +225,8 @@ class TestLearnableFilter:
         """Test module initialization."""
         model = LearnableFilter().cuda()
 
-        assert hasattr(model, 'opacity_threshold')
-        assert hasattr(model, 'sphere_radius')
+        assert hasattr(model, "opacity_threshold")
+        assert hasattr(model, "sphere_radius")
 
     def test_forward_shape(self):
         """Test forward returns correct shape."""
@@ -251,10 +240,7 @@ class TestLearnableFilter:
 
     def test_weights_range(self):
         """Test weights are in [0, 1]."""
-        config = LearnableFilterConfig(
-            opacity_threshold=0.5,
-            sphere_radius=2.0
-        )
+        config = LearnableFilterConfig(opacity_threshold=0.5, sphere_radius=2.0)
         model = LearnableFilter(config).cuda()
         means, scales, _, opacities, _ = create_test_tensors(100)
 
@@ -265,10 +251,7 @@ class TestLearnableFilter:
 
     def test_gradient_flow(self):
         """Test gradients flow through soft filter."""
-        config = LearnableFilterConfig(
-            opacity_threshold=0.3,
-            learnable=['opacity_threshold']
-        )
+        config = LearnableFilterConfig(opacity_threshold=0.3, learnable=["opacity_threshold"])
         model = LearnableFilter(config).cuda()
         means, scales, _, opacities, _ = create_test_tensors(100)
 
@@ -282,14 +265,16 @@ class TestLearnableFilter:
         """Test opacity threshold creates appropriate weights."""
         config = LearnableFilterConfig(
             opacity_threshold=0.5,
-            opacity_sharpness=100.0  # Very sharp threshold
+            opacity_sharpness=100.0,  # Very sharp threshold
         )
         model = LearnableFilter(config).cuda()
 
-        means = torch.zeros(10, 3, device='cuda')
-        scales = torch.ones(10, 3, device='cuda')
+        means = torch.zeros(10, 3, device="cuda")
+        scales = torch.ones(10, 3, device="cuda")
         # Low and high opacities
-        opacities = torch.tensor([0.1, 0.2, 0.3, 0.4, 0.45, 0.55, 0.6, 0.7, 0.8, 0.9], device='cuda')
+        opacities = torch.tensor(
+            [0.1, 0.2, 0.3, 0.4, 0.45, 0.55, 0.6, 0.7, 0.8, 0.9], device="cuda"
+        )
 
         weights = model(means, opacities, scales)
 
@@ -308,7 +293,7 @@ class TestLearnableGSTensor:
         data = LearnableGSTensor(means, scales, quats, opacities, sh0)
 
         assert len(data) == 100
-        assert data.device == torch.device('cuda:0')
+        assert data.device == torch.device("cuda:0")
 
     def test_from_gstensor_pro(self):
         """Test creation from GSTensorPro."""
@@ -327,7 +312,7 @@ class TestLearnableGSTensor:
             shN=None,
         )
 
-        gstensor = GSTensorPro.from_gsdata(gsdata, device='cuda')
+        gstensor = GSTensorPro.from_gsdata(gsdata, device="cuda")
         data = LearnableGSTensor.from_gstensor_pro(gstensor, requires_grad=True)
 
         assert len(data) == n
@@ -393,7 +378,7 @@ class TestLearnableGSTensor:
         sh0.requires_grad = True
         data = LearnableGSTensor(means, scales, quats, opacities, sh0)
 
-        config = ColorGradingConfig(learnable=['brightness'])
+        config = ColorGradingConfig(learnable=["brightness"])
         color_model = LearnableColor(config).cuda()
 
         result = data.apply_color(color_model)
@@ -429,12 +414,12 @@ class TestLearnableGSTensor:
 
     def test_to_device(self):
         """Test moving to different device."""
-        means, scales, quats, opacities, sh0 = create_test_tensors(100, device='cuda')
+        means, scales, quats, opacities, sh0 = create_test_tensors(100, device="cuda")
         data = LearnableGSTensor(means, scales, quats, opacities, sh0)
 
-        cpu_data = data.to('cpu')
+        cpu_data = data.to("cpu")
 
-        assert cpu_data.device == torch.device('cpu')
+        assert cpu_data.device == torch.device("cpu")
 
 
 class TestEndToEndTraining:
@@ -445,10 +430,10 @@ class TestEndToEndTraining:
         # Create data
         means, scales, quats, opacities, sh0 = create_test_tensors(100)
         data = LearnableGSTensor(means, scales, quats, opacities, sh0)
-        target = torch.rand(100, 3, device='cuda')
+        target = torch.rand(100, 3, device="cuda")
 
         # Create model
-        config = ColorGradingConfig(learnable=['brightness', 'contrast'])
+        config = ColorGradingConfig(learnable=["brightness", "contrast"])
         model = LearnableColor(config).cuda()
         optimizer = torch.optim.Adam(model.parameters(), lr=0.1)
 
@@ -475,21 +460,23 @@ class TestEndToEndTraining:
         # Create data
         means, scales, quats, opacities, sh0 = create_test_tensors(100)
         data = LearnableGSTensor(means, scales, quats, opacities, sh0)
-        target_sh0 = torch.rand(100, 3, device='cuda')
-        target_means = torch.randn(100, 3, device='cuda')
+        target_sh0 = torch.rand(100, 3, device="cuda")
+        target_means = torch.randn(100, 3, device="cuda")
 
         # Create models
-        color_config = ColorGradingConfig(learnable=['brightness'])
+        color_config = ColorGradingConfig(learnable=["brightness"])
         color_model = LearnableColor(color_config).cuda()
 
-        transform_config = TransformConfig(learnable=['translation'])
+        transform_config = TransformConfig(learnable=["translation"])
         transform_model = LearnableTransform(transform_config).cuda()
 
         # Combined optimizer
-        optimizer = torch.optim.Adam([
-            {'params': color_model.parameters(), 'lr': 0.1},
-            {'params': transform_model.parameters(), 'lr': 0.01},
-        ])
+        optimizer = torch.optim.Adam(
+            [
+                {"params": color_model.parameters(), "lr": 0.1},
+                {"params": transform_model.parameters(), "lr": 0.01},
+            ]
+        )
 
         # Training loop
         for i in range(5):
@@ -497,18 +484,20 @@ class TestEndToEndTraining:
 
             result = data.apply_transform(transform_model).apply_color(color_model)
 
-            loss = (
-                torch.nn.functional.mse_loss(result.sh0, target_sh0) +
-                torch.nn.functional.mse_loss(result.means, target_means)
-            )
+            loss = torch.nn.functional.mse_loss(
+                result.sh0, target_sh0
+            ) + torch.nn.functional.mse_loss(result.means, target_means)
 
             loss.backward()
             optimizer.step()
 
         # Both models should have gradients
-        assert color_model.brightness.grad is not None or color_model.brightness.grad is None  # May be zero'd
-        assert transform_model.translation.grad is not None or transform_model.translation.grad is None
+        assert (
+            color_model.brightness.grad is not None or color_model.brightness.grad is None
+        )  # May be zero'd
+        assert (
+            transform_model.translation.grad is not None or transform_model.translation.grad is None
+        )
 
 
 # Import nn for type checking
-import torch.nn as nn

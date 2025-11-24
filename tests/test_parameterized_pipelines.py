@@ -116,7 +116,6 @@ class TestTemplateValidation:
             )
 
 
-
 class TestColorTemplate:
     """Test Color.template() and parameterized pipelines."""
 
@@ -513,6 +512,6 @@ class TestIntegration:
         for name1 in presets:
             for name2 in presets:
                 if name1 != name2:
-                    assert not np.allclose(results[name1].sh0, results[name2].sh0), (
-                        f"{name1} and {name2} should be different"
-                    )
+                    assert not np.allclose(
+                        results[name1].sh0, results[name2].sh0
+                    ), f"{name1} and {name2} should be different"

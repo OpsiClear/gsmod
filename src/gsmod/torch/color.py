@@ -216,7 +216,9 @@ class ColorGPU:
         self._operations.append(("preset", (name, strength)))
         return self
 
-    def __call__(self, data: GSTensorPro, inplace: bool = True, restore_format: bool = False) -> GSTensorPro:
+    def __call__(
+        self, data: GSTensorPro, inplace: bool = True, restore_format: bool = False
+    ) -> GSTensorPro:
         """Apply color pipeline to GSTensorPro.
 
         Format Contract:
@@ -244,7 +246,7 @@ class ColorGPU:
         if not inplace:
             data = data.clone()
             # Deep copy _format since clone() may do shallow copy
-            if hasattr(data, '_format'):
+            if hasattr(data, "_format"):
                 data._format = data._format.copy()
 
         # Track original format for potential restoration (use gsply 0.2.8 property)
@@ -263,10 +265,20 @@ class ColorGPU:
 
         # Collect operations by type
         ops_by_type = {
-            "temperature": [], "tint": [], "brightness": [], "contrast": [], "gamma": [],
-            "saturation": [], "vibrance": [], "hue_shift": [],
-            "shadows": [], "highlights": [], "fade": [],
-            "shadow_tint": [], "highlight_tint": [], "preset": []
+            "temperature": [],
+            "tint": [],
+            "brightness": [],
+            "contrast": [],
+            "gamma": [],
+            "saturation": [],
+            "vibrance": [],
+            "hue_shift": [],
+            "shadows": [],
+            "highlights": [],
+            "fade": [],
+            "shadow_tint": [],
+            "highlight_tint": [],
+            "preset": [],
         }
         for op_name, op_value in self._operations:
             if op_name in ops_by_type:
@@ -313,8 +325,7 @@ class ColorGPU:
             data.to_sh(inplace=True)
 
         logger.debug(
-            "[ColorGPU] Applied %d operations to %d Gaussians",
-            len(self._operations), len(data)
+            "[ColorGPU] Applied %d operations to %d Gaussians", len(self._operations), len(data)
         )
 
         return data
@@ -342,8 +353,7 @@ class ColorGPU:
         """
         # Calculate luminance
         luminance = torch.sum(
-            data.sh0 * torch.tensor([0.299, 0.587, 0.114], device=data.device),
-            dim=-1, keepdim=True
+            data.sh0 * torch.tensor([0.299, 0.587, 0.114], device=data.device), dim=-1, keepdim=True
         )
 
         # Create shadow mask (inverse luminance)
@@ -362,8 +372,7 @@ class ColorGPU:
         """
         # Calculate luminance
         luminance = torch.sum(
-            data.sh0 * torch.tensor([0.299, 0.587, 0.114], device=data.device),
-            dim=-1, keepdim=True
+            data.sh0 * torch.tensor([0.299, 0.587, 0.114], device=data.device), dim=-1, keepdim=True
         )
 
         # Create highlight mask (luminance)
@@ -385,7 +394,7 @@ class ColorGPU:
         tint_offset_rb = value * 0.05
 
         data.sh0[..., 0] += tint_offset_rb  # R
-        data.sh0[..., 1] += tint_offset_g   # G
+        data.sh0[..., 1] += tint_offset_g  # G
         data.sh0[..., 2] += tint_offset_rb  # B
         data.sh0.clamp_(0, 1)
 
@@ -412,8 +421,7 @@ class ColorGPU:
 
         # Calculate luminance
         luminance = torch.sum(
-            data.sh0 * torch.tensor([0.299, 0.587, 0.114], device=data.device),
-            dim=-1, keepdim=True
+            data.sh0 * torch.tensor([0.299, 0.587, 0.114], device=data.device), dim=-1, keepdim=True
         )
 
         # Shadow mask: smooth falloff (1 - lum*2) clamped
@@ -421,6 +429,7 @@ class ColorGPU:
 
         # Convert hue to RGB offset
         import math
+
         hue_rad = hue * (math.pi / 180.0)
         tint_r = math.cos(hue_rad) * 0.5
         tint_g = math.cos(hue_rad - 2.0 * math.pi / 3.0) * 0.5
@@ -445,8 +454,7 @@ class ColorGPU:
 
         # Calculate luminance
         luminance = torch.sum(
-            data.sh0 * torch.tensor([0.299, 0.587, 0.114], device=data.device),
-            dim=-1, keepdim=True
+            data.sh0 * torch.tensor([0.299, 0.587, 0.114], device=data.device), dim=-1, keepdim=True
         )
 
         # Highlight mask: smooth falloff (lum*2 - 1) clamped
@@ -454,6 +462,7 @@ class ColorGPU:
 
         # Convert hue to RGB offset
         import math
+
         hue_rad = hue * (math.pi / 180.0)
         tint_r = math.cos(hue_rad) * 0.5
         tint_g = math.cos(hue_rad - 2.0 * math.pi / 3.0) * 0.5

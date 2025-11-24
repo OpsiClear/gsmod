@@ -384,6 +384,7 @@ class TestHistogramNumbaKernels:
 # GPU tests - only run if CUDA is available
 try:
     import torch
+
     CUDA_AVAILABLE = torch.cuda.is_available()
 except ImportError:
     CUDA_AVAILABLE = False

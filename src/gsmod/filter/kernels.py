@@ -146,9 +146,7 @@ def rotated_cuboid_filter_numba(
 
         # Check if inside box (abs local coords <= half extents)
         inside = (
-            abs(lx) <= half_extents[0]
-            and abs(ly) <= half_extents[1]
-            and abs(lz) <= half_extents[2]
+            abs(lx) <= half_extents[0] and abs(ly) <= half_extents[1] and abs(lz) <= half_extents[2]
         )
 
         out[i] = inside
@@ -376,9 +374,14 @@ def combined_filter_fused(
 
         # Box filter
         if passed and has_box:
-            if (positions[i, 0] < box_min[0] or positions[i, 0] > box_max[0] or
-                positions[i, 1] < box_min[1] or positions[i, 1] > box_max[1] or
-                positions[i, 2] < box_min[2] or positions[i, 2] > box_max[2]):
+            if (
+                positions[i, 0] < box_min[0]
+                or positions[i, 0] > box_max[0]
+                or positions[i, 1] < box_min[1]
+                or positions[i, 1] > box_max[1]
+                or positions[i, 2] < box_min[2]
+                or positions[i, 2] > box_max[2]
+            ):
                 passed = False
 
         # Ellipsoid filter
@@ -387,9 +390,21 @@ def combined_filter_fused(
             dy = positions[i, 1] - ellipsoid_center[1]
             dz = positions[i, 2] - ellipsoid_center[2]
             # Apply rotation to get local coordinates
-            lx = ellipsoid_rotation[0, 0] * dx + ellipsoid_rotation[0, 1] * dy + ellipsoid_rotation[0, 2] * dz
-            ly = ellipsoid_rotation[1, 0] * dx + ellipsoid_rotation[1, 1] * dy + ellipsoid_rotation[1, 2] * dz
-            lz = ellipsoid_rotation[2, 0] * dx + ellipsoid_rotation[2, 1] * dy + ellipsoid_rotation[2, 2] * dz
+            lx = (
+                ellipsoid_rotation[0, 0] * dx
+                + ellipsoid_rotation[0, 1] * dy
+                + ellipsoid_rotation[0, 2] * dz
+            )
+            ly = (
+                ellipsoid_rotation[1, 0] * dx
+                + ellipsoid_rotation[1, 1] * dy
+                + ellipsoid_rotation[1, 2] * dz
+            )
+            lz = (
+                ellipsoid_rotation[2, 0] * dx
+                + ellipsoid_rotation[2, 1] * dy
+                + ellipsoid_rotation[2, 2] * dz
+            )
             # Normalize by radii
             nx = lx / ellipsoid_radii[0]
             ny = ly / ellipsoid_radii[1]
@@ -404,9 +419,21 @@ def combined_filter_fused(
             dy = positions[i, 1] - frustum_pos[1]
             dz = positions[i, 2] - frustum_pos[2]
             # Apply rotation to get camera-local coordinates
-            lx = frustum_rotation[0, 0] * dx + frustum_rotation[0, 1] * dy + frustum_rotation[0, 2] * dz
-            ly = frustum_rotation[1, 0] * dx + frustum_rotation[1, 1] * dy + frustum_rotation[1, 2] * dz
-            lz = frustum_rotation[2, 0] * dx + frustum_rotation[2, 1] * dy + frustum_rotation[2, 2] * dz
+            lx = (
+                frustum_rotation[0, 0] * dx
+                + frustum_rotation[0, 1] * dy
+                + frustum_rotation[0, 2] * dz
+            )
+            ly = (
+                frustum_rotation[1, 0] * dx
+                + frustum_rotation[1, 1] * dy
+                + frustum_rotation[1, 2] * dz
+            )
+            lz = (
+                frustum_rotation[2, 0] * dx
+                + frustum_rotation[2, 1] * dy
+                + frustum_rotation[2, 2] * dz
+            )
             # Check depth (must be in front of camera and within near/far)
             if lz < -frustum_near and lz > -frustum_far:
                 abs_z = -lz

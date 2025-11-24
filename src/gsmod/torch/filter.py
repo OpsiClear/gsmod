@@ -35,7 +35,9 @@ class FilterGPU:
         """Initialize filter pipeline."""
         self._operations = []
 
-    def within_sphere(self, center: list[float] | np.ndarray | torch.Tensor = None, radius: float = 1.0) -> FilterGPU:
+    def within_sphere(
+        self, center: list[float] | np.ndarray | torch.Tensor = None, radius: float = 1.0
+    ) -> FilterGPU:
         """Add spherical region filter.
 
         :param center: Sphere center [x, y, z] (default: origin)
@@ -48,8 +50,11 @@ class FilterGPU:
         self._operations.append(("within_sphere", (center, radius)))
         return self
 
-    def within_box(self, min_bounds: list[float] | np.ndarray | torch.Tensor,
-                   max_bounds: list[float] | np.ndarray | torch.Tensor) -> FilterGPU:
+    def within_box(
+        self,
+        min_bounds: list[float] | np.ndarray | torch.Tensor,
+        max_bounds: list[float] | np.ndarray | torch.Tensor,
+    ) -> FilterGPU:
         """Add axis-aligned box filter.
 
         :param min_bounds: Minimum bounds [x, y, z]
@@ -110,7 +115,9 @@ class FilterGPU:
         self._operations.append(("max_scale", threshold))
         return self
 
-    def outside_sphere(self, center: list[float] | np.ndarray | torch.Tensor = None, radius: float = 1.0) -> FilterGPU:
+    def outside_sphere(
+        self, center: list[float] | np.ndarray | torch.Tensor = None, radius: float = 1.0
+    ) -> FilterGPU:
         """Add filter for points outside sphere.
 
         :param center: Sphere center [x, y, z] (default: origin)
@@ -123,8 +130,11 @@ class FilterGPU:
         self._operations.append(("outside_sphere", (center, radius)))
         return self
 
-    def outside_box(self, min_bounds: list[float] | np.ndarray | torch.Tensor,
-                    max_bounds: list[float] | np.ndarray | torch.Tensor) -> FilterGPU:
+    def outside_box(
+        self,
+        min_bounds: list[float] | np.ndarray | torch.Tensor,
+        max_bounds: list[float] | np.ndarray | torch.Tensor,
+    ) -> FilterGPU:
         """Add filter for points outside box.
 
         :param min_bounds: Minimum bounds [x, y, z]
@@ -299,7 +309,9 @@ class FilterGPU:
             min_scales = torch.min(data.scales, dim=1)[0]
             return min_scales >= threshold
 
-    def _filter_plane(self, data: GSTensorPro, distance: float, axis: str, plane_type: str) -> torch.Tensor:
+    def _filter_plane(
+        self, data: GSTensorPro, distance: float, axis: str, plane_type: str
+    ) -> torch.Tensor:
         """Filter by plane (near or far).
 
         :param data: GSTensorPro

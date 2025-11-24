@@ -1,9 +1,11 @@
 """Simple benchmark to test GPU vs CPU performance."""
 
 import time
+
 import numpy as np
 import torch
 from gsply import GSData
+
 from gsmod.torch import GSTensorPro
 
 
@@ -34,10 +36,10 @@ def benchmark_basic_operations():
 
     # Check GPU
     if torch.cuda.is_available():
-        device = 'cuda'
+        device = "cuda"
         print(f"GPU: {torch.cuda.get_device_name(0)}")
     else:
-        device = 'cpu'
+        device = "cpu"
         print("Running on CPU (no GPU available)")
 
     # Test different sizes
@@ -56,7 +58,7 @@ def benchmark_basic_operations():
         # Brightness adjustment
         start = time.perf_counter()
         gstensor.adjust_brightness(1.2, inplace=True)
-        if device == 'cuda':
+        if device == "cuda":
             torch.cuda.synchronize()
         brightness_time = time.perf_counter() - start
         print(f"  Brightness: {brightness_time*1000:.2f} ms")
@@ -64,7 +66,7 @@ def benchmark_basic_operations():
         # Translation
         start = time.perf_counter()
         gstensor.translate([1.0, 0.0, 0.5], inplace=True)
-        if device == 'cuda':
+        if device == "cuda":
             torch.cuda.synchronize()
         translate_time = time.perf_counter() - start
         print(f"  Translate: {translate_time*1000:.2f} ms")
@@ -73,7 +75,7 @@ def benchmark_basic_operations():
         start = time.perf_counter()
         mask = gstensor.filter_within_sphere(radius=2.0)
         filtered = gstensor[mask]
-        if device == 'cuda':
+        if device == "cuda":
             torch.cuda.synchronize()
         filter_time = time.perf_counter() - start
         print(f"  Filter: {filter_time*1000:.2f} ms (kept {len(filtered):,})")

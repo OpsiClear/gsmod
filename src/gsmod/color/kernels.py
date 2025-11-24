@@ -570,9 +570,32 @@ def warmup_color_kernels() -> None:
     # Warmup interleaved LUT kernel (with vibrance, hue_shift, fade, and split toning)
     lut_interleaved = np.stack([r_lut, g_lut, b_lut], axis=1)
     fused_color_pipeline_interleaved_lut_numba(
-        colors, lut_interleaved, 1.3, 1.1, 15.0, 0.1, -0.1, out_colors,
-        1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0,  # identity hue matrix
-        0.1, 0.3, 0.0, -0.3, 0.2, 0.0, 0.3, 0.3, 0.15  # fade, shadow tint, highlight tint
+        colors,
+        lut_interleaved,
+        1.3,
+        1.1,
+        15.0,
+        0.1,
+        -0.1,
+        out_colors,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,  # identity hue matrix
+        0.1,
+        0.3,
+        0.0,
+        -0.3,
+        0.2,
+        0.0,
+        0.3,
+        0.3,
+        0.15,  # fade, shadow tint, highlight tint
     )
 
     # Warmup LUT-only kernel (fast path for Phase 1 only)

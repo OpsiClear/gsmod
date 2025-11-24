@@ -48,4 +48,3 @@ Paste benchmark results here
 ## Additional Notes
 
 Add any other context about the pull request here.
-

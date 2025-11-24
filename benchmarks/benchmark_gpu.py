@@ -1,11 +1,13 @@
 """Benchmark GPU operations vs CPU operations in gsmod."""
 
 import time
+
 import numpy as np
 import torch
 from gsply import GSData
-from gsmod.torch import GSTensorPro, PipelineGPU, ColorGPU, TransformGPU, FilterGPU
-from gsmod import Pipeline, Color, Transform, Filter
+
+from gsmod import Color, Filter, Pipeline, Transform
+from gsmod.torch import ColorGPU, FilterGPU, GSTensorPro, PipelineGPU, TransformGPU
 
 
 def create_test_data(n_gaussians):
@@ -28,7 +30,7 @@ def create_test_data(n_gaussians):
     return data
 
 
-def benchmark_color_operations(data, device='cuda'):
+def benchmark_color_operations(data, device="cuda"):
     """Benchmark color operations on GPU vs CPU."""
     print(f"\n[COLOR OPERATIONS BENCHMARK - {len(data):,} Gaussians]")
     print("=" * 60)
@@ -39,42 +41,30 @@ def benchmark_color_operations(data, device='cuda'):
 
     # GPU color pipeline
     gpu_pipeline = (
-        ColorGPU()
-        .brightness(1.2)
-        .contrast(1.1)
-        .saturation(1.3)
-        .gamma(0.9)
-        .temperature(0.1)
+        ColorGPU().brightness(1.2).contrast(1.1).saturation(1.3).gamma(0.9).temperature(0.1)
     )
 
     # Warmup
     _ = gpu_pipeline(gstensor_gpu.clone(), inplace=True)
-    if device == 'cuda':
+    if device == "cuda":
         torch.cuda.synchronize()
 
     # Benchmark GPU
     start = time.perf_counter()
-    result_gpu = gpu_pipeline(gstensor_gpu.clone(), inplace=True)
-    if device == 'cuda':
+    gpu_pipeline(gstensor_gpu.clone(), inplace=True)
+    if device == "cuda":
         torch.cuda.synchronize()
     gpu_time = time.perf_counter() - start
 
     # CPU color pipeline
-    cpu_pipeline = (
-        Color()
-        .brightness(1.2)
-        .contrast(1.1)
-        .saturation(1.3)
-        .gamma(0.9)
-        .temperature(0.1)
-    )
+    cpu_pipeline = Color().brightness(1.2).contrast(1.1).saturation(1.3).gamma(0.9).temperature(0.1)
 
     # Warmup
     _ = cpu_pipeline(data_cpu.copy(), inplace=True)
 
     # Benchmark CPU
     start = time.perf_counter()
-    result_cpu = cpu_pipeline(data_cpu.copy(), inplace=True)
+    cpu_pipeline(data_cpu.copy(), inplace=True)
     cpu_time = time.perf_counter() - start
 
     # Results
@@ -85,7 +75,7 @@ def benchmark_color_operations(data, device='cuda'):
     return gpu_time, cpu_time
 
 
-def benchmark_transform_operations(data, device='cuda'):
+def benchmark_transform_operations(data, device="cuda"):
     """Benchmark transform operations on GPU vs CPU."""
     print(f"\n[TRANSFORM OPERATIONS BENCHMARK - {len(data):,} Gaussians]")
     print("=" * 60)
@@ -96,30 +86,24 @@ def benchmark_transform_operations(data, device='cuda'):
 
     # GPU transform pipeline
     gpu_pipeline = (
-        TransformGPU()
-        .translate([1.0, 0.0, 0.5])
-        .rotate_axis_angle([0, 1, 0], np.pi/4)
-        .scale(2.0)
+        TransformGPU().translate([1.0, 0.0, 0.5]).rotate_axis_angle([0, 1, 0], np.pi / 4).scale(2.0)
     )
 
     # Warmup
     _ = gpu_pipeline(gstensor_gpu.clone(), inplace=True)
-    if device == 'cuda':
+    if device == "cuda":
         torch.cuda.synchronize()
 
     # Benchmark GPU
     start = time.perf_counter()
-    result_gpu = gpu_pipeline(gstensor_gpu.clone(), inplace=True)
-    if device == 'cuda':
+    gpu_pipeline(gstensor_gpu.clone(), inplace=True)
+    if device == "cuda":
         torch.cuda.synchronize()
     gpu_time = time.perf_counter() - start
 
     # CPU transform pipeline
     cpu_pipeline = (
-        Transform()
-        .translate([1.0, 0.0, 0.5])
-        .rotate_axis_angle([0, 1, 0], np.pi/4)
-        .scale(2.0)
+        Transform().translate([1.0, 0.0, 0.5]).rotate_axis_angle([0, 1, 0], np.pi / 4).scale(2.0)
     )
 
     # Warmup
@@ -127,7 +111,7 @@ def benchmark_transform_operations(data, device='cuda'):
 
     # Benchmark CPU
     start = time.perf_counter()
-    result_cpu = cpu_pipeline(data_cpu.copy(), inplace=True)
+    cpu_pipeline(data_cpu.copy(), inplace=True)
     cpu_time = time.perf_counter() - start
 
     # Results
@@ -138,7 +122,7 @@ def benchmark_transform_operations(data, device='cuda'):
     return gpu_time, cpu_time
 
 
-def benchmark_filter_operations(data, device='cuda'):
+def benchmark_filter_operations(data, device="cuda"):
     """Benchmark filter operations on GPU vs CPU."""
     print(f"\n[FILTER OPERATIONS BENCHMARK - {len(data):,} Gaussians]")
     print("=" * 60)
@@ -148,33 +132,23 @@ def benchmark_filter_operations(data, device='cuda'):
     data_cpu = data.copy()
 
     # GPU filter pipeline
-    gpu_pipeline = (
-        FilterGPU()
-        .within_sphere(radius=2.0)
-        .min_opacity(0.1)
-        .max_scale(0.5)
-    )
+    gpu_pipeline = FilterGPU().within_sphere(radius=2.0).min_opacity(0.1).max_scale(0.5)
 
     # Warmup
     _ = gpu_pipeline.compute_mask(gstensor_gpu)
-    if device == 'cuda':
+    if device == "cuda":
         torch.cuda.synchronize()
 
     # Benchmark GPU
     start = time.perf_counter()
     mask_gpu = gpu_pipeline.compute_mask(gstensor_gpu)
     filtered_gpu = gstensor_gpu[mask_gpu]
-    if device == 'cuda':
+    if device == "cuda":
         torch.cuda.synchronize()
     gpu_time = time.perf_counter() - start
 
     # CPU filter pipeline
-    cpu_pipeline = (
-        Filter()
-        .within_sphere(radius=2.0)
-        .min_opacity(0.1)
-        .max_scale(0.5)
-    )
+    cpu_pipeline = Filter().within_sphere(radius=2.0).min_opacity(0.1).max_scale(0.5)
 
     # Warmup
     _ = cpu_pipeline(data_cpu.copy(), inplace=False)
@@ -193,7 +167,7 @@ def benchmark_filter_operations(data, device='cuda'):
     return gpu_time, cpu_time
 
 
-def benchmark_unified_pipeline(data, device='cuda'):
+def benchmark_unified_pipeline(data, device="cuda"):
     """Benchmark unified pipeline on GPU vs CPU."""
     print(f"\n[UNIFIED PIPELINE BENCHMARK - {len(data):,} Gaussians]")
     print("=" * 60)
@@ -208,7 +182,7 @@ def benchmark_unified_pipeline(data, device='cuda'):
         .within_sphere(radius=3.0)
         .min_opacity(0.05)
         .translate([1.0, 0.0, 0.0])
-        .rotate_axis_angle([0, 1, 0], np.pi/6)
+        .rotate_axis_angle([0, 1, 0], np.pi / 6)
         .brightness(1.15)
         .saturation(1.2)
         .contrast(1.1)
@@ -216,13 +190,13 @@ def benchmark_unified_pipeline(data, device='cuda'):
 
     # Warmup
     _ = gpu_pipeline(gstensor_gpu.clone(), inplace=False)
-    if device == 'cuda':
+    if device == "cuda":
         torch.cuda.synchronize()
 
     # Benchmark GPU
     start = time.perf_counter()
     result_gpu = gpu_pipeline(gstensor_gpu.clone(), inplace=False)
-    if device == 'cuda':
+    if device == "cuda":
         torch.cuda.synchronize()
     gpu_time = time.perf_counter() - start
 
@@ -232,7 +206,7 @@ def benchmark_unified_pipeline(data, device='cuda'):
         .within_sphere(radius=3.0)
         .min_opacity(0.05)
         .translate([1.0, 0.0, 0.0])
-        .rotate_axis_angle([0, 1, 0], np.pi/6)
+        .rotate_axis_angle([0, 1, 0], np.pi / 6)
         .brightness(1.15)
         .saturation(1.2)
         .contrast(1.1)
@@ -263,11 +237,11 @@ def main():
 
     # Check GPU availability
     if torch.cuda.is_available():
-        device = 'cuda'
+        device = "cuda"
         print(f"\nGPU: {torch.cuda.get_device_name(0)}")
         print(f"CUDA Version: {torch.version.cuda}")
     else:
-        device = 'cpu'
+        device = "cpu"
         print("\nWARNING: CUDA not available. Running on CPU.")
 
     print(f"PyTorch Version: {torch.__version__}")
@@ -294,10 +268,10 @@ def main():
         unified_gpu, unified_cpu = benchmark_unified_pipeline(data, device)
 
         results[n_gaussians] = {
-            'color': (color_gpu, color_cpu),
-            'transform': (transform_gpu, transform_cpu),
-            'filter': (filter_gpu, filter_cpu),
-            'unified': (unified_gpu, unified_cpu),
+            "color": (color_gpu, color_cpu),
+            "transform": (transform_gpu, transform_cpu),
+            "filter": (filter_gpu, filter_cpu),
+            "unified": (unified_gpu, unified_cpu),
         }
 
     # Summary
@@ -309,13 +283,15 @@ def main():
         print(f"\n{n_gaussians:,} Gaussians:")
         for op_type, (gpu_time, cpu_time) in results[n_gaussians].items():
             speedup = cpu_time / gpu_time
-            print(f"  {op_type.capitalize():12} - Speedup: {speedup:.1f}x "
-                  f"(GPU: {gpu_time*1000:.1f}ms, CPU: {cpu_time*1000:.1f}ms)")
+            print(
+                f"  {op_type.capitalize():12} - Speedup: {speedup:.1f}x "
+                f"(GPU: {gpu_time*1000:.1f}ms, CPU: {cpu_time*1000:.1f}ms)"
+            )
 
     # Average speedups
     print("\n" + "-" * 60)
     print("Average Speedups:")
-    for op_type in ['color', 'transform', 'filter', 'unified']:
+    for op_type in ["color", "transform", "filter", "unified"]:
         speedups = [results[n][op_type][1] / results[n][op_type][0] for n in sizes]
         avg_speedup = sum(speedups) / len(speedups)
         print(f"  {op_type.capitalize():12} - {avg_speedup:.1f}x")

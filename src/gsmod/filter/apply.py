@@ -11,9 +11,7 @@ from gsmod.config.values import FilterValues
 from gsmod.filter.kernels import (
     combined_filter_fused,
     compute_output_indices_and_count,
-    cuboid_filter_numba,
     filter_gaussians_fused_parallel,
-    sphere_filter_numba,
 )
 
 
@@ -36,11 +34,9 @@ def _axis_angle_to_rotation_matrix(axis_angle: tuple[float, float, float] | None
     axis = axis_angle / angle
 
     # Rodrigues' rotation formula
-    K = np.array([
-        [0, -axis[2], axis[1]],
-        [axis[2], 0, -axis[0]],
-        [-axis[1], axis[0], 0]
-    ], dtype=np.float32)
+    K = np.array(
+        [[0, -axis[2], axis[1]], [axis[2], 0, -axis[0]], [-axis[1], axis[0], 0]], dtype=np.float32
+    )
 
     # R = I + sin(angle) * K + (1 - cos(angle)) * K^2
     R = np.eye(3, dtype=np.float32) + np.sin(angle) * K + (1 - np.cos(angle)) * (K @ K)
@@ -65,14 +61,22 @@ def compute_filter_mask(data, values: FilterValues) -> np.ndarray:
     scales = np.ascontiguousarray(data.scales, dtype=np.float32)
 
     # Prepare sphere parameters
-    has_sphere = values.sphere_radius < float('inf')
-    sphere_center = np.array(values.sphere_center, dtype=np.float32) if has_sphere else np.zeros(3, dtype=np.float32)
-    sphere_radius_sq = values.sphere_radius ** 2 if has_sphere else 0.0
+    has_sphere = values.sphere_radius < float("inf")
+    sphere_center = (
+        np.array(values.sphere_center, dtype=np.float32)
+        if has_sphere
+        else np.zeros(3, dtype=np.float32)
+    )
+    sphere_radius_sq = values.sphere_radius**2 if has_sphere else 0.0
 
     # Prepare box parameters
     has_box = values.box_min is not None and values.box_max is not None
-    box_min = np.array(values.box_min, dtype=np.float32) if has_box else np.zeros(3, dtype=np.float32)
-    box_max = np.array(values.box_max, dtype=np.float32) if has_box else np.zeros(3, dtype=np.float32)
+    box_min = (
+        np.array(values.box_min, dtype=np.float32) if has_box else np.zeros(3, dtype=np.float32)
+    )
+    box_max = (
+        np.array(values.box_max, dtype=np.float32) if has_box else np.zeros(3, dtype=np.float32)
+    )
 
     # Prepare ellipsoid parameters
     has_ellipsoid = values.ellipsoid_radii is not None

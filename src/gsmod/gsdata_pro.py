@@ -88,8 +88,8 @@ class GSDataPro(GSData):
         mask = compute_filter_mask(self, values)
 
         # Apply mask using fused parallel scatter (single pass)
-        self.means, self.scales, self.quats, self.opacities, self.sh0, self.shN = (
-            apply_mask_fused(self, mask)
+        self.means, self.scales, self.quats, self.opacities, self.sh0, self.shN = apply_mask_fused(
+            self, mask
         )
 
         return self
@@ -209,9 +209,9 @@ class GSDataPro(GSData):
         pro.quats = data.quats
         pro.opacities = data.opacities
         pro.sh0 = data.sh0
-        pro.shN = getattr(data, 'shN', None)
+        pro.shN = getattr(data, "shN", None)
         # Copy format tracking if present
-        if hasattr(data, '_format'):
+        if hasattr(data, "_format"):
             pro._format = data._format.copy()
         return pro
 

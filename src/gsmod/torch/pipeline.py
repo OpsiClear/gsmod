@@ -5,10 +5,10 @@ from __future__ import annotations
 import numpy as np
 import torch
 
-from gsmod.torch.gstensor_pro import GSTensorPro
 from gsmod.torch.color import ColorGPU
-from gsmod.torch.transform import TransformGPU
 from gsmod.torch.filter import FilterGPU
+from gsmod.torch.gstensor_pro import GSTensorPro
+from gsmod.torch.transform import TransformGPU
 
 
 class PipelineGPU:
@@ -182,7 +182,9 @@ class PipelineGPU:
         self._operation_order.append("transform")
         return self
 
-    def rotate_euler(self, angles: list[float] | np.ndarray | torch.Tensor, order: str = "XYZ") -> PipelineGPU:
+    def rotate_euler(
+        self, angles: list[float] | np.ndarray | torch.Tensor, order: str = "XYZ"
+    ) -> PipelineGPU:
         """Add rotation by Euler angles.
 
         :param angles: Euler angles [x, y, z] in radians
@@ -193,7 +195,9 @@ class PipelineGPU:
         self._operation_order.append("transform")
         return self
 
-    def rotate_axis_angle(self, axis: list[float] | np.ndarray | torch.Tensor, angle: float) -> PipelineGPU:
+    def rotate_axis_angle(
+        self, axis: list[float] | np.ndarray | torch.Tensor, angle: float
+    ) -> PipelineGPU:
         """Add rotation around axis.
 
         :param axis: Rotation axis [x, y, z]
@@ -237,7 +241,9 @@ class PipelineGPU:
     # Filter Operations
     # ==========================================================================
 
-    def within_sphere(self, center: list[float] | np.ndarray | torch.Tensor = None, radius: float = 1.0) -> PipelineGPU:
+    def within_sphere(
+        self, center: list[float] | np.ndarray | torch.Tensor = None, radius: float = 1.0
+    ) -> PipelineGPU:
         """Add spherical region filter.
 
         :param center: Sphere center [x, y, z] (default: origin)
@@ -248,8 +254,11 @@ class PipelineGPU:
         self._operation_order.append("filter")
         return self
 
-    def within_box(self, min_bounds: list[float] | np.ndarray | torch.Tensor,
-                   max_bounds: list[float] | np.ndarray | torch.Tensor) -> PipelineGPU:
+    def within_box(
+        self,
+        min_bounds: list[float] | np.ndarray | torch.Tensor,
+        max_bounds: list[float] | np.ndarray | torch.Tensor,
+    ) -> PipelineGPU:
         """Add box filter.
 
         :param min_bounds: Minimum bounds [x, y, z]
@@ -304,7 +313,9 @@ class PipelineGPU:
     # Execution
     # ==========================================================================
 
-    def __call__(self, data: GSTensorPro, inplace: bool = True, filter_mode: str = "and") -> GSTensorPro:
+    def __call__(
+        self, data: GSTensorPro, inplace: bool = True, filter_mode: str = "and"
+    ) -> GSTensorPro:
         """Apply pipeline to GSTensorPro.
 
         :param data: GSTensorPro object to process
@@ -328,7 +339,7 @@ class PipelineGPU:
         if not inplace:
             data = data.clone()
             # Deep copy _format since clone() may do shallow copy
-            if hasattr(data, '_format'):
+            if hasattr(data, "_format"):
                 data._format = data._format.copy()
 
         # Get unique operation types in order

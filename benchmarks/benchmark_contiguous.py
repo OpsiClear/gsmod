@@ -9,7 +9,7 @@ Helps determine when make_contiguous() is beneficial.
 
 Usage:
     python benchmark_contiguous.py [ply_file_path]
-    
+
 If no PLY file is provided, uses synthetic data.
 """
 
@@ -17,8 +17,8 @@ import sys
 import time
 from pathlib import Path
 
-import numpy as np
 import gsply
+import numpy as np
 from gsply import GSData
 
 from gsmod import Color, Filter, Transform
@@ -139,11 +139,7 @@ def benchmark_color_pipeline(data: GSData, contiguous: bool) -> dict:
 def benchmark_transform_pipeline(data: GSData, contiguous: bool) -> dict:
     """Benchmark Transform pipeline performance."""
     pipeline = (
-        Transform()
-        .translate([1.0, 0.5, -0.5])
-        .rotate_euler([0.1, 0.2, 0.3])
-        .scale(1.1)
-        .compile()
+        Transform().translate([1.0, 0.5, -0.5]).rotate_euler([0.1, 0.2, 0.3]).scale(1.1).compile()
     )
 
     # Warmup
@@ -169,13 +165,7 @@ def benchmark_transform_pipeline(data: GSData, contiguous: bool) -> dict:
 
 def benchmark_filter_pipeline(data: GSData, contiguous: bool) -> dict:
     """Benchmark Filter pipeline performance."""
-    pipeline = (
-        Filter()
-        .within_sphere(radius=0.8)
-        .min_opacity(0.1)
-        .max_scale(2.5)
-        .compile()
-    )
+    pipeline = Filter().within_sphere(radius=0.8).min_opacity(0.1).max_scale(2.5).compile()
 
     # Warmup
     warmup_data = data.copy()
@@ -205,27 +195,27 @@ if use_real_data:
     print(f"\n{'=' * 80}")
     print(f"Loading real PLY data from: {ply_path}")
     print("=" * 80)
-    
+
     # Load real PLY data (non-contiguous by default)
     print("\nLoading PLY file...")
     real_data = gsply.plyread(ply_path)
     n = len(real_data)
     print(f"Loaded {n:,} Gaussians")
-    
+
     # Check contiguity status
     if hasattr(real_data, "is_contiguous"):
         is_contig = real_data.is_contiguous()
         print(f"  Contiguity status: {'contiguous' if is_contig else 'NON-contiguous'}")
-    
+
     # Use real data as non-contiguous
     non_contig_data = real_data
-    
+
     # Create contiguous version
     print("Creating contiguous version...")
     contig_data = real_data.copy()
     if hasattr(contig_data, "make_contiguous"):
         contig_data.make_contiguous(inplace=True)
-        print(f"  Contiguous version created")
+        print("  Contiguous version created")
 else:
     # Use synthetic data for different sizes
     N_GAUSSIANS = [10_000, 100_000, 1_000_000]
@@ -240,43 +230,47 @@ if use_real_data:
     print(f"\n{'=' * 80}")
     print(f"Testing with {n:,} Gaussians (real PLY data)")
     print("=" * 80)
-    
+
     # Check contiguity
     if hasattr(non_contig_data, "is_contiguous"):
         non_contig_status = "contiguous" if non_contig_data.is_contiguous() else "NON-contiguous"
         contig_status = "contiguous" if contig_data.is_contiguous() else "NON-contiguous"
-        print(f"\nData status:")
+        print("\nData status:")
         print(f"  Original (PLY): {non_contig_status}")
         print(f"  Contiguous copy: {contig_status}")
-    
+
     # Benchmark conversion overhead
     if hasattr(non_contig_data, "make_contiguous"):
         print("\n1. Conversion Overhead (make_contiguous):")
         conv_time = benchmark_conversion_overhead(non_contig_data)
         print(f"   Mean: {conv_time:.3f} ms")
         print(f"   Overhead: {conv_time:.3f} ms per conversion")
-    
+
     # Benchmark Color pipeline
     print("\n2. Color Pipeline Performance:")
     color_non_contig = benchmark_color_pipeline(non_contig_data, contiguous=False)
     color_contig = benchmark_color_pipeline(contig_data, contiguous=True)
-    
+
     print(f"   Non-contiguous: {color_non_contig['mean']:.3f} ± {color_non_contig['std']:.3f} ms")
     print(f"   Contiguous:     {color_contig['mean']:.3f} ± {color_contig['std']:.3f} ms")
-    speedup_color = color_non_contig["mean"] / color_contig["mean"] if color_contig["mean"] > 0 else 1.0
+    speedup_color = (
+        color_non_contig["mean"] / color_contig["mean"] if color_contig["mean"] > 0 else 1.0
+    )
     print(f"   Speedup: {speedup_color:.2f}x")
     if hasattr(non_contig_data, "make_contiguous"):
         if color_non_contig["mean"] > color_contig["mean"]:
             break_even = conv_time / (color_non_contig["mean"] - color_contig["mean"])
             if break_even > 0:
                 print(f"   Break-even: {break_even:.1f} operations (conversion pays off)")
-    
+
     # Benchmark Transform pipeline
     print("\n3. Transform Pipeline Performance:")
     transform_non_contig = benchmark_transform_pipeline(non_contig_data, contiguous=False)
     transform_contig = benchmark_transform_pipeline(contig_data, contiguous=True)
-    
-    print(f"   Non-contiguous: {transform_non_contig['mean']:.3f} ± {transform_non_contig['std']:.3f} ms")
+
+    print(
+        f"   Non-contiguous: {transform_non_contig['mean']:.3f} ± {transform_non_contig['std']:.3f} ms"
+    )
     print(f"   Contiguous:     {transform_contig['mean']:.3f} ± {transform_contig['std']:.3f} ms")
     speedup_transform = (
         transform_non_contig["mean"] / transform_contig["mean"]
@@ -289,22 +283,24 @@ if use_real_data:
             break_even = conv_time / (transform_non_contig["mean"] - transform_contig["mean"])
             if break_even > 0:
                 print(f"   Break-even: {break_even:.1f} operations (conversion pays off)")
-    
+
     # Benchmark Filter pipeline
     print("\n4. Filter Pipeline Performance:")
     filter_non_contig = benchmark_filter_pipeline(non_contig_data, contiguous=False)
     filter_contig = benchmark_filter_pipeline(contig_data, contiguous=True)
-    
+
     print(f"   Non-contiguous: {filter_non_contig['mean']:.3f} ± {filter_non_contig['std']:.3f} ms")
     print(f"   Contiguous:     {filter_contig['mean']:.3f} ± {filter_contig['std']:.3f} ms")
-    speedup_filter = filter_non_contig["mean"] / filter_contig["mean"] if filter_contig["mean"] > 0 else 1.0
+    speedup_filter = (
+        filter_non_contig["mean"] / filter_contig["mean"] if filter_contig["mean"] > 0 else 1.0
+    )
     print(f"   Speedup: {speedup_filter:.2f}x")
     if hasattr(non_contig_data, "make_contiguous"):
         if filter_non_contig["mean"] > filter_contig["mean"]:
             break_even = conv_time / (filter_non_contig["mean"] - filter_contig["mean"])
             if break_even > 0:
                 print(f"   Break-even: {break_even:.1f} operations (conversion pays off)")
-    
+
     # Summary
     print("\n" + "-" * 80)
     print("SUMMARY:")
@@ -337,7 +333,9 @@ else:
 
         # Check contiguity
         if hasattr(non_contig_data, "is_contiguous"):
-            non_contig_status = "contiguous" if non_contig_data.is_contiguous() else "NON-contiguous"
+            non_contig_status = (
+                "contiguous" if non_contig_data.is_contiguous() else "NON-contiguous"
+            )
             contig_status = "contiguous" if contig_data.is_contiguous() else "NON-contiguous"
             print(f"  Non-contiguous data: {non_contig_status}")
             print(f"  Contiguous data: {contig_status}")
@@ -354,9 +352,13 @@ else:
         color_non_contig = benchmark_color_pipeline(non_contig_data, contiguous=False)
         color_contig = benchmark_color_pipeline(contig_data, contiguous=True)
 
-        print(f"   Non-contiguous: {color_non_contig['mean']:.3f} ± {color_non_contig['std']:.3f} ms")
+        print(
+            f"   Non-contiguous: {color_non_contig['mean']:.3f} ± {color_non_contig['std']:.3f} ms"
+        )
         print(f"   Contiguous:     {color_contig['mean']:.3f} ± {color_contig['std']:.3f} ms")
-        speedup = color_non_contig["mean"] / color_contig["mean"] if color_contig["mean"] > 0 else 1.0
+        speedup = (
+            color_non_contig["mean"] / color_contig["mean"] if color_contig["mean"] > 0 else 1.0
+        )
         print(f"   Speedup: {speedup:.2f}x")
         if hasattr(non_contig_data, "make_contiguous"):
             if color_non_contig["mean"] > color_contig["mean"]:
@@ -369,8 +371,12 @@ else:
         transform_non_contig = benchmark_transform_pipeline(non_contig_data, contiguous=False)
         transform_contig = benchmark_transform_pipeline(contig_data, contiguous=True)
 
-        print(f"   Non-contiguous: {transform_non_contig['mean']:.3f} ± {transform_non_contig['std']:.3f} ms")
-        print(f"   Contiguous:     {transform_contig['mean']:.3f} ± {transform_contig['std']:.3f} ms")
+        print(
+            f"   Non-contiguous: {transform_non_contig['mean']:.3f} ± {transform_non_contig['std']:.3f} ms"
+        )
+        print(
+            f"   Contiguous:     {transform_contig['mean']:.3f} ± {transform_contig['std']:.3f} ms"
+        )
         speedup = (
             transform_non_contig["mean"] / transform_contig["mean"]
             if transform_contig["mean"] > 0
@@ -388,9 +394,13 @@ else:
         filter_non_contig = benchmark_filter_pipeline(non_contig_data, contiguous=False)
         filter_contig = benchmark_filter_pipeline(contig_data, contiguous=True)
 
-        print(f"   Non-contiguous: {filter_non_contig['mean']:.3f} ± {filter_non_contig['std']:.3f} ms")
+        print(
+            f"   Non-contiguous: {filter_non_contig['mean']:.3f} ± {filter_non_contig['std']:.3f} ms"
+        )
         print(f"   Contiguous:     {filter_contig['mean']:.3f} ± {filter_contig['std']:.3f} ms")
-        speedup = filter_non_contig["mean"] / filter_contig["mean"] if filter_contig["mean"] > 0 else 1.0
+        speedup = (
+            filter_non_contig["mean"] / filter_contig["mean"] if filter_contig["mean"] > 0 else 1.0
+        )
         print(f"   Speedup: {speedup:.2f}x")
         if hasattr(non_contig_data, "make_contiguous"):
             if filter_non_contig["mean"] > filter_contig["mean"]:
@@ -418,4 +428,3 @@ else:
 print("\n" + "=" * 80)
 print("Benchmark complete!")
 print("=" * 80)
-

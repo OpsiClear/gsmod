@@ -18,12 +18,12 @@ _test_data = GSData(
     sh0=np.zeros((1, 3), dtype=np.float32),
     shN=None,
 )
-_gsdata_has_concatenate = hasattr(GSData, 'concatenate')
-_gsdata_has_add = hasattr(_test_data, 'add')
+_gsdata_has_concatenate = hasattr(GSData, "concatenate")
+_gsdata_has_add = hasattr(_test_data, "add")
 
 skip_no_concat_support = pytest.mark.skipif(
     not _gsdata_has_concatenate or not _gsdata_has_add,
-    reason="gsply version does not support GSData.concatenate() or .add()"
+    reason="gsply version does not support GSData.concatenate() or .add()",
 )
 
 

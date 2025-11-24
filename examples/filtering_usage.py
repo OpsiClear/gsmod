@@ -15,10 +15,10 @@ import logging
 import numpy as np
 from gsply import GSData
 
-from gsmod import GSDataPro, FilterValues
+from gsmod import FilterValues, GSDataPro
 from gsmod.filter import (
-    SphereFilter,
     BoxFilter,
+    SphereFilter,
     calculate_recommended_max_scale,
     calculate_scene_bounds,
 )
@@ -118,7 +118,7 @@ def example_3_sphere_filtering():
             sphere_center=tuple(bounds.center),
             sphere_radius=sphere_radius,
         ),
-        inplace=False
+        inplace=False,
     )
 
     print(f"After sphere filter (radius={sphere_radius}): {len(result)} Gaussians")
@@ -137,7 +137,7 @@ def example_4_box_filtering():
     print(f"Original: {len(data)} Gaussians")
 
     # Calculate scene bounds for reference
-    bounds = calculate_scene_bounds(data.means)
+    calculate_scene_bounds(data.means)
 
     # Keep only Gaussians within a box from -2 to +2 in all dimensions
     box_min = (-2.0, -2.0, -2.0)
@@ -147,7 +147,7 @@ def example_4_box_filtering():
             box_min=box_min,
             box_max=box_max,
         ),
-        inplace=False
+        inplace=False,
     )
 
     print(f"After box filter ({box_min} to {box_max}): {len(result)} Gaussians")
@@ -174,10 +174,10 @@ def example_5_combined_filtering():
         FilterValues(
             sphere_center=tuple(bounds.center),
             sphere_radius=4.0,  # Absolute radius in world units
-            min_opacity=0.05,   # Remove < 5% opacity
+            min_opacity=0.05,  # Remove < 5% opacity
             max_scale=recommended_scale,  # Remove outliers
         ),
-        inplace=False
+        inplace=False,
     )
 
     print(f"After combined filtering: {len(result)} Gaussians")
@@ -209,6 +209,7 @@ def example_6_geometry_config():
 
     # Combine with quality filter
     from gsmod.filter import QualityFilter
+
     quality = QualityFilter(min_opacity=0.1, max_scale=3.0)
     combined_mask = apply_geometry_filter(positions, sphere_config, quality)
     print(f"Sphere + quality filter: {combined_mask.sum()} Gaussians")
@@ -234,10 +235,7 @@ def example_7_custom_percentiles():
 
     # Use more aggressive filtering (95th percentile)
     aggressive_threshold = calculate_recommended_max_scale(scales, percentile=95.0)
-    result = data.filter(
-        FilterValues(max_scale=aggressive_threshold),
-        inplace=False
-    )
+    result = data.filter(FilterValues(max_scale=aggressive_threshold), inplace=False)
 
     print("\nWith 95th percentile threshold:")
     print(f"  Kept: {len(result)} / {len(data)} Gaussians ({len(result) / len(data) * 100:.1f}%)")
@@ -255,8 +253,8 @@ def example_8_method_chaining():
     print(f"Original: {len(data)} Gaussians")
 
     # Chain multiple filter operations
-    result = (data
-        .filter(FilterValues(min_opacity=0.1), inplace=False)
+    result = (
+        data.filter(FilterValues(min_opacity=0.1), inplace=False)
         .filter(FilterValues(max_scale=3.0), inplace=False)
         .filter(FilterValues(sphere_radius=4.0), inplace=False)
     )

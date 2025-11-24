@@ -1,15 +1,15 @@
 """Tests for GPU-accelerated operations in gsmod.torch."""
 
-import numpy as np
 import pytest
-import torch
 
 # Skip all tests if PyTorch is not available
 pytest.importorskip("torch")
 
-from gsply import GSData
+import numpy as np  # noqa: E402
+import torch  # noqa: E402
+from gsply import GSData  # noqa: E402
 
-from gsmod.torch import ColorGPU, FilterGPU, GSTensorPro, PipelineGPU, TransformGPU
+from gsmod.torch import ColorGPU, FilterGPU, GSTensorPro, PipelineGPU, TransformGPU  # noqa: E402
 
 
 @pytest.fixture
@@ -163,7 +163,7 @@ class TestTransformOperations:
     def test_rotate_euler(self, sample_gstensor):
         """Test Euler angle rotation."""
         original_means = sample_gstensor.means.clone()
-        sample_gstensor.rotate_euler([0, np.pi/4, 0], order="XYZ", inplace=True)
+        sample_gstensor.rotate_euler([0, np.pi / 4, 0], order="XYZ", inplace=True)
 
         # Check that positions changed (except for points at origin)
         if torch.any(torch.norm(original_means, dim=1) > 1e-6):
@@ -228,12 +228,7 @@ class TestPipelines:
 
     def test_color_pipeline(self, sample_gstensor):
         """Test ColorGPU pipeline."""
-        pipeline = (
-            ColorGPU()
-            .brightness(1.2)
-            .contrast(1.1)
-            .saturation(1.3)
-        )
+        pipeline = ColorGPU().brightness(1.2).contrast(1.1).saturation(1.3)
 
         original = sample_gstensor.clone()
         result = pipeline(sample_gstensor, inplace=False)
@@ -245,12 +240,7 @@ class TestPipelines:
 
     def test_transform_pipeline(self, sample_gstensor):
         """Test TransformGPU pipeline."""
-        pipeline = (
-            TransformGPU()
-            .translate([1, 0, 0])
-            .scale(2.0)
-            .rotate_euler([0, np.pi/4, 0])
-        )
+        pipeline = TransformGPU().translate([1, 0, 0]).scale(2.0).rotate_euler([0, np.pi / 4, 0])
 
         original = sample_gstensor.clone()
         result = pipeline(sample_gstensor, inplace=False)
@@ -262,12 +252,7 @@ class TestPipelines:
 
     def test_filter_pipeline(self, sample_gstensor):
         """Test FilterGPU pipeline."""
-        pipeline = (
-            FilterGPU()
-            .within_sphere(radius=2.0)
-            .min_opacity(0.1)
-            .max_scale(0.5)
-        )
+        pipeline = FilterGPU().within_sphere(radius=2.0).min_opacity(0.1).max_scale(0.5)
 
         mask = pipeline.compute_mask(sample_gstensor)
         filtered = sample_gstensor[mask]
@@ -294,4 +279,3 @@ class TestPipelines:
         # Check transforms applied (if any points remain)
         if len(result) > 0:
             assert result.means.shape[1] == 3
-

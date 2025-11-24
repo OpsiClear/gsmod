@@ -37,29 +37,29 @@ Example:
     >>> result = pipeline(gstensor, inplace=True)
 """
 
-from gsmod.torch.gstensor_pro import GSTensorPro
 from gsmod.torch.color import ColorGPU
-from gsmod.torch.transform import TransformGPU
 from gsmod.torch.filter import FilterGPU
-from gsmod.torch.pipeline import PipelineGPU
+from gsmod.torch.gstensor_pro import GSTensorPro
 
 # Learnable modules for training pipelines
 from gsmod.torch.learn import (
-    # New names
-    LearnableColor,
-    LearnableTransform,
-    LearnableFilter,
-    LearnableGSTensor,
     # Configs (will be deprecated)
     ColorGradingConfig,
-    TransformConfig,
-    LearnableFilterConfig,
+    GSTensorProLearn,
+    # New names
+    LearnableColor,
     # Backwards compatibility aliases
     LearnableColorGrading,
+    LearnableFilter,
+    LearnableFilterConfig,
+    LearnableGSTensor,
+    LearnableTransform,
     SoftFilter,
-    GSTensorProLearn,
     SoftFilterConfig,
+    TransformConfig,
 )
+from gsmod.torch.pipeline import PipelineGPU
+from gsmod.torch.transform import TransformGPU
 
 __all__ = [
     # Inference (fast, in-place operations)
