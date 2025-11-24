@@ -378,7 +378,7 @@ def _apply_ellipsoid_filter(
     ellipsoid_filter_numba(positions, center, radii, rotation_matrix, mask)
 
     logger.debug(
-        f"Ellipsoid filter: kept {mask.sum()}/{len(mask)} " f"(center={center}, radii={radii})"
+        f"Ellipsoid filter: kept {mask.sum()}/{len(mask)} (center={center}, radii={radii})"
     )
 
     return mask

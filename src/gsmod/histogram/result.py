@@ -221,8 +221,7 @@ class HistogramResult:
 
         else:
             raise ValueError(
-                f"Unknown profile: {profile}. "
-                f"Available: neutral, vibrant, dramatic, bright, dark"
+                f"Unknown profile: {profile}. Available: neutral, vibrant, dramatic, bright, dark"
             )
 
     def learn_from(
