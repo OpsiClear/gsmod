@@ -1,6 +1,6 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "gsmod"
@@ -8,10 +8,9 @@ version = "0.1.0"
 description = "Ultra-fast CPU processing for 3D Gaussian Splatting (color, transform, filter)"
 readme = "README.md"
 requires-python = ">=3.12"
-license = { text = "MIT" }
+license = "MIT"
 authors = [
     { name = "OpsiClear" }
-
 ]
 keywords = [
     "gaussian-splatting",
@@ -24,7 +23,6 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -62,14 +60,13 @@ Repository = "https://github.com/OpsiClear/gsmod"
 Issues = "https://github.com/OpsiClear/gsmod/issues"
 Documentation = "https://github.com/OpsiClear/gsmod#readme"
 
-[tool.hatch.build]
-packages = ["src/gsmod"]
+[tool.setuptools]
+packages = ["gsmod", "gsmod.color", "gsmod.config", "gsmod.filter", "gsmod.histogram", "gsmod.torch", "gsmod.transform"]
+package-dir = {"" = "src"}
+zip-safe = true
 
-[tool.hatch.build.targets.wheel]
-# Include all subpackages (filter, color, etc.)
-
-[tool.hatch.metadata]
-allow-direct-references = true
+[tool.setuptools.package-data]
+gsmod = ["py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
