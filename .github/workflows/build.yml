@@ -59,10 +59,23 @@ jobs:
       with:
         python-version: '3.12'
 
+    - name: List downloaded artifacts
+      shell: bash
+      run: |
+        echo "Contents of dist directory:"
+        ls -la dist/
+
     - name: Install from wheel
       shell: bash
       run: |
-        pip install dist/*.whl
+        echo "=== Debugging Python/pip locations ==="
+        echo "pip location: $(which pip)"
+        echo "python location: $(which python)"
+        python -m pip install dist/*.whl
+        echo "=== Verifying installation ==="
+        python -m pip show gsmod
+        python -c "import sys; print('Python executable:', sys.executable)"
+        python -c "import site; print('Site packages:', site.getsitepackages())"
 
     - name: Test import
       run: |
