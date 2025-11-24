@@ -1,0 +1,103 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "gsmod"
+version = "0.1.0"
+description = "Ultra-fast CPU processing for 3D Gaussian Splatting (color, transform, filter)"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [
+    { name = "OpsiClear" }
+
+]
+keywords = [
+    "gaussian-splatting",
+    "3d-graphics",
+    "computer-vision",
+    "lut",
+    "color-grading"
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Image Processing",
+    "Topic :: Multimedia :: Graphics :: 3D Rendering",
+]
+
+dependencies = [
+    "numpy>=1.24.0",
+    "numba>=0.59.0",
+    "gsply>=0.2.8",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.1.0",
+    "pre-commit>=3.0.0",
+]
+docs = [
+    "sphinx>=7.2",
+    "myst-parser>=2.0",
+    "furo>=2024.0.0",
+    "sphinx-autodoc-typehints>=2.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/OpsiClear/gsmod"
+Repository = "https://github.com/OpsiClear/gsmod"
+Issues = "https://github.com/OpsiClear/gsmod/issues"
+Documentation = "https://github.com/OpsiClear/gsmod#readme"
+
+[tool.hatch.build]
+packages = ["src/gsmod"]
+
+[tool.hatch.build.targets.wheel]
+# Include all subpackages (filter, color, etc.)
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+    "--cov=gsmod",
+    "--cov-report=term-missing",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+ignore = [
+    "E501",  # Line too long
+    "N803",  # Allow uppercase argument names (R for rotation matrix)
+    "N806",  # Allow uppercase variable names (R for rotation matrix)
+    "N812",  # Allow lowercase imports as uppercase (e.g., 'import torch.nn.functional as F')
+]
+
+[tool.ruff.lint.per-file-ignores]
+"benchmarks/archive/*.py" = ["E402"]  # Allow mid-file imports in archived debug scripts
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"

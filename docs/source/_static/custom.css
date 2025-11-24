@@ -1,0 +1,46 @@
+/* Custom styling for gsmod documentation (Furo theme) */
+
+:root {
+  /* Make fonts slightly smaller and cleaner */
+  --font-size--small: 0.8125rem;  /* 13px */
+  --font-size--normal: 0.9375rem; /* 15px */
+
+  /* Adjust line heights for compactness */
+  --line-height--normal: 1.5;
+
+  /* Sidebar styling */
+  --sidebar-item-font-size: 0.9375rem;
+  --sidebar-caption-font-size: 0.8125rem;
+
+  /* Code block fonts */
+  --font-code: "Consolas", "Monaco", "Courier New", monospace;
+  --font-size--code: 0.875rem;
+}
+
+/* Improve table typography */
+table {
+  font-size: 0.9375rem;
+}
+
+/* Make API signatures distinct but cleaner */
+dl.class > dt,
+dl.function > dt,
+dl.method > dt,
+dl.attribute > dt {
+  font-family: var(--font-code);
+  background-color: var(--color-background-secondary);
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  border-left: 3px solid var(--color-brand-primary);
+}
+
+/* Compact parameter lists */
+.field-list dd {
+  margin-left: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Admonition refinement */
+.admonition {
+  font-size: 0.9375rem;
+}

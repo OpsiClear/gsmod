@@ -1,0 +1,13 @@
+# Code owners for gsmod
+# These owners will be requested for review when PRs are opened
+
+# Default owners for everything in the repo
+*       @OpsiClear
+
+# Specific owners for different areas
+/src/           @OpsiClear
+/tests/         @OpsiClear
+/benchmarks/    @OpsiClear
+*.md            @OpsiClear
+pyproject.toml  @OpsiClear
+
