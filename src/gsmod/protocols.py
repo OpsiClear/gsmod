@@ -33,7 +33,7 @@ class PipelineStage(Protocol[T]):
 
         :param data: GSData or GSTensor object to process
         :param inplace: If True, modify data in-place; if False, create copy
-        :return: Processed data object (same type as input)
+        :returns: Processed data object (same type as input)
         """
         ...
 

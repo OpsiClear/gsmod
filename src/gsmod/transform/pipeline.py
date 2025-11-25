@@ -104,7 +104,7 @@ class Transform:
         Add a translation to the pipeline.
 
         :param vector: Translation vector [3] or list/tuple
-        :return: Self for method chaining
+        :returns: Self for method chaining
         """
         if not isinstance(vector, np.ndarray | list | tuple):
             raise TypeError(f"vector must be array-like, got {type(vector)}")
@@ -119,7 +119,7 @@ class Transform:
 
         :param quaternion: Rotation quaternion [w, x, y, z] (4-element array)
         :param center: Optional center point for rotation
-        :return: Self for method chaining
+        :returns: Self for method chaining
 
         Example:
             >>> Transform().rotate_quat([1, 0, 0, 0])  # Identity rotation
@@ -138,7 +138,7 @@ class Transform:
 
         :param angles: Euler angles [roll, pitch, yaw] in radians (3-element array)
         :param center: Optional center point for rotation
-        :return: Self for method chaining
+        :returns: Self for method chaining
 
         Example:
             >>> Transform().rotate_euler([0, 0, np.pi/2])  # 90deg yaw rotation
@@ -160,7 +160,7 @@ class Transform:
         :param axis: Rotation axis (3-element array, will be normalized)
         :param angle: Rotation angle in radians
         :param center: Optional center point for rotation
-        :return: Self for method chaining
+        :returns: Self for method chaining
 
         Example:
             >>> Transform().rotate_axis_angle(axis=[0, 0, 1], angle=np.pi/2)  # 90deg around Z
@@ -185,7 +185,7 @@ class Transform:
 
         :param matrix: 3x3 rotation matrix
         :param center: Optional center point for rotation
-        :return: Self for method chaining
+        :returns: Self for method chaining
 
         Example:
             >>> R = np.eye(3)  # Identity rotation
@@ -205,7 +205,7 @@ class Transform:
 
         :param factor: Uniform scale (float) or per-axis scale [3]
         :param center: Optional center point for scaling
-        :return: Self for method chaining
+        :returns: Self for method chaining
         """
         params = {"scale_factor": factor}
         if center is not None:
@@ -220,7 +220,7 @@ class Transform:
         Set a center point for subsequent rotation/scaling operations.
 
         :param center: Center point [3]
-        :return: Self for method chaining
+        :returns: Self for method chaining
         """
         if not isinstance(center, np.ndarray | list | tuple):
             raise TypeError(f"center must be array-like, got {type(center)}")
@@ -236,7 +236,7 @@ class Transform:
         homogeneous transformation matrix and accumulates quaternions/scales
         for efficient single-pass application.
 
-        :return: Self for method chaining
+        :returns: Self for method chaining
         """
         if not self._is_dirty and self._compiled_matrix is not None:
             logger.debug("[Transform] Already compiled, skipping")
@@ -360,7 +360,7 @@ class Transform:
         :param scales: Optional sizes [N, 3] to scale
         :param inplace: If True, modifies input arrays directly
         :param make_contiguous: If True, ensures C-contiguous arrays for optimal performance
-        :return: Tuple of (transformed_means, transformed_quaternions, transformed_scales)
+        :returns: Tuple of (transformed_means, transformed_quaternions, transformed_scales)
         """
         # Auto-compile if needed
         if self._is_dirty or self._compiled_matrix is None:
@@ -430,7 +430,7 @@ class Transform:
         """
         Check if this pipeline applies no geometric transformations (identity operation).
 
-        :return: True if pipeline has no operations, False otherwise
+        :returns: True if pipeline has no operations, False otherwise
 
         Note:
             Identity pipelines have zero overhead with fast-path optimization
@@ -445,7 +445,7 @@ class Transform:
         :param data: GSData object containing Gaussian data
         :param inplace: If True, modifies input GSData directly
         :param make_contiguous: If True, ensures C-contiguous arrays for optimal Numba performance
-        :return: GSData with transformed positions, orientations, and scales
+        :returns: GSData with transformed positions, orientations, and scales
 
         Example:
             >>> import gsply
@@ -517,7 +517,7 @@ class Transform:
         :param data: GSData object containing Gaussian data
         :param inplace: If True, modifies input GSData directly
         :param make_contiguous: If True, ensures C-contiguous arrays for optimal Numba performance
-        :return: GSData with transformed geometry
+        :returns: GSData with transformed geometry
 
         Example:
             >>> data = Transform().rotate_quat(quat).translate([1, 0, 0])(data, inplace=True)
@@ -528,7 +528,7 @@ class Transform:
         """
         Reset the pipeline, clearing all transforms.
 
-        :return: Self for method chaining
+        :returns: Self for method chaining
         """
         self._transforms = []
         self._compiled_matrix = None
@@ -543,7 +543,7 @@ class Transform:
         """
         Create a deep copy of the pipeline.
 
-        :return: New Transform instance with copied state
+        :returns: New Transform instance with copied state
         """
         return deepcopy(self)
 
@@ -576,7 +576,7 @@ class Transform:
         """
         Get the compiled 4x4 transformation matrix.
 
-        :return: The compiled matrix if available, None otherwise
+        :returns: The compiled matrix if available, None otherwise
         """
         if self._is_dirty or self._compiled_matrix is None:
             self.compile()

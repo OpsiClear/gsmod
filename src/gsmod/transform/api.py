@@ -73,7 +73,7 @@ def _compose_transform_matrix_numpy(
     """
     Compose transformation matrix and auxiliary data.
 
-    :return: Tuple of (transform_matrix, rotation_quat, scale_vec)
+    :returns: Tuple of (transform_matrix, rotation_quat, scale_vec)
         - transform_matrix: 4x4 homogeneous transformation matrix
         - rotation_quat: Quaternion for orientation updates (or None)
         - scale_vec: Scale vector for size updates (or None)
@@ -171,7 +171,7 @@ def _apply_homogeneous_transform_numpy(
     :param points: Input points [N, 3]
     :param matrix: 4x4 transformation matrix
     :param out: Optional pre-allocated output buffer [N, 3]
-    :return: Transformed points (same as `out` if provided)
+    :returns: Transformed points (same as `out` if provided)
     """
     # Extract 3x3 combined rotation/scale matrix and translation vector
     R = matrix[:3, :3]  # Upper-left 3x3
@@ -322,7 +322,7 @@ def _quaternion_multiply_numpy(
     :param q1: First quaternion [N, 4] or [4] (w, x, y, z)
     :param q2: Second quaternion [N, 4] or [4] (w, x, y, z)
     :param out: Optional pre-allocated output buffer [N, 4]
-    :return: Product quaternion [N, 4] (same as `out` if provided)
+    :returns: Product quaternion [N, 4] (same as `out` if provided)
     """
     # Use Numba-optimized version (always available)
     # Ensure inputs are 2D
@@ -385,7 +385,7 @@ def quaternion_multiply(q1: np.ndarray, q2: np.ndarray) -> np.ndarray:
 
     :param q1: First quaternion(s) [4] or [N, 4]
     :param q2: Second quaternion(s) [4] or [N, 4]
-    :return: Product quaternion(s)
+    :returns: Product quaternion(s)
     """
     return _quaternion_multiply_numpy(q1, q2)
 

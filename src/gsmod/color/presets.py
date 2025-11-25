@@ -69,7 +69,7 @@ class ColorPreset:
 
         :param colors: RGB colors [N, 3] in range [0, 1]
         :param inplace: If True, modifies colors in-place
-        :return: Adjusted colors [N, 3]
+        :returns: Adjusted colors [N, 3]
         """
         return self._pipeline.apply(colors, inplace=inplace)
 
@@ -77,7 +77,7 @@ class ColorPreset:
         """
         Convert preset to Color pipeline for further composition.
 
-        :return: Color pipeline with this preset's adjustments
+        :returns: Color pipeline with this preset's adjustments
         """
         return (
             Color()

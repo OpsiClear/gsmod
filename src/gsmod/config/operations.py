@@ -36,10 +36,10 @@ class OperationSpec:
         """Validate and clamp value to allowed range.
 
         :param value: Value to validate
-        :return: Clamped value within [min_value, max_value]
+        :returns: Clamped value within [min_value, max_value]
         :raises ValueError: If value is not a number
         """
-        if not isinstance(value, (int, float)):
+        if not isinstance(value, int | float):
             raise ValueError(f"{self.name}: expected number, got {type(value).__name__}")
 
         # Clamp to range
@@ -50,7 +50,7 @@ class OperationSpec:
 
         :param value: Value to check
         :param tolerance: Tolerance for floating point comparison
-        :return: True if value is within tolerance of neutral
+        :returns: True if value is within tolerance of neutral
         """
         return abs(value - self.neutral) < tolerance
 
@@ -59,7 +59,7 @@ class OperationSpec:
 
         :param a: First value
         :param b: Second value
-        :return: Combined value
+        :returns: Combined value
         """
         if self.composition == "multiplicative":
             return a * b

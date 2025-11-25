@@ -42,7 +42,7 @@ class HistogramResult:
     def bin_centers(self) -> np.ndarray:
         """Get bin center values.
 
-        :return: Array of bin centers, shape [n_bins]
+        :returns: Array of bin centers, shape [n_bins]
         """
         return (self.bin_edges[:-1] + self.bin_edges[1:]) / 2
 
@@ -50,7 +50,7 @@ class HistogramResult:
     def n_bins(self) -> int:
         """Get number of bins.
 
-        :return: Number of histogram bins
+        :returns: Number of histogram bins
         """
         return len(self.bin_edges) - 1
 
@@ -58,7 +58,7 @@ class HistogramResult:
     def n_channels(self) -> int:
         """Get number of channels (1 for single property, 3 for RGB).
 
-        :return: Number of channels
+        :returns: Number of channels
         """
         if self.counts.ndim == 1:
             return 1
@@ -69,7 +69,7 @@ class HistogramResult:
 
         :param p: Percentile value (0-100)
         :param channel: Channel index for multi-channel histograms
-        :return: Value at percentile
+        :returns: Value at percentile
         """
         counts = self.counts if self.counts.ndim == 1 else self.counts[channel]
         cumsum = np.cumsum(counts)
@@ -86,7 +86,7 @@ class HistogramResult:
         """Get most frequent value (mode).
 
         :param channel: Channel index for multi-channel histograms
-        :return: Bin center of most frequent bin
+        :returns: Bin center of most frequent bin
         """
         counts = self.counts if self.counts.ndim == 1 else self.counts[channel]
         idx = np.argmax(counts)
@@ -96,7 +96,7 @@ class HistogramResult:
         """Compute entropy of distribution.
 
         :param channel: Channel index for multi-channel histograms
-        :return: Shannon entropy in bits
+        :returns: Shannon entropy in bits
         """
         counts = self.counts if self.counts.ndim == 1 else self.counts[channel]
         total = counts.sum()
@@ -113,7 +113,7 @@ class HistogramResult:
 
         :param percentile_low: Low percentile (default 1%)
         :param percentile_high: High percentile (default 99%)
-        :return: Dynamic range (high - low)
+        :returns: Dynamic range (high - low)
         """
         if self.n_channels == 1:
             low = self.percentile(percentile_low)
@@ -142,7 +142,7 @@ class HistogramResult:
         - "punchy": High contrast and saturation
 
         :param profile: Target histogram profile
-        :return: ColorValues to apply
+        :returns: ColorValues to apply
 
         Example:
             >>> result = data.histogram_colors()
@@ -297,7 +297,7 @@ class HistogramResult:
         :param n_epochs: Number of optimization epochs
         :param lr: Learning rate
         :param verbose: Print progress
-        :return: Learned ColorValues
+        :returns: Learned ColorValues
 
         Example:
             >>> # Get target histogram from reference
@@ -372,7 +372,7 @@ class HistogramResult:
 
         :param n_bins: Number of bins
         :param n_channels: Number of channels
-        :return: Empty HistogramResult
+        :returns: Empty HistogramResult
         """
         if n_channels == 1:
             counts = np.zeros(n_bins, dtype=np.int64)

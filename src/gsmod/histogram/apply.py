@@ -28,7 +28,7 @@ def compute_histogram_colors(
 
     :param sh0: Color values [N, 3] in [0, 1]
     :param config: Histogram configuration
-    :return: HistogramResult with counts and statistics
+    :returns: HistogramResult with counts and statistics
     """
     if config is None:
         config = HistogramConfig()
@@ -112,7 +112,7 @@ def compute_histogram_opacity(
 
     :param opacities: Opacity values [N] in [0, 1]
     :param config: Histogram configuration
-    :return: HistogramResult with counts and statistics
+    :returns: HistogramResult with counts and statistics
     """
     if config is None:
         config = HistogramConfig()
@@ -189,7 +189,7 @@ def compute_histogram_scales(
 
     :param scales: Scale values [N, 3]
     :param config: Histogram configuration
-    :return: HistogramResult with counts and statistics
+    :returns: HistogramResult with counts and statistics
     """
     if config is None:
         config = HistogramConfig()
@@ -266,7 +266,7 @@ def compute_histogram_positions(
     :param means: Position values [N, 3]
     :param config: Histogram configuration
     :param axis: Axis to histogram (0=X, 1=Y, 2=Z, None=distance from origin)
-    :return: HistogramResult with counts and statistics
+    :returns: HistogramResult with counts and statistics
     """
     if config is None:
         config = HistogramConfig()

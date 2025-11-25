@@ -38,7 +38,7 @@ class FormatVerifier:
         """Get the sh0 format of data.
 
         :param data: GSData or GSTensorPro object
-        :return: DataFormat enum value (SH0_SH or SH0_RGB)
+        :returns: DataFormat enum value (SH0_SH or SH0_RGB)
 
         Example:
             >>> format = FormatVerifier.get_format(data)
@@ -55,7 +55,7 @@ class FormatVerifier:
         """Check if data is in RGB format.
 
         :param data: GSData or GSTensorPro object
-        :return: True if in RGB format, False otherwise
+        :returns: True if in RGB format, False otherwise
         """
         # Use gsply 0.2.8 format query property
         return data.is_sh0_rgb
@@ -65,7 +65,7 @@ class FormatVerifier:
         """Check if data is in SH format.
 
         :param data: GSData or GSTensorPro object
-        :return: True if in SH format, False otherwise
+        :returns: True if in SH format, False otherwise
         """
         # Use gsply 0.2.8 format query property
         return data.is_sh0_sh
@@ -76,7 +76,7 @@ class FormatVerifier:
 
         :param data: GSData or GSTensorPro object
         :param inplace: If True, convert in-place
-        :return: Data in RGB format
+        :returns: Data in RGB format
 
         Example:
             >>> data = FormatVerifier.ensure_rgb(data, inplace=True)
@@ -92,7 +92,7 @@ class FormatVerifier:
 
         :param data: GSData or GSTensorPro object
         :param inplace: If True, convert in-place
-        :return: Data in SH format
+        :returns: Data in SH format
 
         Example:
             >>> data = FormatVerifier.ensure_sh(data, inplace=True)
@@ -213,7 +213,7 @@ class FormatVerifier:
         """Get a string summary of data format.
 
         :param data: GSData or GSTensorPro object
-        :return: Format summary string
+        :returns: Format summary string
 
         Example:
             >>> print(FormatVerifier.format_summary(data))

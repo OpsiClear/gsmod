@@ -52,7 +52,7 @@ def calculate_scene_bounds(data: GSData | np.ndarray) -> SceneBounds:
     Testing showed NumPy is competitive with custom Numba for this operation.
 
     :param data: GSData object or positions array [N, 3] in format [x, y, z]
-    :return: SceneBounds object containing min, max, sizes, max_size, center
+    :returns: SceneBounds object containing min, max, sizes, max_size, center
 
     Example:
         >>> # With GSData
@@ -97,7 +97,7 @@ def calculate_recommended_max_scale(data: GSData | np.ndarray, percentile: float
 
     :param data: GSData object or scales array [N, 3] in format [scale_x, scale_y, scale_z]
     :param percentile: Percentile to use (default: 99.5)
-    :return: Recommended max_scale threshold
+    :returns: Recommended max_scale threshold
 
     Example:
         >>> # With GSData

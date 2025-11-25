@@ -396,7 +396,7 @@ def get_color_preset(name: str) -> ColorValues:
     """Get color preset by name.
 
     :param name: Preset name (case-insensitive)
-    :return: ColorValues preset
+    :returns: ColorValues preset
     :raises KeyError: If preset not found
     """
     name_lower = name.lower()
@@ -410,7 +410,7 @@ def get_filter_preset(name: str) -> FilterValues:
     """Get filter preset by name.
 
     :param name: Preset name (case-insensitive)
-    :return: FilterValues preset
+    :returns: FilterValues preset
     :raises KeyError: If preset not found
     """
     name_lower = name.lower()
@@ -424,7 +424,7 @@ def get_transform_preset(name: str) -> TransformValues:
     """Get transform preset by name.
 
     :param name: Preset name (case-insensitive)
-    :return: TransformValues preset
+    :returns: TransformValues preset
     :raises KeyError: If preset not found
     """
     name_lower = name.lower()
@@ -438,7 +438,7 @@ def get_opacity_preset(name: str) -> OpacityValues:
     """Get opacity preset by name.
 
     :param name: Preset name (case-insensitive)
-    :return: OpacityValues preset
+    :returns: OpacityValues preset
     :raises KeyError: If preset not found
     """
     name_lower = name.lower()
@@ -457,7 +457,7 @@ def color_from_dict(d: dict) -> ColorValues:
     """Create ColorValues from dictionary.
 
     :param d: Dictionary with color parameters
-    :return: ColorValues instance
+    :returns: ColorValues instance
 
     Example:
         >>> d = {"brightness": 1.2, "temperature": 0.3}
@@ -482,7 +482,7 @@ def filter_from_dict(d: dict) -> FilterValues:
     """Create FilterValues from dictionary.
 
     :param d: Dictionary with filter parameters
-    :return: FilterValues instance
+    :returns: FilterValues instance
     """
     valid_fields = {
         "min_opacity",
@@ -551,7 +551,7 @@ def load_color_json(path: str | Path) -> ColorValues:
     """Load ColorValues from JSON file.
 
     :param path: Path to JSON file
-    :return: ColorValues instance
+    :returns: ColorValues instance
     """
     with open(path) as f:
         d = json.load(f)
@@ -562,7 +562,7 @@ def load_filter_json(path: str | Path) -> FilterValues:
     """Load FilterValues from JSON file.
 
     :param path: Path to JSON file
-    :return: FilterValues instance
+    :returns: FilterValues instance
     """
     with open(path) as f:
         d = json.load(f)
@@ -573,7 +573,7 @@ def load_transform_json(path: str | Path) -> TransformValues:
     """Load TransformValues from JSON file.
 
     :param path: Path to JSON file
-    :return: TransformValues instance
+    :returns: TransformValues instance
     """
     with open(path) as f:
         d = json.load(f)
@@ -589,7 +589,7 @@ def color_to_dict(values: ColorValues) -> dict:
     """Convert ColorValues to dictionary.
 
     :param values: ColorValues instance
-    :return: Dictionary representation
+    :returns: Dictionary representation
     """
     return {
         "brightness": values.brightness,
@@ -608,7 +608,7 @@ def filter_to_dict(values: FilterValues) -> dict:
     """Convert FilterValues to dictionary.
 
     :param values: FilterValues instance
-    :return: Dictionary representation
+    :returns: Dictionary representation
     """
     d = {
         "min_opacity": values.min_opacity,
@@ -628,7 +628,7 @@ def transform_to_dict(values: TransformValues) -> dict:
     """Convert TransformValues to dictionary.
 
     :param values: TransformValues instance
-    :return: Dictionary representation
+    :returns: Dictionary representation
     """
     return {
         "scale": values.scale,

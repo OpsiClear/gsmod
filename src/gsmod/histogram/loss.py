@@ -39,7 +39,7 @@ def soft_histogram(
     :param min_val: Minimum value for binning
     :param max_val: Maximum value for binning
     :param sigma: Gaussian kernel bandwidth (default: auto from bin width)
-    :return: Soft histogram [n_bins], normalized to sum to 1
+    :returns: Soft histogram [n_bins], normalized to sum to 1
 
     Example:
         >>> colors = torch.rand(1000, 3, requires_grad=True)
@@ -103,7 +103,7 @@ def soft_histogram_rgb(
     :param min_val: Minimum value
     :param max_val: Maximum value
     :param sigma: Gaussian kernel bandwidth
-    :return: Soft histograms [3, n_bins]
+    :returns: Soft histograms [3, n_bins]
     """
     hists = []
     for c in range(3):
@@ -164,7 +164,7 @@ class MomentMatchingLoss(nn.Module):
 
         :param source_colors: Source colors [N, 3]
         :param target_hist: Target HistogramResult
-        :return: Scalar loss
+        :returns: Scalar loss
         """
         device = source_colors.device
         dtype = source_colors.dtype

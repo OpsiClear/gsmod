@@ -45,7 +45,7 @@ class GSDataPro(GSData):
 
         :param values: Color parameters to apply
         :param inplace: If True, modify self; if False, return modified copy
-        :return: Self (modified) or copy with modifications
+        :returns: Self (modified) or copy with modifications
 
         Example:
             >>> data.color(ColorValues(brightness=1.2, temperature=0.3))
@@ -72,7 +72,7 @@ class GSDataPro(GSData):
 
         :param values: Filter parameters
         :param inplace: If True, modify self; if False, return filtered copy
-        :return: Self (filtered) or filtered copy
+        :returns: Self (filtered) or filtered copy
 
         Example:
             >>> data.filter(FilterValues(min_opacity=0.3, sphere_radius=5.0))
@@ -109,7 +109,7 @@ class GSDataPro(GSData):
 
         :param values: Transform parameters
         :param inplace: If True, modify self; if False, return transformed copy
-        :return: Self (transformed) or transformed copy
+        :returns: Self (transformed) or transformed copy
 
         Example:
             >>> data.transform(TransformValues.from_scale(2.0))
@@ -142,7 +142,7 @@ class GSDataPro(GSData):
 
         :param values: Opacity parameters to apply
         :param inplace: If True, modify self; if False, return modified copy
-        :return: Self (modified) or copy with modifications
+        :returns: Self (modified) or copy with modifications
 
         Example:
             >>> data.opacity(OpacityValues(scale=0.5))  # Fade to 50%
@@ -173,7 +173,7 @@ class GSDataPro(GSData):
         """Compute histogram of color values.
 
         :param config: Histogram configuration (default: 256 bins)
-        :return: HistogramResult with counts and statistics
+        :returns: HistogramResult with counts and statistics
 
         Example:
             >>> result = data.histogram_colors()
@@ -189,7 +189,7 @@ class GSDataPro(GSData):
         """Compute histogram of opacity values.
 
         :param config: Histogram configuration (default: 256 bins)
-        :return: HistogramResult with counts and statistics
+        :returns: HistogramResult with counts and statistics
 
         Example:
             >>> result = data.histogram_opacity()
@@ -205,7 +205,7 @@ class GSDataPro(GSData):
         Uses mean scale across all 3 dimensions for each Gaussian.
 
         :param config: Histogram configuration (default: 256 bins)
-        :return: HistogramResult with counts and statistics
+        :returns: HistogramResult with counts and statistics
 
         Example:
             >>> result = data.histogram_scales()
@@ -222,7 +222,7 @@ class GSDataPro(GSData):
 
         :param config: Histogram configuration (default: 256 bins)
         :param axis: Axis to histogram (0=X, 1=Y, 2=Z, None=distance from origin)
-        :return: HistogramResult with counts and statistics
+        :returns: HistogramResult with counts and statistics
 
         Example:
             >>> result = data.histogram_positions()  # Distance from origin
@@ -241,7 +241,7 @@ class GSDataPro(GSData):
         """Create from existing GSData.
 
         :param data: Source GSData object
-        :return: GSDataPro instance
+        :returns: GSDataPro instance
         """
         pro = cls.__new__(cls)
         # Copy all attributes
@@ -268,7 +268,7 @@ class GSDataPro(GSData):
         """Load from PLY file.
 
         :param path: Path to PLY file
-        :return: GSDataPro instance
+        :returns: GSDataPro instance
         """
         from gsply import plyread
 
@@ -282,7 +282,7 @@ class GSDataPro(GSData):
     def to_gsdata(self) -> GSData:
         """Convert to base GSData.
 
-        :return: GSData instance
+        :returns: GSData instance
         """
         data = GSData(
             means=self.means,
@@ -306,7 +306,7 @@ class GSDataPro(GSData):
         """Convert to GPU tensor.
 
         :param device: Target device (default 'cuda')
-        :return: GSTensorPro instance
+        :returns: GSTensorPro instance
         """
         from gsmod.torch.gstensor_pro import GSTensorPro
 
@@ -315,7 +315,7 @@ class GSDataPro(GSData):
     def clone(self) -> GSDataPro:
         """Create deep copy.
 
-        :return: New GSDataPro with copied arrays
+        :returns: New GSDataPro with copied arrays
         """
         pro = GSDataPro.__new__(GSDataPro)
         pro.means = self.means.copy()

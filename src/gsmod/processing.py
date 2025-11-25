@@ -72,7 +72,7 @@ class GaussianProcessor:
         :param data: GSData/GSDataPro (CPU) or GSTensor/GSTensorPro (GPU)
         :param values: Color parameters to apply
         :param inplace: If True, modify data in-place; if False, create copy
-        :return: Processed data (same type as input)
+        :returns: Processed data (same type as input)
 
         Example:
             >>> processor = GaussianProcessor()
@@ -154,7 +154,7 @@ class GaussianProcessor:
         :param data: GSData/GSDataPro (CPU) or GSTensor/GSTensorPro (GPU)
         :param values: Transform parameters to apply
         :param inplace: If True, modify data in-place; if False, create copy
-        :return: Processed data (same type as input)
+        :returns: Processed data (same type as input)
 
         Example:
             >>> processor = GaussianProcessor()
@@ -223,7 +223,7 @@ class GaussianProcessor:
         :param data: GSData/GSDataPro (CPU) or GSTensor/GSTensorPro (GPU)
         :param values: Filter parameters to apply
         :param inplace: If True, modify data in-place; if False, create copy
-        :return: Filtered data (same type as input)
+        :returns: Filtered data (same type as input)
 
         Example:
             >>> processor = GaussianProcessor()
@@ -292,7 +292,7 @@ class GaussianProcessor:
         :param data: GSData/GSDataPro (CPU) or GSTensor/GSTensorPro (GPU)
         :param values: Opacity parameters to apply
         :param inplace: If True, modify data in-place; if False, create copy
-        :return: Processed data (same type as input)
+        :returns: Processed data (same type as input)
 
         Example:
             >>> processor = GaussianProcessor()
@@ -385,7 +385,7 @@ class GaussianProcessor:
         :param filter_values: Optional filter parameters
         :param opacity_values: Optional opacity parameters
         :param inplace: If True, modify data in-place; if False, create copy
-        :return: Processed data (same type as input)
+        :returns: Processed data (same type as input)
 
         Example:
             >>> processor = GaussianProcessor()
@@ -423,7 +423,7 @@ _default_processor = None
 def get_processor() -> GaussianProcessor:
     """Get the default GaussianProcessor instance.
 
-    :return: Singleton GaussianProcessor instance
+    :returns: Singleton GaussianProcessor instance
 
     Example:
         >>> from gsmod.processing import get_processor

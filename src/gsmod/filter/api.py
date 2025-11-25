@@ -42,7 +42,7 @@ def apply_geometry_filter(
     :param positions: Gaussian positions [N, 3]
     :param geometry: Volume filter (SphereFilter, BoxFilter, EllipsoidFilter, FrustumFilter)
     :param quality: Optional quality filter (opacity/scale thresholds)
-    :return: Boolean mask [N] where True = keep Gaussian
+    :returns: Boolean mask [N] where True = keep Gaussian
 
     Example:
         >>> from gsmod.filter.config import SphereFilter, FrustumFilter, QualityFilter
@@ -168,7 +168,7 @@ def _apply_filter(
     :param frustum_far: Far clipping plane distance
     :param opacity_threshold: Minimum opacity to keep (0.0 to 1.0)
     :param max_scale: Maximum scale threshold
-    :return: Boolean mask [N] where True = keep Gaussian
+    :returns: Boolean mask [N] where True = keep Gaussian
 
     Example:
         >>> # Sphere filtering with absolute radius
@@ -306,7 +306,7 @@ def _apply_sphere_filter(
     :param positions: Gaussian positions [N, 3]
     :param sphere_center: Center point
     :param sphere_radius: Absolute radius in world units
-    :return: Boolean mask [N] where True = inside sphere
+    :returns: Boolean mask [N] where True = inside sphere
     """
     radius_sq = sphere_radius**2
     center = np.array(sphere_center, dtype=np.float32)
@@ -329,7 +329,7 @@ def _axis_angle_to_rotation_matrix(
     Convert axis-angle rotation to 3x3 rotation matrix.
 
     :param axis_angle: Rotation vector [3] where magnitude is angle in radians
-    :return: Rotation matrix [3, 3]
+    :returns: Rotation matrix [3, 3]
     """
     axis_angle = np.asarray(axis_angle, dtype=np.float32)
     angle = np.linalg.norm(axis_angle)
@@ -364,7 +364,7 @@ def _apply_ellipsoid_filter(
     :param ellipsoid_center: Center point [x, y, z]
     :param ellipsoid_radii: Radii in each axis [rx, ry, rz]
     :param ellipsoid_rotation: Rotation in axis-angle format (radians) or None
-    :return: Boolean mask [N] where True = inside ellipsoid
+    :returns: Boolean mask [N] where True = inside ellipsoid
     """
     center = np.array(ellipsoid_center, dtype=np.float32)
     radii = np.array(ellipsoid_radii, dtype=np.float32)
@@ -397,7 +397,7 @@ def _apply_rotated_cuboid_filter(
     :param cuboid_center: Center point [x, y, z]
     :param cuboid_size: Full size in each dimension [width, height, depth]
     :param cuboid_rotation: Rotation in axis-angle format (radians) or None
-    :return: Boolean mask [N] where True = inside cuboid
+    :returns: Boolean mask [N] where True = inside cuboid
     """
     center = np.array(cuboid_center, dtype=np.float32)
     half_extents = np.array(cuboid_size, dtype=np.float32) * 0.5
@@ -437,7 +437,7 @@ def _apply_frustum_filter(
     :param frustum_aspect: Aspect ratio width/height
     :param frustum_near: Near clipping plane distance
     :param frustum_far: Far clipping plane distance
-    :return: Boolean mask [N] where True = inside frustum
+    :returns: Boolean mask [N] where True = inside frustum
     """
     camera_pos = np.array(frustum_position, dtype=np.float32)
 

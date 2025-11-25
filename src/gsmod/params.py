@@ -55,7 +55,7 @@ class Param:
         Validate a parameter value against its range.
 
         :param value: Value to validate
-        :return: Validated value as float
+        :returns: Validated value as float
         :raises ValueError: If value is outside defined range
 
         Example:

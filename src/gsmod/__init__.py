@@ -49,7 +49,7 @@ Example - Parameterized Templates:
     >>> result = template(data, params={"b": 1.5, "c": 1.2})
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.2"
 
 # Import GSData from gsply
 from gsply import GSData

@@ -54,103 +54,6 @@ class ColorValues:
     # Additive with wrap (neutral=0.0)
     hue_shift: float = 0.0
 
-    # Common aliases for color grading compatibility
-    #
-    # Broadcast/video terminology:
-    #   black_level -> brightness (overall luminance baseline)
-    #   white_level -> contrast (dynamic range/peak)
-    #
-    # DaVinci Resolve lift/gamma/gain:
-    #   lift -> shadows
-    #   midtones -> gamma
-    #   gain -> highlights
-    #
-    # Lightroom/photography:
-    #   exposure -> brightness
-    #   blacks -> shadows
-    #   whites -> highlights
-
-    @property
-    def black_level(self) -> float:
-        """Alias for brightness (broadcast terminology - luminance baseline)."""
-        return self.brightness
-
-    @black_level.setter
-    def black_level(self, value: float) -> None:
-        object.__setattr__(self, "brightness", value)
-
-    @property
-    def white_level(self) -> float:
-        """Alias for contrast (broadcast terminology - dynamic range)."""
-        return self.contrast
-
-    @white_level.setter
-    def white_level(self, value: float) -> None:
-        object.__setattr__(self, "contrast", value)
-
-    @property
-    def lift(self) -> float:
-        """Alias for shadows (DaVinci Resolve terminology)."""
-        return self.shadows
-
-    @lift.setter
-    def lift(self, value: float) -> None:
-        object.__setattr__(self, "shadows", value)
-
-    @property
-    def gain(self) -> float:
-        """Alias for highlights (DaVinci Resolve terminology)."""
-        return self.highlights
-
-    @gain.setter
-    def gain(self, value: float) -> None:
-        object.__setattr__(self, "highlights", value)
-
-    @property
-    def exposure(self) -> float:
-        """Alias for brightness (photography terminology)."""
-        return self.brightness
-
-    @exposure.setter
-    def exposure(self, value: float) -> None:
-        object.__setattr__(self, "brightness", value)
-
-    @property
-    def midtones(self) -> float:
-        """Alias for gamma (DaVinci Resolve lift/gamma/gain)."""
-        return self.gamma
-
-    @midtones.setter
-    def midtones(self, value: float) -> None:
-        object.__setattr__(self, "gamma", value)
-
-    @property
-    def vibrancy(self) -> float:
-        """Alias for vibrance (common spelling variant)."""
-        return self.vibrance
-
-    @vibrancy.setter
-    def vibrancy(self, value: float) -> None:
-        object.__setattr__(self, "vibrance", value)
-
-    @property
-    def blacks(self) -> float:
-        """Alias for shadows (Lightroom terminology)."""
-        return self.shadows
-
-    @blacks.setter
-    def blacks(self, value: float) -> None:
-        object.__setattr__(self, "shadows", value)
-
-    @property
-    def whites(self) -> float:
-        """Alias for highlights (Lightroom terminology)."""
-        return self.highlights
-
-    @whites.setter
-    def whites(self, value: float) -> None:
-        object.__setattr__(self, "highlights", value)
-
     def __add__(self, other: ColorValues) -> ColorValues:
         """Merge using composition rules."""
         if not isinstance(other, ColorValues):
@@ -188,7 +91,7 @@ class ColorValues:
     def clamp(self) -> ColorValues:
         """Clamp all values to valid ranges.
 
-        :return: New ColorValues with clamped values
+        :returns: New ColorValues with clamped values
         """
         return ColorValues(
             brightness=max(0.0, min(5.0, self.brightness)),
@@ -211,7 +114,7 @@ class ColorValues:
     def is_neutral(self) -> bool:
         """Check if all values are neutral (no-op).
 
-        :return: True if applying these values would have no effect
+        :returns: True if applying these values would have no effect
         """
         return (
             self.brightness == 1.0
@@ -259,7 +162,7 @@ class ColorValues:
         - 11000K = -1.0 (very cool/blue)
 
         :param kelvin: Color temperature in Kelvin (2000-11000)
-        :return: ColorValues with temperature set
+        :returns: ColorValues with temperature set
         """
         # Linear mapping: 6500K = 0, range is 4500K per unit
         temp = (6500.0 - kelvin) / 4500.0
@@ -271,7 +174,7 @@ class ColorValues:
         """Create ColorValues with hue shift from radians.
 
         :param radians: Hue shift in radians
-        :return: ColorValues with hue_shift set (converted to degrees)
+        :returns: ColorValues with hue_shift set (converted to degrees)
         """
         degrees = np.degrees(radians)
         # Wrap to [-180, 180]
@@ -281,14 +184,14 @@ class ColorValues:
     def to_k(self) -> float:
         """Convert current temperature to Kelvin.
 
-        :return: Color temperature in Kelvin
+        :returns: Color temperature in Kelvin
         """
         return 6500.0 - self.temperature * 4500.0
 
     def to_rad(self) -> float:
         """Convert current hue_shift to radians.
 
-        :return: Hue shift in radians
+        :returns: Hue shift in radians
         """
         return np.radians(self.hue_shift)
 
@@ -504,7 +407,7 @@ class FilterValues:
     def clamp(self) -> FilterValues:
         """Clamp to valid ranges.
 
-        :return: New FilterValues with clamped values
+        :returns: New FilterValues with clamped values
         """
         return FilterValues(
             min_opacity=max(0.0, min(1.0, self.min_opacity)),
@@ -531,7 +434,7 @@ class FilterValues:
     def is_neutral(self) -> bool:
         """Check if no filtering applied.
 
-        :return: True if these values would not filter anything
+        :returns: True if these values would not filter anything
         """
         return (
             self.min_opacity == 0.0
@@ -580,7 +483,7 @@ class TransformValues:
     def to_matrix(self) -> np.ndarray:
         """Convert to 4x4 homogeneous transformation matrix.
 
-        :return: 4x4 numpy array
+        :returns: 4x4 numpy array
         """
         from gsmod.transform.api import quaternion_to_rotation_matrix
 
@@ -598,7 +501,7 @@ class TransformValues:
         """Extract parameters from 4x4 matrix.
 
         :param M: 4x4 homogeneous transformation matrix
-        :return: TransformValues instance
+        :returns: TransformValues instance
         """
         from gsmod.transform.api import rotation_matrix_to_quaternion
 
@@ -618,7 +521,7 @@ class TransformValues:
         """Compose transforms: self applied FIRST, then other.
 
         :param other: Transform to apply after self
-        :return: Composed transform
+        :returns: Composed transform
         """
         if not isinstance(other, TransformValues):
             return NotImplemented
@@ -635,7 +538,7 @@ class TransformValues:
     def is_neutral(self) -> bool:
         """Check if identity transform.
 
-        :return: True if this is the identity transform
+        :returns: True if this is the identity transform
         """
         import numpy as np
 
@@ -672,7 +575,7 @@ class TransformValues:
         """Create uniform scale transform.
 
         :param factor: Scale factor
-        :return: TransformValues with only scale set
+        :returns: TransformValues with only scale set
         """
         return cls(scale=factor)
 
@@ -683,7 +586,7 @@ class TransformValues:
         :param x: X translation
         :param y: Y translation
         :param z: Z translation
-        :return: TransformValues with only translation set
+        :returns: TransformValues with only translation set
         """
         return cls(translation=(x, y, z))
 
@@ -694,7 +597,7 @@ class TransformValues:
         :param rx: X rotation in degrees
         :param ry: Y rotation in degrees
         :param rz: Z rotation in degrees
-        :return: TransformValues with only rotation set
+        :returns: TransformValues with only rotation set
         """
         from gsmod.transform.api import euler_to_quaternion
 
@@ -711,7 +614,7 @@ class TransformValues:
 
         :param axis: Rotation axis [x, y, z]
         :param angle: Rotation angle in degrees
-        :return: TransformValues with only rotation set
+        :returns: TransformValues with only rotation set
         """
         from gsmod.transform.api import axis_angle_to_quaternion
 
@@ -736,7 +639,7 @@ class TransformValues:
         :param rx: X rotation in radians
         :param ry: Y rotation in radians
         :param rz: Z rotation in radians
-        :return: TransformValues with only rotation set
+        :returns: TransformValues with only rotation set
         """
         from gsmod.transform.api import euler_to_quaternion
 
@@ -750,7 +653,7 @@ class TransformValues:
 
         :param axis: Rotation axis [x, y, z]
         :param angle: Rotation angle in radians
-        :return: TransformValues with only rotation set
+        :returns: TransformValues with only rotation set
         """
         from gsmod.transform.api import axis_angle_to_quaternion
 
@@ -828,7 +731,7 @@ class HistogramConfig:
     def is_neutral(self) -> bool:
         """Check if default configuration.
 
-        :return: True if this is the default configuration
+        :returns: True if this is the default configuration
         """
         return (
             self.n_bins == 256
@@ -874,14 +777,14 @@ class OpacityValues:
     def is_neutral(self) -> bool:
         """Check if this is a no-op (scale=1.0).
 
-        :return: True if scale is 1.0
+        :returns: True if scale is 1.0
         """
         return self.scale == 1.0
 
     def clamp(self) -> OpacityValues:
         """Return clamped copy with scale in valid range.
 
-        :return: OpacityValues with scale clamped to [0.0, 10.0]
+        :returns: OpacityValues with scale clamped to [0.0, 10.0]
         """
         return OpacityValues(scale=max(0.0, min(10.0, self.scale)))
 
@@ -890,7 +793,7 @@ class OpacityValues:
         """Create fade effect (reduce opacity).
 
         :param amount: Fade amount (0.0 = invisible, 1.0 = no change)
-        :return: OpacityValues with scale set to amount
+        :returns: OpacityValues with scale set to amount
         """
         return cls(scale=max(0.0, min(1.0, amount)))
 
@@ -899,6 +802,6 @@ class OpacityValues:
         """Create boost effect (increase opacity).
 
         :param amount: Boost factor (1.0 = no change, >1.0 = more opaque)
-        :return: OpacityValues with scale set to amount
+        :returns: OpacityValues with scale set to amount
         """
         return cls(scale=max(1.0, amount))

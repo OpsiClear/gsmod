@@ -128,7 +128,7 @@ def compute_stats_numba(
     Uses Welford's online algorithm for numerical stability.
 
     :param data: Input data [N]
-    :return: Tuple of (mean, std, min_val, max_val)
+    :returns: Tuple of (mean, std, min_val, max_val)
     """
     N = data.shape[0]
     if N == 0:

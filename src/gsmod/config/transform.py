@@ -46,7 +46,7 @@ class TransformConfig:
         """Get operation spec by name.
 
         :param name: Operation name
-        :return: OperationSpec for the operation
+        :returns: OperationSpec for the operation
         :raises AttributeError: If operation not found
         """
         return getattr(self, name)
@@ -54,7 +54,7 @@ class TransformConfig:
     def get_all_specs(self) -> dict[str, OperationSpec]:
         """Get all operation specs as a dictionary.
 
-        :return: Dictionary mapping operation names to specs
+        :returns: Dictionary mapping operation names to specs
         """
         return {
             "scale_factor": self.scale_factor,

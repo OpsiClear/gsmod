@@ -23,7 +23,7 @@ def apply_color_values(sh0: np.ndarray, values: ColorValues) -> np.ndarray:
 
     :param sh0: SH0 coefficients [N, 3] in [0, 1]
     :param values: Color parameters
-    :return: Modified colors [N, 3]
+    :returns: Modified colors [N, 3]
     """
     if values.is_neutral():
         return sh0
@@ -128,7 +128,7 @@ def _hue_to_rgb_offset(hue_deg: float) -> tuple[float, float, float]:
     """Convert hue angle to RGB offset (centered at 0).
 
     :param hue_deg: Hue angle in degrees
-    :return: Tuple of (r, g, b) offsets
+    :returns: Tuple of (r, g, b) offsets
     """
     hue_rad = hue_deg * (np.pi / 180.0)
     # Use HSL-like conversion with L=0.5, S=1.0
@@ -143,7 +143,7 @@ def _build_lut_interleaved(values: ColorValues, size: int = 256) -> np.ndarray:
 
     :param values: Color parameters
     :param size: LUT size (default 256)
-    :return: Interleaved LUT [size, 3]
+    :returns: Interleaved LUT [size, 3]
     """
     x = np.linspace(0, 1, size, dtype=np.float32)
 
@@ -188,7 +188,7 @@ def _compute_hue_rotation_matrix(hue_shift_deg: float) -> np.ndarray:
     Uses Rodrigues' rotation formula around the (1,1,1) axis.
 
     :param hue_shift_deg: Hue shift in degrees
-    :return: 3x3 rotation matrix
+    :returns: 3x3 rotation matrix
     """
     if abs(hue_shift_deg) < 0.5:
         return np.eye(3, dtype=np.float32)

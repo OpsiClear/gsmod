@@ -32,7 +32,7 @@ def concatenate(scenes: list[GSData]) -> GSData:
     than repeated .add() operations for 3+ scenes.
 
     :param scenes: List of GSData objects to concatenate
-    :return: Concatenated GSData object containing all Gaussians
+    :returns: Concatenated GSData object containing all Gaussians
 
     Example:
         >>> scene1 = gsply.plyread("scene1.ply")
@@ -76,7 +76,7 @@ def compose_with_transforms(
     :param scenes: List of GSData objects to compose
     :param transforms: List of Transform pipelines (one per scene)
     :param inplace: If True, modifies input scenes directly
-    :return: Concatenated GSData with all transforms applied
+    :returns: Concatenated GSData with all transforms applied
     :raises ValueError: If number of scenes and transforms don't match
 
     Example:
@@ -129,7 +129,7 @@ def deduplicate(
         - "first": Keep first occurrence
         - "last": Keep last occurrence
         - "average": Average all duplicate attributes
-    :return: Deduplicated GSData object
+    :returns: Deduplicated GSData object
 
     Example:
         >>> scene = concatenate([scene1, scene2, scene3])
@@ -241,7 +241,7 @@ def merge_scenes(
     :param scenes: List of GSData objects to merge
     :param transforms: Optional list of Transform pipelines (one per scene)
     :param deduplicate_threshold: If provided, remove duplicates within this distance
-    :return: Merged GSData object
+    :returns: Merged GSData object
 
     Example:
         >>> # Simple merge without transforms
@@ -285,7 +285,7 @@ def split_by_region(
 
     :param data: GSData object to split
     :param predicate: Function that takes positions [N, 3] and returns boolean mask [N]
-    :return: Tuple of (inside_region, outside_region) GSData objects
+    :returns: Tuple of (inside_region, outside_region) GSData objects
 
     Example:
         >>> # Split scene by X coordinate

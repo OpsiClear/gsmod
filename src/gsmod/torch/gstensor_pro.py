@@ -220,7 +220,7 @@ class GSTensorPro(GSTensor):
 
         :param values: Color parameters
         :param inplace: If True, modify self; if False, return modified copy
-        :return: Self (modified) or copy with modifications
+        :returns: Self (modified) or copy with modifications
 
         Example:
             >>> tensor.color(ColorValues(brightness=1.2, saturation=1.3))
@@ -372,7 +372,7 @@ class GSTensorPro(GSTensor):
 
         :param values: Filter parameters
         :param inplace: If True, modify self; if False, return filtered copy
-        :return: Self (filtered) or filtered copy
+        :returns: Self (filtered) or filtered copy
 
         Example:
             >>> tensor.filter(FilterValues(min_opacity=0.3, sphere_radius=5.0))
@@ -541,7 +541,7 @@ class GSTensorPro(GSTensor):
 
         :param values: Transform parameters
         :param inplace: If True, modify self; if False, return transformed copy
-        :return: Self (transformed) or transformed copy
+        :returns: Self (transformed) or transformed copy
 
         Example:
             >>> tensor.transform(TransformValues.from_scale(2.0))
@@ -590,7 +590,7 @@ class GSTensorPro(GSTensor):
 
         :param values: Opacity parameters to apply
         :param inplace: If True, modify self; if False, return modified copy
-        :return: Self (modified) or copy with modifications
+        :returns: Self (modified) or copy with modifications
 
         Example:
             >>> tensor.opacity(OpacityValues(scale=0.5))  # Fade to 50%
@@ -642,7 +642,7 @@ class GSTensorPro(GSTensor):
     def to_cpu(self):
         """Convert to CPU GSDataPro.
 
-        :return: GSDataPro instance on CPU
+        :returns: GSDataPro instance on CPU
         """
         from gsmod.gsdata_pro import GSDataPro
 
@@ -1593,7 +1593,7 @@ class GSTensorPro(GSTensor):
         """Compute histogram of color values (GPU-accelerated).
 
         :param config: Histogram configuration (default: 256 bins)
-        :return: HistogramResult with counts and statistics
+        :returns: HistogramResult with counts and statistics
 
         Example:
             >>> result = tensor.histogram_colors()
@@ -1663,7 +1663,7 @@ class GSTensorPro(GSTensor):
         """Compute histogram of opacity values (GPU-accelerated).
 
         :param config: Histogram configuration (default: 256 bins)
-        :return: HistogramResult with counts and statistics
+        :returns: HistogramResult with counts and statistics
 
         Example:
             >>> result = tensor.histogram_opacity()
@@ -1726,7 +1726,7 @@ class GSTensorPro(GSTensor):
         Uses mean scale across all 3 dimensions for each Gaussian.
 
         :param config: Histogram configuration (default: 256 bins)
-        :return: HistogramResult with counts and statistics
+        :returns: HistogramResult with counts and statistics
 
         Example:
             >>> result = tensor.histogram_scales()
@@ -1792,7 +1792,7 @@ class GSTensorPro(GSTensor):
 
         :param config: Histogram configuration (default: 256 bins)
         :param axis: Axis to histogram (0=X, 1=Y, 2=Z, None=distance from origin)
-        :return: HistogramResult with counts and statistics
+        :returns: HistogramResult with counts and statistics
 
         Example:
             >>> result = tensor.histogram_positions()  # Distance from origin

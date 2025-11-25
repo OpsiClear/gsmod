@@ -29,7 +29,7 @@ def apply_transform_values(
     :param quats: Quaternions [N, 4] wxyz
     :param scales: Scales [N, 3]
     :param values: Transform parameters
-    :return: Tuple of (means, quats, scales) - all modified inplace
+    :returns: Tuple of (means, quats, scales) - all modified inplace
     """
     if values.is_neutral():
         return means, quats, scales

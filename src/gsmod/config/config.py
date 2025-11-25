@@ -36,7 +36,7 @@ class GsproConfig:
     def get_all_specs(self) -> dict[str, dict[str, any]]:
         """Get all operation specs organized by process.
 
-        :return: Nested dictionary of all specifications
+        :returns: Nested dictionary of all specifications
         """
         return {
             "color": self.color.get_all_specs(),

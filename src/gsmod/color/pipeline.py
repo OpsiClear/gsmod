@@ -241,7 +241,7 @@ class Color:
         :param lut_size: Resolution of 1D LUTs (default 1024)
         :param param_specs: Named parameters with Param specifications.
             Valid keys: temperature, brightness, contrast, gamma, saturation, shadows, highlights
-        :return: Color pipeline configured as a parameterized template
+        :returns: Color pipeline configured as a parameterized template
 
         Example:
             >>> from gsmod import Color, Param
@@ -343,7 +343,7 @@ class Color:
         Multiple temperature operations are combined additively (offsets add).
 
         :param value: Temperature (-1.0=cool/blue, 0.0=neutral, 1.0=warm/orange)
-        :return: Self for method chaining
+        :returns: Self for method chaining
 
         Example:
             >>> Color().temperature(0.3).temperature(0.2)  # Combined: 0.5
@@ -361,7 +361,7 @@ class Color:
         brightness(a).brightness(b) -> brightness(a * b)
 
         :param value: Brightness multiplier (1.0=no change, >1.0=brighter, <1.0=darker)
-        :return: Self for method chaining
+        :returns: Self for method chaining
 
         Example:
             >>> Color().brightness(1.2).brightness(1.1)  # Optimized to brightness(1.32)
@@ -379,7 +379,7 @@ class Color:
         contrast(a).contrast(b) -> contrast(a * b)
 
         :param value: Contrast multiplier (1.0=no change, >1.0=more contrast, <1.0=less)
-        :return: Self for method chaining
+        :returns: Self for method chaining
 
         Example:
             >>> Color().contrast(1.1).contrast(1.05)  # Optimized to contrast(1.155)
@@ -397,7 +397,7 @@ class Color:
         gamma(a).gamma(b) -> gamma(a * b) because (x^a)^b = x^(a*b)
 
         :param value: Gamma exponent (1.0=linear, >1.0=darken, <1.0=brighten)
-        :return: Self for method chaining
+        :returns: Self for method chaining
 
         Example:
             >>> Color().gamma(1.05).gamma(1.05)  # Optimized to gamma(1.1025)
@@ -419,7 +419,7 @@ class Color:
         saturation(1.2).saturation(1.5) -> saturation(1.8)
 
         :param value: Saturation multiplier (1.0=no change, 0.0=grayscale, >1.0=more saturated)
-        :return: Self for method chaining
+        :returns: Self for method chaining
         """
         self._saturation_operations.append(float(value))
         self._is_dirty = True
@@ -434,7 +434,7 @@ class Color:
         of already vibrant colors. Multiple vibrance calls stack multiplicatively.
 
         :param value: Vibrance multiplier (1.0=no change, >1.0=more vibrant, <1.0=less vibrant)
-        :return: Self for method chaining
+        :returns: Self for method chaining
 
         Example:
             >>> Color().vibrance(1.3).vibrance(1.2)  # Combined effect: 1.56x
@@ -454,7 +454,7 @@ class Color:
         :param degrees: Hue shift in degrees (-180 to 180, 0=no change)
             Positive values shift towards warmer colors (red -> orange -> yellow)
             Negative values shift towards cooler colors (red -> purple -> blue)
-        :return: Self for method chaining
+        :returns: Self for method chaining
 
         Example:
             >>> Color().hue_shift(30).hue_shift(15)  # Combined: 45 degree shift
@@ -472,7 +472,7 @@ class Color:
         shadows(0.2).shadows(0.3) -> shadows(0.5)
 
         :param value: Shadow adjustment (-1.0=darker, 0.0=no change, 1.0=lighter)
-        :return: Self for method chaining
+        :returns: Self for method chaining
 
         Example:
             >>> Color().shadows(0.2).shadows(0.1)  # Combined effect: 0.3
@@ -490,7 +490,7 @@ class Color:
         highlights(0.2).highlights(0.3) -> highlights(0.5)
 
         :param value: Highlight adjustment (-1.0=darker, 0.0=no change, 1.0=lighter)
-        :return: Self for method chaining
+        :returns: Self for method chaining
 
         Example:
             >>> Color().highlights(-0.1).highlights(-0.2)  # Combined effect: -0.3
@@ -508,7 +508,7 @@ class Color:
         tint(0.2).tint(0.3) -> tint(0.5)
 
         :param value: Tint adjustment (-1.0=green, 0.0=neutral, 1.0=magenta)
-        :return: Self for method chaining
+        :returns: Self for method chaining
 
         Example:
             >>> Color().temperature(0.3).tint(-0.1)  # Warm with slight green
@@ -526,7 +526,7 @@ class Color:
         film photography. Multiple fade calls stack additively.
 
         :param value: Fade amount (0.0=no change, 1.0=full lift)
-        :return: Self for method chaining
+        :returns: Self for method chaining
 
         Example:
             >>> Color().fade(0.1)  # Subtle film look
@@ -544,7 +544,7 @@ class Color:
 
         :param hue: Tint hue in degrees (-180 to 180)
         :param saturation: Tint intensity (0.0=none, 1.0=full)
-        :return: Self for method chaining
+        :returns: Self for method chaining
 
         Example:
             >>> Color().shadow_tint(220, 0.3)  # Blue shadows (cinematic)
@@ -570,7 +570,7 @@ class Color:
 
         :param hue: Tint hue in degrees (-180 to 180)
         :param saturation: Tint intensity (0.0=none, 1.0=full)
-        :return: Self for method chaining
+        :returns: Self for method chaining
 
         Example:
             >>> Color().highlight_tint(40, 0.2)   # Warm highlights
@@ -601,7 +601,7 @@ class Color:
         - gamma: multiply all exponents
         - temperature: add all values (additive composition)
 
-        :return: Dictionary of optimized operation values
+        :returns: Dictionary of optimized operation values
         """
         # Initialize with neutral defaults
         optimized = {
@@ -644,7 +644,7 @@ class Color:
         Mathematical proof: Saturation preserves luminance, allowing
         multiplicative composition: sat(s1).sat(s2) = sat(s1 * s2)
 
-        :return: Optimized saturation value (1.0 = neutral)
+        :returns: Optimized saturation value (1.0 = neutral)
         """
         saturation = 1.0
         for sat_value in self._saturation_operations:
@@ -661,7 +661,7 @@ class Color:
         Mathematical proof: Vibrance applies saturation selectively based on
         current saturation, allowing multiplicative composition.
 
-        :return: Optimized vibrance value (1.0 = neutral)
+        :returns: Optimized vibrance value (1.0 = neutral)
         """
         vibrance = 1.0
         for vib_value in self._vibrance_operations:
@@ -678,7 +678,7 @@ class Color:
         Mathematical proof: Hue rotation is additive in degrees:
         rotate(a).rotate(b) = rotate(a + b)
 
-        :return: Optimized hue shift in degrees (0 = neutral)
+        :returns: Optimized hue shift in degrees (0 = neutral)
         """
         total_shift = 0.0
         for shift_degrees in self._hue_shift_operations:
@@ -697,7 +697,7 @@ class Color:
         Mathematical proof: Shadow adjustments apply additive offsets,
         allowing composition: shadow(s1).shadow(s2) = shadow(s1 + s2)
 
-        :return: Optimized shadows value (0.0 = neutral), clamped to [-1, 1]
+        :returns: Optimized shadows value (0.0 = neutral), clamped to [-1, 1]
         """
         shadows = 0.0
         for shadow_value in self._shadows_operations:
@@ -714,7 +714,7 @@ class Color:
         Mathematical proof: Highlight adjustments apply additive offsets,
         allowing composition: highlight(h1).highlight(h2) = highlight(h1 + h2)
 
-        :return: Optimized highlights value (0.0 = neutral), clamped to [-1, 1]
+        :returns: Optimized highlights value (0.0 = neutral), clamped to [-1, 1]
         """
         highlights = 0.0
         for highlight_value in self._highlights_operations:
@@ -728,7 +728,7 @@ class Color:
         Reduces stacked tint operations to single value by adding:
         tint(0.2).tint(0.3) -> 0.5
 
-        :return: Optimized tint value (0.0 = neutral), clamped to [-1, 1]
+        :returns: Optimized tint value (0.0 = neutral), clamped to [-1, 1]
         """
         tint = 0.0
         for tint_value in self._tint_operations:
@@ -742,7 +742,7 @@ class Color:
         Reduces stacked fade operations to single value by adding:
         fade(0.1).fade(0.05) -> 0.15
 
-        :return: Optimized fade value (0.0 = neutral), clamped to [0, 1]
+        :returns: Optimized fade value (0.0 = neutral), clamped to [0, 1]
         """
         fade = 0.0
         for fade_value in self._fade_operations:
@@ -755,7 +755,7 @@ class Color:
 
         Hue is averaged weighted by saturation, saturation is summed.
 
-        :return: Tuple of (hue, saturation), saturation clamped to [0, 1]
+        :returns: Tuple of (hue, saturation), saturation clamped to [0, 1]
         """
         if not self._shadow_tint_sat_operations:
             return 0.0, 0.0
@@ -782,7 +782,7 @@ class Color:
 
         Hue is averaged weighted by saturation, saturation is summed.
 
-        :return: Tuple of (hue, saturation), saturation clamped to [0, 1]
+        :returns: Tuple of (hue, saturation), saturation clamped to [0, 1]
         """
         if not self._highlight_tint_sat_operations:
             return 0.0, 0.0
@@ -817,7 +817,7 @@ class Color:
         1. Optimizes stacked operations into minimal computation
         2. Applies optimized operations to build the LUT
 
-        :return: Self for method chaining
+        :returns: Self for method chaining
         """
         if self.is_compiled:
             logger.debug("[Color] Already compiled, skipping")
@@ -952,7 +952,7 @@ class Color:
 
         :param colors: Input RGB colors [N, 3] in range [0, 1]
         :param inplace: If True, modifies input array directly
-        :return: Transformed colors
+        :returns: Transformed colors
         """
         # Auto-compile if needed
         if self.needs_compilation:
@@ -1019,7 +1019,7 @@ class Color:
         Uses pre-sorted param order for O(1) key generation instead of O(n log n) sorting.
 
         :param params: Dictionary of parameter names to values
-        :return: Tuple of parameter values in pre-sorted order
+        :returns: Tuple of parameter values in pre-sorted order
         """
         # Use pre-sorted order (set once at template creation)
         # This is 8x faster than sorting every time (1.64us -> 0.20us)
@@ -1039,7 +1039,7 @@ class Color:
         :param params: Runtime parameter values (e.g., {"b": 1.5, "c": 1.2})
         :param inplace: If True, modifies input GSData directly
         :param restore_format: If True, restore original format after processing
-        :return: GSData with transformed colors
+        :returns: GSData with transformed colors
         :raises ValueError: If parameter name is not in template or value outside range
         """
         # Quick check: validate param names are all known (before cache key generation)
@@ -1137,7 +1137,7 @@ class Color:
         """
         Check if this pipeline applies no color transformations (identity operation).
 
-        :return: True if pipeline has no operations, False otherwise
+        :returns: True if pipeline has no operations, False otherwise
 
         Note:
             Identity pipelines have zero overhead with fast-path optimization
@@ -1170,7 +1170,7 @@ class Color:
         :param data: GSData object containing Gaussian data
         :param inplace: If True, modifies input GSData sh0 colors directly
         :param restore_format: If True, restore original format after processing
-        :return: GSData with transformed colors
+        :returns: GSData with transformed colors
 
         Example:
             >>> import gsply
@@ -1233,7 +1233,7 @@ class Color:
         :param params: Optional runtime parameter values for parameterized templates
             Example: {"b": 1.5, "c": 1.2} for brightness and contrast
         :param restore_format: If True, restore original format after processing
-        :return: GSData with transformed colors
+        :returns: GSData with transformed colors
 
         Example (standard pipeline):
             >>> data = Color().brightness(1.2).saturation(1.3)(data, inplace=True)
@@ -1262,7 +1262,7 @@ class Color:
 
         Clears all operations, compiled state, and parameter caches.
 
-        :return: Self for method chaining
+        :returns: Self for method chaining
         """
         self._phase1_operations = []
         self._saturation_operations = []
@@ -1289,7 +1289,7 @@ class Color:
         """
         Create a deep copy of this pipeline.
 
-        :return: New Color instance with same configuration
+        :returns: New Color instance with same configuration
 
         Example:
             >>> pipeline = Color().brightness(1.2).contrast(1.1)
@@ -1301,7 +1301,7 @@ class Color:
         """
         Get list of all Phase 1 operations (before optimization).
 
-        :return: List of (operation_type, parameters) tuples
+        :returns: List of (operation_type, parameters) tuples
 
         Example:
             >>> pipeline = Color().brightness(1.2).contrast(1.1).brightness(1.1)
@@ -1314,7 +1314,7 @@ class Color:
         """
         Get optimized parameters (after operation reduction).
 
-        :return: Dictionary of optimized parameter values
+        :returns: Dictionary of optimized parameter values
 
         Example:
             >>> pipeline = Color().brightness(1.2).brightness(1.1)
@@ -1327,7 +1327,7 @@ class Color:
         """
         Get all current parameters (optimized Phase 1 + Phase 2).
 
-        :return: Dictionary of all parameter values
+        :returns: Dictionary of all parameter values
 
         Example:
             >>> pipeline = Color().brightness(1.2).saturation(1.3).vibrance(1.1)

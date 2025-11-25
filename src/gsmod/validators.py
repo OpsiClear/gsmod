@@ -27,7 +27,7 @@ def validate_range(
     :param max_val: Maximum allowed value (inclusive)
     :param param_name: Name of parameter for error messages
     :param param_index: Position of parameter in function signature (default: 1 = first arg after self)
-    :return: Decorated function with range validation
+    :returns: Decorated function with range validation
 
     Example:
         >>> @validate_range(0.0, 1.0, "opacity")
@@ -49,7 +49,7 @@ def validate_range(
                 return func(*args, **kwargs)
 
             # Validate range
-            if not isinstance(value, (int, float)):
+            if not isinstance(value, int | float):
                 raise TypeError(
                     f"{param_name} must be a number, got {type(value).__name__}. "
                     f"Provide a numeric value (int or float)."
@@ -88,7 +88,7 @@ def validate_positive(param_name: str = "value", param_index: int = 1) -> Callab
 
     :param param_name: Name of parameter for error messages
     :param param_index: Position of parameter in function signature
-    :return: Decorated function with positive validation
+    :returns: Decorated function with positive validation
 
     Example:
         >>> @validate_positive("scale")
@@ -109,7 +109,7 @@ def validate_positive(param_name: str = "value", param_index: int = 1) -> Callab
                 return func(*args, **kwargs)
 
             # Validate positive
-            if not isinstance(value, (int, float)):
+            if not isinstance(value, int | float):
                 raise TypeError(
                     f"{param_name} must be a number, got {type(value).__name__}. "
                     f"Provide a numeric value (int or float)."
@@ -142,7 +142,7 @@ def validate_type(
     :param expected_type: Expected type or tuple of types
     :param param_name: Name of parameter for error messages
     :param param_index: Position of parameter in function signature
-    :return: Decorated function with type validation
+    :returns: Decorated function with type validation
 
     Example:
         >>> @validate_type(np.ndarray, "vector")
@@ -192,7 +192,7 @@ def validate_choices(
     :param valid_choices: Set of valid string choices
     :param param_name: Name of parameter for error messages
     :param param_index: Position of parameter in function signature
-    :return: Decorated function with choice validation
+    :returns: Decorated function with choice validation
 
     Example:
         >>> @validate_choices({"quaternion", "matrix", "euler"}, "format")

@@ -22,7 +22,7 @@ def linear_interp_1d(x: np.ndarray, centers: np.ndarray, values: np.ndarray) -> 
     :param x: Input values to interpolate [N]
     :param centers: Sorted cluster centers [K]
     :param values: Precomputed output values at cluster centers [K]
-    :return: Interpolated values [N]
+    :returns: Interpolated values [N]
 
     Example:
         >>> centers = np.array([0.0, 0.5, 1.0])
@@ -56,7 +56,7 @@ def nearest_neighbor_1d(x: np.ndarray, centers: np.ndarray, values: np.ndarray) 
     :param x: Input values [N]
     :param centers: Cluster centers [K] (need not be sorted)
     :param values: Precomputed output values at cluster centers [K]
-    :return: Values at nearest neighbors [N]
+    :returns: Values at nearest neighbors [N]
 
     Example:
         >>> centers = np.array([0.0, 0.5, 1.0])
@@ -84,7 +84,7 @@ def multiply_opacity(data: GSData, factor: float, inplace: bool = True) -> GSDat
     :param data: GSData object containing Gaussian data
     :param factor: Opacity multiplier (1.0=no change, >1.0=more opaque, <1.0=more transparent)
     :param inplace: If True, modifies input GSData directly
-    :return: GSData with adjusted opacity values
+    :returns: GSData with adjusted opacity values
 
     Example:
         >>> # Fade scene to 50% opacity

@@ -347,7 +347,7 @@ class LearnableColor(nn.Module):
         """Apply color grading (fully differentiable).
 
         :param sh0: Input colors [N, 3] in RGB format [0, 1]
-        :return: Adjusted colors [N, 3]
+        :returns: Adjusted colors [N, 3]
 
         Note: Operations are skipped only for non-learnable parameters at neutral values.
         Learnable parameters are always applied to maintain gradient flow.
@@ -506,7 +506,7 @@ class LearnableColor(nn.Module):
 
         :param values: ColorValues instance
         :param learnable: Parameter names to make learnable (None = all)
-        :return: LearnableColor module
+        :returns: LearnableColor module
 
         Example:
             >>> from gsmod import CINEMATIC
@@ -538,7 +538,7 @@ class LearnableColor(nn.Module):
     def to_values(self):
         """Export current parameter values to ColorValues.
 
-        :return: ColorValues with learned parameters
+        :returns: ColorValues with learned parameters
 
         Example:
             >>> learned = model.to_color_values()
@@ -619,7 +619,7 @@ class LearnableTransform(nn.Module):
         :param means: Gaussian positions [N, 3]
         :param scales: Gaussian scales [N, 3]
         :param quats: Gaussian quaternions [N, 4] (w, x, y, z)
-        :return: (new_means, new_scales, new_quats)
+        :returns: (new_means, new_scales, new_quats)
         """
         # Scale positions and Gaussian sizes
         new_means = means * self.scale
@@ -809,7 +809,7 @@ class LearnableTransform(nn.Module):
     def get_rotation_axis_angle(self) -> np.ndarray:
         """Get current rotation as axis-angle vector.
 
-        :return: Axis-angle (rx, ry, rz) where magnitude is angle in radians
+        :returns: Axis-angle (rx, ry, rz) where magnitude is angle in radians
         """
         # Convert 6D to rotation matrix
         rot_matrix = self._6d_to_rotation_matrix(self.rotation_6d)
@@ -881,7 +881,7 @@ class LearnableOpacity(nn.Module):
 
         :param opacities: Input opacities [N] or [N, 1]
         :param is_ply_format: Whether opacities are in PLY (logit) format
-        :return: Adjusted opacities (same shape and format as input)
+        :returns: Adjusted opacities (same shape and format as input)
 
         Note: The scale factor is applied in linear space even for PLY format.
         For PLY format, the function converts to linear, scales, then converts back.
@@ -927,7 +927,7 @@ class LearnableOpacity(nn.Module):
 
         :param values: OpacityValues instance
         :param learnable: Parameter names to make learnable (None = all)
-        :return: LearnableOpacity module
+        :returns: LearnableOpacity module
 
         Example:
             >>> from gsmod.config.values import OpacityValues
@@ -945,7 +945,7 @@ class LearnableOpacity(nn.Module):
     def to_values(self):
         """Export current parameter values to OpacityValues.
 
-        :return: OpacityValues with learned parameters
+        :returns: OpacityValues with learned parameters
 
         Example:
             >>> learned = model.to_values()
@@ -1099,7 +1099,7 @@ class LearnableFilter(nn.Module):
         :param means: Gaussian positions [N, 3]
         :param opacities: Gaussian opacities [N] or [N, 1]
         :param scales: Gaussian scales [N, 3]
-        :return: Soft weights [N] in [0, 1]
+        :returns: Soft weights [N] in [0, 1]
 
         Example:
             >>> weights = model(means, opacities, scales)
@@ -1230,7 +1230,7 @@ class LearnableFilter(nn.Module):
 
         :param values: FilterValues instance
         :param learnable: Parameter names to make learnable (None = all)
-        :return: LearnableFilter module
+        :returns: LearnableFilter module
         """
         config = LearnableFilterConfig(
             opacity_threshold=values.min_opacity,
@@ -1244,7 +1244,7 @@ class LearnableFilter(nn.Module):
     def to_values(self):
         """Export current parameter values to FilterValues.
 
-        :return: FilterValues with learned parameters
+        :returns: FilterValues with learned parameters
         """
         from gsmod.config.values import FilterValues
 
@@ -1308,7 +1308,7 @@ class LearnableGSTensor:
         :param gstensor: GSTensorPro instance
         :param requires_grad: Whether to track gradients
         :param device: Device to move tensors to ('cuda:0', 'cuda:1', etc.)
-        :return: LearnableGSTensor with gradient support
+        :returns: LearnableGSTensor with gradient support
         """
         result = cls(
             means=gstensor.means.clone().requires_grad_(requires_grad),
@@ -1335,7 +1335,7 @@ class LearnableGSTensor:
         :param path: Path to PLY file
         :param device: Target device
         :param requires_grad: Whether to track gradients
-        :return: LearnableGSTensor on device
+        :returns: LearnableGSTensor on device
         """
         from gsmod.torch import GSTensorPro
 
@@ -1345,7 +1345,7 @@ class LearnableGSTensor:
     def to_gstensor_pro(self):
         """Convert to GSTensorPro for inference.
 
-        :return: GSTensorPro instance (detached from computation graph)
+        :returns: GSTensorPro instance (detached from computation graph)
         """
         from gsmod.torch import GSTensorPro
 
@@ -1362,7 +1362,7 @@ class LearnableGSTensor:
         """Apply learnable color grading (creates new instance).
 
         :param color_module: LearnableColor module
-        :return: New LearnableGSTensor with modified colors
+        :returns: New LearnableGSTensor with modified colors
         """
         new_sh0 = color_module(self.sh0)
         return LearnableGSTensor(
@@ -1378,7 +1378,7 @@ class LearnableGSTensor:
         """Apply learnable transform (creates new instance).
 
         :param transform_module: LearnableTransform module
-        :return: New LearnableGSTensor with transformed geometry
+        :returns: New LearnableGSTensor with transformed geometry
         """
         new_means, new_scales, new_quats = transform_module(self.means, self.scales, self.quats)
         return LearnableGSTensor(
@@ -1397,7 +1397,7 @@ class LearnableGSTensor:
 
         :param opacity_module: LearnableOpacity module
         :param is_ply_format: Whether opacities are in PLY (logit) format
-        :return: New LearnableGSTensor with adjusted opacities
+        :returns: New LearnableGSTensor with adjusted opacities
         """
         new_opacities = opacity_module(self.opacities, is_ply_format=is_ply_format)
         return LearnableGSTensor(
@@ -1415,7 +1415,7 @@ class LearnableGSTensor:
         """Apply soft filter, returning weights.
 
         :param filter_module: LearnableFilter module
-        :return: (self, weights) tuple
+        :returns: (self, weights) tuple
 
         Use the weights to modulate opacities or as loss weights:
             >>> data, weights = data.apply_soft_filter(filter_model)
@@ -1470,14 +1470,3 @@ class LearnableGSTensor:
             sh0=self.sh0.to(device),
             shN=self.shN.to(device) if self.shN is not None else None,
         )
-
-
-# ============================================================================
-# Backwards Compatibility Aliases (deprecated)
-# ============================================================================
-
-# Old names - use new names instead
-LearnableColorGrading = LearnableColor
-SoftFilter = LearnableFilter
-GSTensorProLearn = LearnableGSTensor
-SoftFilterConfig = LearnableFilterConfig

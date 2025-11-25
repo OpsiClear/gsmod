@@ -24,7 +24,7 @@ def apply_opacity_values(
     :param opacities: Opacity values [N] or [N, 1]
     :param values: Opacity parameters
     :param is_ply_format: True if opacities are in PLY (logit) format
-    :return: Modified opacities (same shape as input)
+    :returns: Modified opacities (same shape as input)
     """
     if values.is_neutral():
         return opacities

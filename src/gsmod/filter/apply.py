@@ -19,7 +19,7 @@ def _axis_angle_to_rotation_matrix(axis_angle: tuple[float, float, float] | None
     """Convert axis-angle rotation to 3x3 rotation matrix.
 
     :param axis_angle: Rotation vector [3] where magnitude is angle in radians
-    :return: Rotation matrix [3, 3]
+    :returns: Rotation matrix [3, 3]
     """
     if axis_angle is None:
         return np.eye(3, dtype=np.float32)
@@ -51,7 +51,7 @@ def compute_filter_mask(data, values: FilterValues) -> np.ndarray:
 
     :param data: Object with means, opacities, scales attributes
     :param values: Filter parameters
-    :return: Boolean mask [N]
+    :returns: Boolean mask [N]
     """
     N = len(data.means)
 
@@ -157,7 +157,7 @@ def apply_mask_fused(data, mask: np.ndarray) -> tuple:
 
     :param data: Object with means, scales, quats, opacities, sh0, shN attributes
     :param mask: Boolean mask [N]
-    :return: Tuple of (means, scales, quats, opacities, sh0, shN)
+    :returns: Tuple of (means, scales, quats, opacities, sh0, shN)
     """
     N = len(mask)
 

@@ -5,6 +5,45 @@ All notable changes to gsmod will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2025-01-25
+
+### Changed
+- **Dependencies**
+  - Updated gsply requirement from `>=0.2.8` to `==0.2.10` (exact version pin)
+- **Style Harmonization with gsply**
+  - All docstrings now use `:returns:` instead of `:return:` (consistent with gsply)
+  - Enhanced module-level docstrings with performance notes and examples
+  - `color/__init__.py`: Added performance metrics (1,091M colors/sec)
+  - `transform/__init__.py`: Added performance metrics (698M Gaussians/sec)
+  - `filter/__init__.py`: Added performance metrics (46M Gaussians/sec)
+  - `torch/__init__.py`: Added GPU benchmark details (183x speedup, 1.09B Gaussians/sec)
+- **Configuration Class Documentation**
+  - Fixed misleading "will be deprecated" comment on ColorGradingConfig
+  - Clarified that config classes (ColorGradingConfig, TransformConfig, etc.) are canonical and actively used
+  - Reorganized torch module imports for better clarity
+
+### Removed
+- **Deprecated Backward Compatibility Aliases** (Breaking Change)
+  - Removed `LearnableColorGrading` (use `LearnableColor` instead)
+  - Removed `SoftFilter` (use `LearnableFilter` instead)
+  - Removed `GSTensorProLearn` (use `LearnableGSTensor` instead)
+  - Removed `SoftFilterConfig` (use `LearnableFilterConfig` instead)
+  - **Impact**: Zero usage found in codebase, tests, benchmarks, or documentation
+  - **Migration**: Update imports to use new standardized names with "Learnable" prefix
+- **Property Aliases from ColorValues** (Breaking Change)
+  - Removed `black_level`, `white_level` (use `brightness`, `contrast`)
+  - Removed `lift`, `gain` (use `shadows`, `highlights`)
+  - Removed `exposure` (use `brightness`)
+  - Removed `midtones` (use `gamma`)
+  - Removed `vibrancy` (use `vibrance`)
+  - Removed `blacks`, `whites` (use `shadows`, `highlights`)
+  - **Impact**: Zero usage found in codebase
+  - **Rationale**: Simplifies API, aligns with gsply's design philosophy of no property aliases
+
+### Fixed
+- Removed confusing "legacy" comment from Color pipeline import
+- Improved clarity of module organization and export structure
+
 ## [0.1.1] - 2025-01-24
 
 ### Added
