@@ -99,6 +99,27 @@ pipeline = (Transform()
 result = pipeline(data, inplace=True)
 ```
 
+## Opacity Adjustments
+
+### Using OpacityValues
+
+```python
+from gsmod import GSDataPro, OpacityValues
+
+data = GSDataPro.from_ply("scene.ply")
+
+# Fade to 80% opacity
+data.opacity(OpacityValues.fade(0.8))
+
+# Boost opacity by 20%
+data.opacity(OpacityValues.boost(1.2))
+
+# Use presets
+from gsmod import FADE_MODERATE, GHOST_EFFECT
+data.opacity(FADE_MODERATE)  # Fade to 70%
+data.opacity(GHOST_EFFECT)   # 50% opacity
+```
+
 ## Filtering
 
 ### Using FilterValues
@@ -133,7 +154,7 @@ data.filter(STRICT_FILTER)
 ## Method Chaining
 
 ```python
-from gsmod import GSDataPro, ColorValues, FilterValues, TransformValues
+from gsmod import GSDataPro, ColorValues, FilterValues, TransformValues, OpacityValues
 
 data = GSDataPro.from_ply("scene.ply")
 
@@ -142,6 +163,7 @@ data = GSDataPro.from_ply("scene.ply")
     .filter(FilterValues(min_opacity=0.1))
     .transform(TransformValues.from_scale(2.0))
     .color(ColorValues(brightness=1.2))
+    .opacity(OpacityValues.fade(0.8))
     .to_ply("output.ply"))
 ```
 
@@ -149,7 +171,7 @@ data = GSDataPro.from_ply("scene.ply")
 
 ```python
 from gsmod.torch import GSTensorPro
-from gsmod import ColorValues, FilterValues, TransformValues
+from gsmod import ColorValues, FilterValues, TransformValues, OpacityValues
 
 # Load directly to GPU
 data = GSTensorPro.from_ply("scene.ply", device="cuda")
@@ -158,6 +180,7 @@ data = GSTensorPro.from_ply("scene.ply", device="cuda")
 data.filter(FilterValues(min_opacity=0.1))
 data.transform(TransformValues.from_translation(1, 0, 0))
 data.color(ColorValues(brightness=1.2))
+data.opacity(OpacityValues.fade(0.8))
 
 # Save result
 data.to_ply("output.ply")

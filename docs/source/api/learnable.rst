@@ -31,6 +31,14 @@ LearnableFilter
    :undoc-members:
    :show-inheritance:
 
+LearnableOpacity
+----------------
+
+.. autoclass:: gsmod.torch.learn.LearnableOpacity
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 LearnableGSTensor
 -----------------
 
@@ -47,6 +55,10 @@ Configuration Classes
    :undoc-members:
 
 .. autoclass:: gsmod.torch.learn.TransformConfig
+   :members:
+   :undoc-members:
+
+.. autoclass:: gsmod.torch.learn.OpacityConfig
    :members:
    :undoc-members:
 

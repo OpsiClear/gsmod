@@ -204,7 +204,7 @@ def benchmark_full_pipeline(gstensor):
 def main():
     """Run comprehensive benchmarks."""
     print("\n" + "=" * 60)
-    print("GSPRO + GSPLY INTEGRATION BENCHMARKS")
+    print("GSMOD + GSPLY INTEGRATION BENCHMARKS")
     print("=" * 60)
 
     # Check GPU

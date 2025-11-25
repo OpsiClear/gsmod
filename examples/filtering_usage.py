@@ -266,7 +266,7 @@ def example_8_method_chaining():
 def main():
     """Run all examples."""
     print("\n" + "=" * 70)
-    print("GSPRO FILTERING SYSTEM EXAMPLES")
+    print("GSMOD FILTERING SYSTEM EXAMPLES")
     print("(Using Absolute Values API)")
     print("=" * 70)
 

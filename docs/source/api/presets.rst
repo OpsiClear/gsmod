@@ -29,6 +29,16 @@ Filter Presets
 - ``QUALITY_FILTER`` - Balanced quality filtering
 - ``CLEANUP_FILTER`` - Light cleanup filtering
 
+Opacity Presets
+---------------
+
+- ``FADE_MILD`` - Reduce opacity to 90%
+- ``FADE_MODERATE`` - Reduce opacity to 70%
+- ``BOOST_MILD`` - Increase opacity by 10%
+- ``BOOST_MODERATE`` - Increase opacity by 30%
+- ``GHOST_EFFECT`` - Semi-transparent ghost effect (50% opacity)
+- ``TRANSLUCENT`` - Highly transparent (30% opacity)
+
 Transform Presets
 -----------------
 
@@ -44,7 +54,7 @@ Usage Examples
 .. code-block:: python
 
    from gsmod import GSDataPro, CINEMATIC, STRICT_FILTER, DOUBLE_SIZE
-   from gsmod import ColorValues
+   from gsmod import ColorValues, FADE_MODERATE, GHOST_EFFECT
 
    data = GSDataPro.from_ply("scene.ply")
 
@@ -52,9 +62,13 @@ Usage Examples
    data.color(CINEMATIC)
    data.filter(STRICT_FILTER)
    data.transform(DOUBLE_SIZE)
+   data.opacity(FADE_MODERATE)  # Fade to 70% opacity
 
    # Compose presets with custom values
    data.color(CINEMATIC + ColorValues(brightness=1.1))
+
+   # Create ghost effect
+   data.opacity(GHOST_EFFECT)  # 50% opacity
 
    # Load from JSON
    from gsmod import load_color_json

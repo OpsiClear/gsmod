@@ -81,7 +81,7 @@ C:\Users\opsiclear\Projects\gsmod\
 │   │   ├── color.py           # ColorConfig
 │   │   ├── filter.py          # FilterConfig
 │   │   ├── transform.py       # TransformConfig
-│   │   └── config.py          # GsproConfig singleton
+│   │   └── config.py          # GsmodConfig singleton
 │   ├── color\                 # Color processing pipeline
 │   │   ├── __init__.py
 │   │   ├── pipeline.py        # Color class with LUT compilation

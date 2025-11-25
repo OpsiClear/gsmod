@@ -19,7 +19,7 @@ benchmarks = [
 ]
 
 print("=" * 80)
-print("GSPRO PERFORMANCE BENCHMARKS")
+print("GSMOD PERFORMANCE BENCHMARKS")
 print("=" * 80)
 
 # Get benchmark directory

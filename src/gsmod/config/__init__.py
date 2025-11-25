@@ -20,7 +20,7 @@ from gsmod.config.config import (
     CONFIG,
     FILTER_CONFIG,
     TRANSFORM_CONFIG,
-    GsproConfig,
+    GsmodConfig,
 )
 from gsmod.config.filter import FilterConfig
 from gsmod.config.operations import OperationSpec
@@ -109,7 +109,7 @@ from gsmod.config.values import ColorValues, FilterValues, OpacityValues, Transf
 __all__ = [
     # Core types
     "OperationSpec",
-    "GsproConfig",
+    "GsmodConfig",
     "ColorConfig",
     "FilterConfig",
     "TransformConfig",

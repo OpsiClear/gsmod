@@ -33,6 +33,7 @@ Classes:
 - :class:`gsmod.ColorValues` - Color adjustment parameters
 - :class:`gsmod.FilterValues` - Filter parameters
 - :class:`gsmod.TransformValues` - Transform parameters
+- :class:`gsmod.OpacityValues` - Opacity adjustment parameters
 - :class:`gsmod.HistogramConfig` - Histogram configuration
 
 Presets
@@ -52,6 +53,11 @@ Filter presets:
 
 - ``STRICT_FILTER``, ``QUALITY_FILTER``, ``CLEANUP_FILTER``
 
+Opacity presets:
+
+- ``FADE_MILD``, ``FADE_MODERATE``, ``BOOST_MILD``, ``BOOST_MODERATE``
+- ``GHOST_EFFECT``, ``TRANSLUCENT``
+
 Transform presets:
 
 - ``DOUBLE_SIZE``, ``HALF_SIZE``, ``FLIP_X``, ``FLIP_Y``, ``FLIP_Z``
@@ -61,6 +67,7 @@ Loading functions:
 - :func:`gsmod.get_color_preset` - Get color preset by name
 - :func:`gsmod.get_filter_preset` - Get filter preset by name
 - :func:`gsmod.get_transform_preset` - Get transform preset by name
+- :func:`gsmod.get_opacity_preset` - Get opacity preset by name
 - :func:`gsmod.load_color_json` - Load color values from JSON file
 - :func:`gsmod.load_filter_json` - Load filter values from JSON file
 - :func:`gsmod.load_transform_json` - Load transform values from JSON file

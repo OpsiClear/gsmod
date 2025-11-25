@@ -2,6 +2,24 @@
 
 All notable changes to gsmod will be documented in this file.
 
+## [0.1.2] - 2025-01-25
+
+### Changed
+- Updated gsply requirement from `>=0.2.8` to `==0.2.10` (exact version pin)
+- Style harmonization with gsply (`:returns:` docstrings, enhanced module documentation)
+- Renamed `GsproConfig` to `GsmodConfig` for consistency with project name
+- Enhanced module-level docstrings with performance metrics
+
+### Removed
+- **Breaking**: Removed deprecated backward compatibility aliases
+  - `LearnableColorGrading` (use `LearnableColor`)
+  - `SoftFilter` (use `LearnableFilter`)
+  - `GSTensorProLearn` (use `LearnableGSTensor`)
+  - `SoftFilterConfig` (use `LearnableFilterConfig`)
+- **Breaking**: Removed property aliases from `ColorValues`
+  - `black_level`, `white_level`, `lift`, `gain`, `exposure`, `midtones`, `vibrancy`, `blacks`, `whites`
+  - Use canonical names: `brightness`, `contrast`, `shadows`, `highlights`, `gamma`, `vibrance`
+
 ## [0.1.1] - 2025-01-24
 
 ### Added

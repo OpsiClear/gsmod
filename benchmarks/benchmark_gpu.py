@@ -232,7 +232,7 @@ def benchmark_unified_pipeline(data, device="cuda"):
 def main():
     """Run all benchmarks."""
     print("\n" + "=" * 60)
-    print("GSPRO GPU PERFORMANCE BENCHMARKS")
+    print("GSMOD GPU PERFORMANCE BENCHMARKS")
     print("=" * 60)
 
     # Check GPU availability

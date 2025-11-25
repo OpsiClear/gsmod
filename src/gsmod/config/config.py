@@ -15,7 +15,7 @@ from gsmod.config.transform import TransformConfig
 
 
 @dataclass(frozen=True)
-class GsproConfig:
+class GsmodConfig:
     """Top-level configuration containing all pipeline configurations.
 
     Provides hierarchical access to all operation specifications:
@@ -46,7 +46,7 @@ class GsproConfig:
 
 
 # Main singleton instance
-CONFIG = GsproConfig()
+CONFIG = GsmodConfig()
 
 # Backward-compatible singleton exports
 COLOR_CONFIG = CONFIG.color

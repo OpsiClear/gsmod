@@ -27,6 +27,14 @@ TransformValues
    :undoc-members:
    :show-inheritance:
 
+OpacityValues
+-------------
+
+.. autoclass:: gsmod.config.values.OpacityValues
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 HistogramConfig
 ---------------
 

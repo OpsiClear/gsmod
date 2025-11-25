@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `transform/__init__.py`: Added performance metrics (698M Gaussians/sec)
   - `filter/__init__.py`: Added performance metrics (46M Gaussians/sec)
   - `torch/__init__.py`: Added GPU benchmark details (183x speedup, 1.09B Gaussians/sec)
+- **Configuration Class Naming**
+  - Renamed `GsproConfig` to `GsmodConfig` for consistency with project name
+  - Updated all references in codebase (config module, AGENTS.md, benchmarks, examples)
+  - Export name updated: import `GsmodConfig` from `gsmod.config`
 - **Configuration Class Documentation**
   - Fixed misleading "will be deprecated" comment on ColorGradingConfig
   - Clarified that config classes (ColorGradingConfig, TransformConfig, etc.) are canonical and actively used
