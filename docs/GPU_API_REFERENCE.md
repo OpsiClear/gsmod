@@ -21,7 +21,7 @@ pip install gsmod
 
 ```python
 from gsmod.torch import GSTensorPro
-from gsmod import ColorValues, FilterValues, TransformValues
+from gsmod import ColorValues, FilterValues, TransformValues, OpacityValues
 from gsmod import CINEMATIC, STRICT_FILTER, DOUBLE_SIZE
 
 # Load data directly to GPU
@@ -32,6 +32,7 @@ data = GSTensorPro.load("scene.ply", device="cuda")
     .filter(FilterValues(min_opacity=0.1, sphere_radius=5.0))
     .transform(TransformValues.from_translation(1, 0, 0))
     .color(ColorValues(brightness=1.2, saturation=1.3))
+    .opacity(OpacityValues.fade(0.8))
 )
 
 # Use presets
@@ -110,10 +111,13 @@ clone = gstensor.clone()
 These methods accept config value objects and return self for method chaining.
 
 ```python
-from gsmod import ColorValues, FilterValues, TransformValues
+from gsmod import ColorValues, FilterValues, TransformValues, OpacityValues
 
 # Color operations
 gstensor.color(values: ColorValues, inplace: bool = True) -> GSTensorPro
+
+# Opacity operations (format-aware: PLY logit and linear)
+gstensor.opacity(values: OpacityValues, inplace: bool = True) -> GSTensorPro
 
 # Filter operations
 gstensor.filter(values: FilterValues, inplace: bool = True) -> GSTensorPro
@@ -123,6 +127,7 @@ gstensor.transform(values: TransformValues, inplace: bool = True) -> GSTensorPro
 
 # Example usage
 gstensor.color(ColorValues(brightness=1.2, saturation=1.3))
+gstensor.opacity(OpacityValues.fade(0.8))  # Fade to 80%
 gstensor.filter(FilterValues(min_opacity=0.1, sphere_radius=5.0))
 gstensor.transform(TransformValues.from_translation(1, 0, 0))
 
@@ -131,6 +136,7 @@ gstensor.transform(TransformValues.from_translation(1, 0, 0))
     .filter(FilterValues(min_opacity=0.1))
     .transform(TransformValues.from_scale(2.0))
     .color(ColorValues(brightness=1.2))
+    .opacity(OpacityValues.fade(0.8))
 )
 
 # Use presets

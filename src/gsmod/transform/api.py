@@ -14,6 +14,15 @@ from __future__ import annotations
 
 import numpy as np
 
+# Import from shared rotation module (canonical implementations)
+from gsmod.shared.rotation import (
+    _axis_angle_to_quaternion_numpy,
+    _euler_to_quaternion_numpy,
+    _quaternion_to_euler_numpy,
+    _quaternion_to_rotation_matrix_numpy,
+    _rotation_matrix_to_quaternion_numpy,
+)
+
 # Import Numba kernels at module level - Numba is required
 from gsmod.transform.kernels import (
     elementwise_multiply_scalar_numba,
@@ -76,7 +85,7 @@ def _compose_transform_matrix_numpy(
 
     # Convert inputs to numpy arrays with proper dtype
     if scale_factor is not None:
-        if isinstance(scale_factor, (int, float)):
+        if isinstance(scale_factor, int | float):
             scale_vec = np.array([scale_factor, scale_factor, scale_factor], dtype=dtype)
         elif not isinstance(scale_factor, np.ndarray):
             scale_vec = np.array(scale_factor, dtype=dtype)
@@ -209,7 +218,7 @@ def _scale_numpy(
     Modifies means and scales arrays in-place for maximum performance.
     """
     # Convert scale_factor to array
-    if isinstance(scale_factor, (int, float)):
+    if isinstance(scale_factor, int | float):
         scale_factor_arr = np.array([scale_factor, scale_factor, scale_factor], dtype=means.dtype)
         is_uniform_scale = True
         uniform_scale_value = float(scale_factor)
@@ -360,124 +369,9 @@ def _quaternion_multiply_numpy(
     return out
 
 
-def _quaternion_to_rotation_matrix_numpy(q: np.ndarray) -> np.ndarray:
-    """NumPy implementation of quaternion to rotation matrix."""
-    q = q / np.linalg.norm(q)
-    w, x, y, z = q[0], q[1], q[2], q[3]
-
-    R = np.zeros((3, 3), dtype=q.dtype)
-
-    R[0, 0] = 1 - 2 * (y * y + z * z)
-    R[0, 1] = 2 * (x * y - w * z)
-    R[0, 2] = 2 * (x * z + w * y)
-
-    R[1, 0] = 2 * (x * y + w * z)
-    R[1, 1] = 1 - 2 * (x * x + z * z)
-    R[1, 2] = 2 * (y * z - w * x)
-
-    R[2, 0] = 2 * (x * z - w * y)
-    R[2, 1] = 2 * (y * z + w * x)
-    R[2, 2] = 1 - 2 * (x * x + y * y)
-
-    return R
-
-
-def _rotation_matrix_to_quaternion_numpy(R: np.ndarray) -> np.ndarray:
-    """NumPy implementation of rotation matrix to quaternion."""
-    trace = R[0, 0] + R[1, 1] + R[2, 2]
-
-    if trace > 0:
-        s = 0.5 / np.sqrt(trace + 1.0)
-        w = 0.25 / s
-        x = (R[2, 1] - R[1, 2]) * s
-        y = (R[0, 2] - R[2, 0]) * s
-        z = (R[1, 0] - R[0, 1]) * s
-    elif R[0, 0] > R[1, 1] and R[0, 0] > R[2, 2]:
-        s = 2.0 * np.sqrt(1.0 + R[0, 0] - R[1, 1] - R[2, 2])
-        w = (R[2, 1] - R[1, 2]) / s
-        x = 0.25 * s
-        y = (R[0, 1] + R[1, 0]) / s
-        z = (R[0, 2] + R[2, 0]) / s
-    elif R[1, 1] > R[2, 2]:
-        s = 2.0 * np.sqrt(1.0 + R[1, 1] - R[0, 0] - R[2, 2])
-        w = (R[0, 2] - R[2, 0]) / s
-        x = (R[0, 1] + R[1, 0]) / s
-        y = 0.25 * s
-        z = (R[1, 2] + R[2, 1]) / s
-    else:
-        s = 2.0 * np.sqrt(1.0 + R[2, 2] - R[0, 0] - R[1, 1])
-        w = (R[1, 0] - R[0, 1]) / s
-        x = (R[0, 2] + R[2, 0]) / s
-        y = (R[1, 2] + R[2, 1]) / s
-        z = 0.25 * s
-
-    q = np.array([w, x, y, z], dtype=R.dtype)
-    return q / np.linalg.norm(q)
-
-
-def _axis_angle_to_quaternion_numpy(axis_angle: np.ndarray) -> np.ndarray:
-    """NumPy implementation of axis-angle to quaternion."""
-    angle = np.linalg.norm(axis_angle)
-    if angle < 1e-8:
-        return np.array([1.0, 0.0, 0.0, 0.0], dtype=axis_angle.dtype)
-
-    axis = axis_angle / angle
-    half_angle = angle / 2
-    sin_half = np.sin(half_angle)
-
-    w = np.cos(half_angle)
-    x = axis[0] * sin_half
-    y = axis[1] * sin_half
-    z = axis[2] * sin_half
-
-    return np.array([w, x, y, z], dtype=axis_angle.dtype)
-
-
-def _euler_to_quaternion_numpy(euler: np.ndarray) -> np.ndarray:
-    """NumPy implementation of Euler angles to quaternion."""
-    roll, pitch, yaw = euler[0], euler[1], euler[2]
-
-    cr = np.cos(roll / 2)
-    sr = np.sin(roll / 2)
-    cp = np.cos(pitch / 2)
-    sp = np.sin(pitch / 2)
-    cy = np.cos(yaw / 2)
-    sy = np.sin(yaw / 2)
-
-    w = cr * cp * cy + sr * sp * sy
-    x = sr * cp * cy - cr * sp * sy
-    y = cr * sp * cy + sr * cp * sy
-    z = cr * cp * sy - sr * sp * cy
-
-    return np.array([w, x, y, z], dtype=euler.dtype)
-
-
-def _quaternion_to_euler_numpy(q: np.ndarray) -> np.ndarray:
-    """NumPy implementation of quaternion to Euler angles."""
-    w, x, y, z = q[0], q[1], q[2], q[3]
-
-    # Roll (x-axis rotation)
-    sinr_cosp = 2 * (w * x + y * z)
-    cosr_cosp = 1 - 2 * (x * x + y * y)
-    roll = np.arctan2(sinr_cosp, cosr_cosp)
-
-    # Pitch (y-axis rotation)
-    sinp = 2 * (w * y - z * x)
-    if np.abs(sinp) >= 1:
-        pitch = np.copysign(np.pi / 2, sinp)
-    else:
-        pitch = np.arcsin(sinp)
-
-    # Yaw (z-axis rotation)
-    siny_cosp = 2 * (w * z + x * y)
-    cosy_cosp = 1 - 2 * (y * y + z * z)
-    yaw = np.arctan2(siny_cosp, cosy_cosp)
-
-    return np.array([roll, pitch, yaw], dtype=q.dtype)
-
-
-# ============================================================================
-# ============================================================================
+# Note: _quaternion_to_rotation_matrix_numpy, _rotation_matrix_to_quaternion_numpy,
+# _axis_angle_to_quaternion_numpy, _euler_to_quaternion_numpy, _quaternion_to_euler_numpy
+# are imported from gsmod.shared.rotation (canonical implementations)
 
 
 # ============================================================================

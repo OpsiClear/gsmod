@@ -101,7 +101,13 @@ from gsmod.config.presets import (
 )
 
 # Config values and presets
-from gsmod.config.values import ColorValues, FilterValues, HistogramConfig, TransformValues
+from gsmod.config.values import (
+    ColorValues,
+    FilterValues,
+    HistogramConfig,
+    OpacityValues,
+    TransformValues,
+)
 
 # Filtering utilities
 from gsmod.filter.bounds import (
@@ -119,8 +125,16 @@ from gsmod.histogram import HistogramResult
 # Parameterized pipelines
 from gsmod.params import Param
 
+# Unified processing
+from gsmod.processing import GaussianProcessor, get_processor
+
 # Protocols
-from gsmod.protocols import PipelineStage
+from gsmod.protocols import (
+    ColorProcessor,
+    FilterProcessor,
+    PipelineStage,
+    TransformProcessor,
+)
 
 # Quaternion utilities
 from gsmod.transform.api import (
@@ -151,6 +165,7 @@ __all__ = [
     "ColorValues",
     "FilterValues",
     "TransformValues",
+    "OpacityValues",
     "HistogramConfig",
     # Histogram
     "HistogramResult",
@@ -191,8 +206,14 @@ __all__ = [
     "Transform",
     # Parameterization
     "Param",
+    # Unified processing
+    "GaussianProcessor",
+    "get_processor",
     # Protocols
     "PipelineStage",
+    "ColorProcessor",
+    "TransformProcessor",
+    "FilterProcessor",
     # Scene composition
     "concatenate",
     "compose_with_transforms",

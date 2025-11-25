@@ -17,12 +17,14 @@
 
 ## Overview
 
-**gsmod** provides processing operations for 3D Gaussian Splatting data: color grading, 3D transforms, spatial filtering, and learnable modules for auto-adjustment. Works with both CPU (NumPy) and GPU (PyTorch) backends.
+**gsmod** provides processing operations for 3D Gaussian Splatting data: color grading, 3D transforms, spatial filtering, opacity adjustment, and learnable modules for auto-adjustment. Works with both CPU (NumPy) and GPU (PyTorch) backends with unified processing interface.
 
 **Included Features:**
 - **Color Grading**: 15 adjustments (brightness, contrast, saturation, temperature, tint, gamma, shadows, highlights, fade, hue shift, split toning)
+- **Opacity Adjustment**: Format-aware opacity scaling (fade/boost) for both PLY (logit) and linear formats
 - **3D Transforms**: translate, rotate, scale with quaternion/euler/axis-angle support
 - **Spatial Filtering**: sphere, box, ellipsoid, frustum volumes + opacity/scale thresholds
+- **Unified Processing**: GaussianProcessor auto-dispatches between CPU and GPU backends
 - **Learnable Modules**: PyTorch nn.Modules for gradient-based color/transform/filter optimization
 - **Composable Pipelines**: Method chaining, built-in presets, JSON serialization
 - **Scene Composition**: Concatenate, merge, deduplicate, split scenes
@@ -38,10 +40,23 @@
   - Split toning: shadow_tint, highlight_tint
   - LUT-based processing with zero-copy API
 
+- **Opacity Adjustment**: Format-aware opacity scaling
+  - Works with both PLY (logit) and linear [0,1] opacity formats
+  - Fade (reduce opacity) and boost (increase opacity) operations
+  - Multiplicative composition for combining adjustments
+  - Factory methods: `OpacityValues.fade()`, `OpacityValues.boost()`
+
+- **Unified Processing**: Single API for CPU and GPU
+  - `GaussianProcessor` auto-dispatches based on input type
+  - Works with GSData/GSDataPro (CPU) and GSTensor/GSTensorPro (GPU)
+  - Methods: `color()`, `transform()`, `filter()`, `opacity()`
+  - Batch processing with `process()` method
+
 - **3D Transforms**: Geometric operations on Gaussian positions and orientations
   - translate, rotate, scale, combined transforms
   - Rotation formats: quaternion, matrix, axis_angle, euler
   - Quaternion utilities for orientation manipulation
+  - Shared rotation utilities for CPU/GPU code reuse
 
 - **Spatial Filtering**: Volume and property-based selection
   - Volume filters: sphere, box, ellipsoid, frustum
@@ -109,7 +124,7 @@ pip install torch --index-url https://download.pytorch.org/whl/cu121
 ### Simplified API (Recommended)
 
 ```python
-from gsmod import GSDataPro, ColorValues, FilterValues, TransformValues
+from gsmod import GSDataPro, ColorValues, FilterValues, TransformValues, OpacityValues
 from gsmod import CINEMATIC, STRICT_FILTER, DOUBLE_SIZE
 
 # Load Gaussian splatting data
@@ -117,6 +132,7 @@ data = GSDataPro.from_ply("scene.ply")
 
 # Apply operations with fluent chaining
 data.color(ColorValues(brightness=1.2, saturation=1.3))
+data.opacity(OpacityValues(scale=0.8))  # Fade to 80%
 data.filter(FilterValues(min_opacity=0.1, sphere_radius=0.8))
 data.transform(TransformValues.from_scale(2.0))
 
@@ -132,7 +148,7 @@ data.to_ply("output.ply")
 ### Using Config Values
 
 ```python
-from gsmod import GSDataPro, ColorValues, FilterValues, TransformValues
+from gsmod import GSDataPro, ColorValues, FilterValues, TransformValues, OpacityValues
 
 data = GSDataPro.from_ply("scene.ply")
 
@@ -147,13 +163,37 @@ data.color(ColorValues(
     highlights=-0.05
 ))
 
+# Opacity adjustments (format-aware: works with PLY logit and linear)
+data.opacity(OpacityValues(scale=0.5))  # Fade to 50%
+data.opacity(OpacityValues.fade(0.7))   # Factory method: fade to 70%
+data.opacity(OpacityValues.boost(1.5))  # Boost opacity (move toward 1.0)
+
 # Spatial filtering
+# Include mode (default): keep only what matches
 data.filter(FilterValues(
     min_opacity=0.1,
     max_scale=2.5,
     sphere_radius=0.8,
     sphere_center=(0, 0, 0)
 ))
+
+# Exclude mode: remove what matches, keep everything outside
+data.filter(FilterValues(
+    sphere_radius=5.0,
+    invert=True  # Keep points OUTSIDE the sphere
+))
+
+# Chain multiple filters with different modes
+data.filter(FilterValues(sphere_radius=3.0, invert=False))  # Keep inside outer sphere
+data.filter(FilterValues(sphere_radius=1.5, invert=True))   # Remove inside inner sphere
+# Result: Hollow shell between r=1.5 and r=3.0
+
+# Complex filtering with method chaining
+(data
+    .filter(FilterValues(sphere_radius=5.0, invert=False))  # Include: inside sphere
+    .filter(FilterValues(min_opacity=0.5, invert=False))     # Include: high opacity
+    .filter(FilterValues(box_min=(-1,-1,-1), box_max=(1,1,1), invert=True))  # Exclude: box
+)
 
 # 3D transforms
 data.transform(TransformValues.from_translation(1.0, 0.0, 0.0))
@@ -179,11 +219,40 @@ cinematic_warm = CINEMATIC + WARM
 data.color(cinematic_warm)
 ```
 
+### Unified Processing (Auto-dispatch CPU/GPU)
+
+```python
+from gsmod import GaussianProcessor, ColorValues, TransformValues, OpacityValues
+from gsmod import GSDataPro
+from gsmod.torch import GSTensorPro
+
+# Create processor (works with both CPU and GPU data)
+processor = GaussianProcessor()
+
+# CPU processing
+cpu_data = GSDataPro.from_ply("scene.ply")
+cpu_data = processor.color(cpu_data, ColorValues(brightness=1.2))
+cpu_data = processor.opacity(cpu_data, OpacityValues.fade(0.8))
+
+# GPU processing (automatically detected)
+gpu_data = GSTensorPro.from_ply("scene.ply", device="cuda")
+gpu_data = processor.color(gpu_data, ColorValues(brightness=1.2))
+gpu_data = processor.opacity(gpu_data, OpacityValues.fade(0.8))
+
+# Batch processing with process() method
+result = processor.process(
+    cpu_data,
+    color=ColorValues(brightness=1.2),
+    transform=TransformValues.from_scale(2.0),
+    opacity_values=OpacityValues.fade(0.8)
+)
+```
+
 ### GPU Pipeline
 
 ```python
 from gsmod.torch import GSTensorPro
-from gsmod import ColorValues, FilterValues, TransformValues
+from gsmod import ColorValues, FilterValues, TransformValues, OpacityValues
 
 # Load data to GPU
 data = GSTensorPro.from_ply("scene.ply", device="cuda")
@@ -192,6 +261,7 @@ data = GSTensorPro.from_ply("scene.ply", device="cuda")
 data.filter(FilterValues(min_opacity=0.1, sphere_radius=0.8))
 data.transform(TransformValues.from_translation(1, 0, 0))
 data.color(ColorValues(brightness=1.2, saturation=1.3))
+data.opacity(OpacityValues.fade(0.7))
 
 # Save result
 data.to_ply("output.ply")

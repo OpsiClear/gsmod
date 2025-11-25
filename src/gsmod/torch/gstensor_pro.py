@@ -21,7 +21,13 @@ import torch
 # Import GSTensor from gsply
 from gsply.torch import GSTensor
 
-from gsmod.config.values import ColorValues, FilterValues, HistogramConfig, TransformValues
+from gsmod.config.values import (
+    ColorValues,
+    FilterValues,
+    HistogramConfig,
+    OpacityValues,
+    TransformValues,
+)
 from gsmod.histogram.result import HistogramResult
 
 # Try to import GPU I/O functions if available
@@ -97,8 +103,10 @@ class GSTensorPro(GSTensor):
             _base=base_tensor._base if hasattr(base_tensor, "_base") else None,
         )
 
-        # Copy format tracking from base if it exists
-        if hasattr(base_tensor, "_format"):
+        # Copy format tracking using public API
+        if hasattr(result, "copy_format_from") and hasattr(base_tensor, "_format"):
+            result.copy_format_from(base_tensor)
+        elif hasattr(base_tensor, "_format"):
             result._format = base_tensor._format.copy()
 
         return result
@@ -142,7 +150,10 @@ class GSTensorPro(GSTensor):
             _base=base_tensor._base if hasattr(base_tensor, "_base") else None,
         )
 
-        if hasattr(base_tensor, "_format"):
+        # Copy format tracking using public API
+        if hasattr(result, "copy_format_from") and hasattr(base_tensor, "_format"):
+            result.copy_format_from(base_tensor)
+        elif hasattr(base_tensor, "_format"):
             result._format = base_tensor._format.copy()
 
         return result
@@ -167,11 +178,11 @@ class GSTensorPro(GSTensor):
             _base=base_clone._base if hasattr(base_clone, "_base") else None,
         )
 
-        # Copy format tracking
-        if hasattr(self, "_format"):
+        # Copy format tracking using public API
+        if hasattr(result, "copy_format_from"):
+            result.copy_format_from(self)
+        elif hasattr(self, "_format"):
             result._format = self._format.copy()
-        else:
-            result._format = {"sh0": "sh", "scales": "linear", "opacities": "linear"}
 
         return result
 
@@ -510,6 +521,10 @@ class GSTensorPro(GSTensor):
             in_fov_y = torch.abs(local[:, 1]) <= abs_z * tan_half_fov_y
             mask &= in_depth & in_fov_x & in_fov_y
 
+        # Invert mask if exclude mode is requested
+        if values.invert:
+            mask = ~mask
+
         # Apply mask to all arrays
         self.means = self.means[mask]
         self.scales = self.scales[mask]
@@ -555,18 +570,75 @@ class GSTensorPro(GSTensor):
         self.means = torch.matmul(homogeneous, matrix_tensor.T)[:, :3]
 
         # Apply rotation to quaternions
-        if values.rotation != (1.0, 0.0, 0.0, 0.0):
+        if not np.allclose(values.rotation, np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float32)):
             rot_quat = torch.tensor(values.rotation, dtype=self.dtype, device=self.device)
             self.quats = self._quaternion_multiply(rot_quat.unsqueeze(0), self.quats)
 
         # Apply scale
-        if values.scale != 1.0:
+        if not np.allclose(values.scale, 1.0):
             if self.is_scales_ply:
                 self.scales += np.log(values.scale)
             else:
                 self.scales *= values.scale
 
         self._base = None
+        return self
+
+    def opacity(self, values: OpacityValues, inplace: bool = True) -> Self:
+        """Apply opacity adjustment.
+
+        Handles both linear [0, 1] and PLY (logit) opacity formats correctly.
+        The scale factor is always applied in linear space.
+
+        :param values: Opacity parameters to apply
+        :param inplace: If True, modify self; if False, return modified copy
+        :return: Self (modified) or copy with modifications
+
+        Example:
+            >>> tensor.opacity(OpacityValues(scale=0.5))  # Fade to 50%
+            >>> tensor.opacity(OpacityValues.fade(0.7))  # Fade to 70%
+            >>> tensor.opacity(OpacityValues.boost(1.5))  # Boost opacity
+        """
+        if not inplace:
+            result = self.clone()
+            return result.opacity(values, inplace=True)
+
+        if values.is_neutral():
+            return self
+
+        scale = values.scale
+
+        if self.is_opacities_ply:
+            # PLY format: stored as logit(opacity)
+            # Convert to linear, scale, convert back
+            linear = torch.sigmoid(self.opacities)
+
+            if scale <= 1.0:
+                # Simple scaling for fade
+                scaled = linear * scale
+            else:
+                # Boost: move toward 1.0 with diminishing returns
+                boost_factor = (scale - 1.0) / 2.0
+                scaled = linear + (1.0 - linear) * boost_factor
+
+            # Clamp to valid range for logit (avoid inf)
+            scaled = torch.clamp(scaled, 1e-7, 1.0 - 1e-7)
+
+            # Convert back to logit
+            self.opacities = torch.logit(scaled)
+        else:
+            # Linear format: direct scaling
+            if scale <= 1.0:
+                self.opacities = torch.clamp(self.opacities * scale, 0.0, 1.0)
+            else:
+                # Boost: move toward 1.0 with diminishing returns
+                boost_factor = (scale - 1.0) / 2.0
+                self.opacities = torch.clamp(
+                    self.opacities + (1.0 - self.opacities) * boost_factor,
+                    0.0,
+                    1.0,
+                )
+
         return self
 
     def to_cpu(self):
@@ -646,7 +718,10 @@ class GSTensorPro(GSTensor):
             _base=result._base if hasattr(result, "_base") else None,
         )
 
-        if hasattr(result, "_format"):
+        # Copy format tracking using public API
+        if hasattr(wrapped, "copy_format_from") and hasattr(result, "_format"):
+            wrapped.copy_format_from(result)
+        elif hasattr(result, "_format"):
             wrapped._format = result._format.copy()
 
         return wrapped

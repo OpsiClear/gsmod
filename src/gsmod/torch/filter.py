@@ -282,8 +282,8 @@ class FilterGPU:
         :param threshold: Maximum opacity threshold
         :returns: Boolean mask
         """
-        # Handle different opacity formats
-        if data._format.get("opacities") == "ply":
+        # Handle different opacity formats using gsply's is_opacities_ply property
+        if data.is_opacities_ply:
             # Logit opacities - convert threshold to logit
             threshold_logit = torch.logit(torch.tensor(threshold, device=data.device))
             return data.opacities <= threshold_logit
@@ -298,8 +298,8 @@ class FilterGPU:
         :param threshold: Minimum scale threshold
         :returns: Boolean mask
         """
-        # Handle different scale formats
-        if data._format.get("scales") == "ply":
+        # Handle different scale formats using gsply's is_scales_ply property
+        if data.is_scales_ply:
             # Log scales - convert threshold to log
             threshold_log = torch.log(torch.tensor(threshold, device=data.device))
             min_scales = torch.min(data.scales, dim=1)[0]

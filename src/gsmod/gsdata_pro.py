@@ -12,7 +12,13 @@ from gsply import GSData
 if TYPE_CHECKING:
     from gsmod.torch.gstensor_pro import GSTensorPro
 
-from gsmod.config.values import ColorValues, FilterValues, HistogramConfig, TransformValues
+from gsmod.config.values import (
+    ColorValues,
+    FilterValues,
+    HistogramConfig,
+    OpacityValues,
+    TransformValues,
+)
 from gsmod.histogram.result import HistogramResult
 
 
@@ -87,6 +93,10 @@ class GSDataPro(GSData):
 
         mask = compute_filter_mask(self, values)
 
+        # Invert mask if exclude mode is requested
+        if values.invert:
+            mask = ~mask
+
         # Apply mask using fused parallel scatter (single pass)
         self.means, self.scales, self.quats, self.opacities, self.sh0, self.shN = apply_mask_fused(
             self, mask
@@ -120,6 +130,37 @@ class GSDataPro(GSData):
 
         self.means, self.quats, self.scales = apply_transform_values(
             self.means, self.quats, self.scales, values
+        )
+
+        return self
+
+    def opacity(self, values: OpacityValues, inplace: bool = True) -> Self:
+        """Apply opacity adjustment.
+
+        Handles both linear [0, 1] and PLY (logit) opacity formats correctly.
+        The scale factor is always applied in linear space.
+
+        :param values: Opacity parameters to apply
+        :param inplace: If True, modify self; if False, return modified copy
+        :return: Self (modified) or copy with modifications
+
+        Example:
+            >>> data.opacity(OpacityValues(scale=0.5))  # Fade to 50%
+            >>> data.opacity(OpacityValues.fade(0.7))  # Fade to 70%
+            >>> data.opacity(OpacityValues.boost(1.5))  # Boost opacity
+        """
+        if not inplace:
+            data = self.clone()
+            return data.opacity(values, inplace=True)
+
+        if values.is_neutral():
+            return self
+
+        # Apply opacity using format-aware function
+        from gsmod.opacity.apply import apply_opacity_values
+
+        self.opacities = apply_opacity_values(
+            self.opacities, values, is_ply_format=self.is_opacities_ply
         )
 
         return self
@@ -210,9 +251,16 @@ class GSDataPro(GSData):
         pro.opacities = data.opacities
         pro.sh0 = data.sh0
         pro.shN = getattr(data, "shN", None)
-        # Copy format tracking if present
-        if hasattr(data, "_format"):
+        pro.masks = getattr(data, "masks", None)
+        pro.mask_names = getattr(data, "mask_names", None)
+        pro._base = getattr(data, "_base", None)
+        # Copy format tracking using public API if available
+        if hasattr(pro, "copy_format_from") and hasattr(data, "_format"):
+            pro.copy_format_from(data)
+        elif hasattr(data, "_format"):
             pro._format = data._format.copy()
+        else:
+            pro._format = {}
         return pro
 
     @classmethod
@@ -236,13 +284,22 @@ class GSDataPro(GSData):
 
         :return: GSData instance
         """
-        data = GSData()
-        data.means = self.means
-        data.scales = self.scales
-        data.quats = self.quats
-        data.opacities = self.opacities
-        data.sh0 = self.sh0
-        data.shN = self.shN
+        data = GSData(
+            means=self.means,
+            scales=self.scales,
+            quats=self.quats,
+            opacities=self.opacities,
+            sh0=self.sh0,
+            shN=self.shN,
+            masks=getattr(self, "masks", None),
+            mask_names=getattr(self, "mask_names", None),
+            _base=getattr(self, "_base", None),
+        )
+        # Copy format tracking using public API
+        if hasattr(data, "copy_format_from"):
+            data.copy_format_from(self)
+        elif hasattr(self, "_format"):
+            data._format = self._format.copy()
         return data
 
     def to_gpu(self, device: str = "cuda") -> GSTensorPro:
@@ -267,6 +324,14 @@ class GSDataPro(GSData):
         pro.opacities = self.opacities.copy()
         pro.sh0 = self.sh0.copy()
         pro.shN = self.shN.copy() if self.shN is not None else None
+        pro.masks = self.masks.copy() if self.masks is not None else None
+        pro.mask_names = list(self.mask_names) if self.mask_names is not None else None
+        pro._base = self._base.copy() if self._base is not None else None
+        # Copy format tracking using public API
+        if hasattr(pro, "copy_format_from"):
+            pro.copy_format_from(self)
+        elif hasattr(self, "_format"):
+            pro._format = self._format.copy()
         return pro
 
     def to_ply(self, path: str) -> None:

@@ -302,11 +302,31 @@ class FilterValues:
     - max_scale: min(a, b) - lower cap is stricter
     - sphere_radius: min(a, b) - smaller region is stricter
 
+    Filter Mode:
+    - invert=False (default): Include mode - keep only what matches (filter out outside)
+    - invert=True: Exclude mode - remove what matches (keep everything outside)
+
+    Important - Composition vs Sequential Filtering:
+    - When composing with '+', the invert parameter uses OR logic
+    - For complex include/exclude logic, use sequential filtering instead:
+      data.filter(f1).filter(f2) rather than data.filter(f1 + f2)
+
     Example:
         >>> f1 = FilterValues(min_opacity=0.3)
         >>> f2 = FilterValues(min_opacity=0.5, max_scale=2.0)
         >>> combined = f1 + f2
         >>> # min_opacity=0.5, max_scale=2.0
+
+        >>> # Include mode (default): keep only inside sphere
+        >>> f_include = FilterValues(sphere_radius=5.0, invert=False)
+
+        >>> # Exclude mode: remove inside sphere, keep outside
+        >>> f_exclude = FilterValues(sphere_radius=5.0, invert=True)
+
+        >>> # Sequential filtering (recommended for complex logic)
+        >>> data.filter(FilterValues(sphere_radius=3.0, invert=False))  # Include outer
+        >>> data.filter(FilterValues(sphere_radius=1.5, invert=True))   # Exclude inner
+        >>> # Result: Hollow shell
     """
 
     # Opacity filtering
@@ -337,6 +357,9 @@ class FilterValues:
     frustum_aspect: float = 1.0  # width/height
     frustum_near: float = 0.1
     frustum_far: float = 100.0
+
+    # Filter mode: False=include (default), True=exclude
+    invert: bool = False
 
     def __add__(self, other: FilterValues) -> FilterValues:
         """Merge using 'stricter wins' (intersection) logic."""
@@ -431,6 +454,9 @@ class FilterValues:
             frustum_near = other.frustum_near
             frustum_far = other.frustum_far
 
+        # For invert, use OR logic: if either inverts, result inverts
+        invert = self.invert or other.invert
+
         return FilterValues(
             min_opacity=max(self.min_opacity, other.min_opacity),
             max_opacity=min(self.max_opacity, other.max_opacity),
@@ -449,6 +475,7 @@ class FilterValues:
             frustum_aspect=frustum_aspect,
             frustum_near=frustum_near,
             frustum_far=frustum_far,
+            invert=invert,
         )
 
     def __radd__(self, other):
@@ -480,6 +507,7 @@ class FilterValues:
             frustum_aspect=max(0.1, min(10.0, self.frustum_aspect)),
             frustum_near=max(0.001, self.frustum_near),
             frustum_far=max(self.frustum_near + 0.001, self.frustum_far),
+            invert=self.invert,
         )
 
     def is_neutral(self) -> bool:
@@ -591,10 +619,17 @@ class TransformValues:
 
         :return: True if this is the identity transform
         """
+        import numpy as np
+
+        scale_arr = np.asarray(self.scale, dtype=np.float32).reshape(-1)
+        scale_val = float(scale_arr[0])
+        rot = np.asarray(self.rotation, dtype=np.float32).reshape(-1)
+        trans = np.asarray(self.translation, dtype=np.float32).reshape(-1)
+
         return (
-            self.scale == 1.0
-            and self.rotation == (1.0, 0.0, 0.0, 0.0)
-            and self.translation == (0.0, 0.0, 0.0)
+            np.allclose(scale_val, 1.0)
+            and np.allclose(rot, np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float32))
+            and np.allclose(trans, np.array([0.0, 0.0, 0.0], dtype=np.float32))
         )
 
     def learn(self, *params: str) -> LearnableTransform:
@@ -783,3 +818,69 @@ class HistogramConfig:
             and self.max_value is None
             and not self.normalize
         )
+
+
+@dataclass
+class OpacityValues:
+    """Opacity adjustment values with merge support.
+
+    Handles both linear [0, 1] and PLY (logit) opacity formats correctly.
+    The scale factor is applied in linear space regardless of storage format.
+
+    Merge semantics: multiplicative composition.
+        scale=0.5 + scale=0.5 -> scale=0.25 (50% of 50%)
+
+    Example:
+        >>> fade = OpacityValues(scale=0.5)  # 50% opacity
+        >>> boost = OpacityValues(scale=1.5)  # 150% opacity (clamped)
+        >>> combined = fade + boost  # 75% opacity
+    """
+
+    # Multiplicative scale factor (1.0 = no change)
+    # Values < 1.0 make more transparent
+    # Values > 1.0 make more opaque (with diminishing returns near 1.0)
+    scale: float = 1.0
+
+    def __add__(self, other: OpacityValues) -> OpacityValues:
+        """Merge using multiplicative composition."""
+        if not isinstance(other, OpacityValues):
+            return NotImplemented
+        return OpacityValues(scale=self.scale * other.scale)
+
+    def __radd__(self, other):
+        """Support sum() with initial value 0."""
+        if other == 0:
+            return self
+        return self.__add__(other)
+
+    def is_neutral(self) -> bool:
+        """Check if this is a no-op (scale=1.0).
+
+        :return: True if scale is 1.0
+        """
+        return self.scale == 1.0
+
+    def clamp(self) -> OpacityValues:
+        """Return clamped copy with scale in valid range.
+
+        :return: OpacityValues with scale clamped to [0.0, 10.0]
+        """
+        return OpacityValues(scale=max(0.0, min(10.0, self.scale)))
+
+    @classmethod
+    def fade(cls, amount: float = 0.5) -> OpacityValues:
+        """Create fade effect (reduce opacity).
+
+        :param amount: Fade amount (0.0 = invisible, 1.0 = no change)
+        :return: OpacityValues with scale set to amount
+        """
+        return cls(scale=max(0.0, min(1.0, amount)))
+
+    @classmethod
+    def boost(cls, amount: float = 1.5) -> OpacityValues:
+        """Create boost effect (increase opacity).
+
+        :param amount: Boost factor (1.0 = no change, >1.0 = more opaque)
+        :return: OpacityValues with scale set to amount
+        """
+        return cls(scale=max(1.0, amount))

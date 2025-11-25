@@ -2,6 +2,22 @@
 
 All notable changes to gsmod will be documented in this file.
 
+## [0.1.1] - 2025-01-24
+
+### Added
+- Opacity adjustment module with format-aware opacity scaling
+- OpacityValues config dataclass with fade() and boost() factory methods
+- GaussianProcessor unified interface for auto-dispatching CPU/GPU operations
+- Shared rotation utilities module for code reuse between backends
+- Enhanced protocol definitions with ColorProcessor, TransformProcessor, FilterProcessor
+- Opacity support in GSDataPro and GSTensorPro classes
+
+### Changed
+- Rotation utilities moved to shared module for better code organization
+- Format property access now uses public API (is_opacities_ply, is_scales_ply)
+- Improved format tracking in GSDataPro and GSTensorPro
+- Fixed TransformValues.is_neutral() with robust float comparison
+
 ## [0.3.0] - 2024
 
 ### Added

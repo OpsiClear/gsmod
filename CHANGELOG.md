@@ -5,6 +5,62 @@ All notable changes to gsmod will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2025-01-24
+
+### Added
+- **Opacity Adjustment Module** (`gsmod.opacity`)
+  - `OpacityValues` config dataclass for opacity scaling
+  - Format-aware opacity adjustment supporting both linear [0,1] and PLY (logit) formats
+  - Factory methods: `OpacityValues.fade()` and `OpacityValues.boost()`
+  - Multiplicative composition: combine multiple opacity adjustments
+- **Unified Processing Interface** (`gsmod.processing`)
+  - `GaussianProcessor` class for auto-dispatching between CPU and GPU backends
+  - Single API works with both GSData/GSDataPro (CPU) and GSTensor/GSTensorPro (GPU)
+  - Methods: `color()`, `transform()`, `filter()`, `opacity()`, and `process()` (batch processing)
+  - Factory function `get_processor()` for singleton access
+- **Shared Rotation Utilities** (`gsmod.shared.rotation`)
+  - Unified rotation functions with auto-dispatch between NumPy and PyTorch
+  - Functions: `quaternion_multiply()`, `quaternion_to_rotation_matrix()`, `euler_to_quaternion()`, etc.
+  - Reduces code duplication across CPU and GPU backends
+- **Enhanced Protocol Definitions** (`gsmod.protocols`)
+  - Added `ColorProcessor`, `TransformProcessor`, `FilterProcessor` protocols
+  - Generic type support in `PipelineStage` protocol for CPU/GPU compatibility
+  - Added `is_neutral()` method to pipeline protocol
+- **Opacity Support in GSDataPro and GSTensorPro**
+  - New `.opacity(OpacityValues)` method on both GSDataPro and GSTensorPro
+  - Handles PLY (logit) and linear opacity formats automatically
+  - Supports fade (reduce opacity) and boost (increase opacity) operations
+- **Filter Include/Exclude Modes**
+  - New `invert` parameter in `FilterValues` (default: False)
+  - `invert=False`: Include mode - keep only what matches (default behavior)
+  - `invert=True`: Exclude mode - remove what matches, keep everything outside
+  - Supported in CPU, GPU, and unified processor implementations
+  - Chain multiple filters with different invert settings for complex patterns
+  - Examples:
+    - `FilterValues(sphere_radius=5.0, invert=True)` - keep points outside sphere
+    - Hollow shell: include r=3.0, then exclude r=1.5
+    - Box with hole: include box, then exclude sphere
+
+### Changed
+- **Rotation utilities refactored**
+  - Moved rotation conversion functions from `transform/api.py` to `gsmod.shared.rotation`
+  - `transform/api.py` now imports from shared module (canonical implementations)
+  - Maintains backward compatibility (all existing imports still work)
+- **Improved format property access**
+  - Updated FilterGPU to use `is_opacities_ply` and `is_scales_ply` properties (from gsply 0.2.8+)
+  - Replaced direct `_format` dict access with public API properties
+- **Enhanced format tracking**
+  - GSDataPro and GSTensorPro now use `copy_format_from()` when available
+  - Better handling of masks, mask_names, and _base attributes in clone/copy operations
+- **Fixed TransformValues.is_neutral()**
+  - Now uses `np.allclose()` for robust float comparison
+  - Prevents false negatives from floating-point precision errors
+
+### Fixed
+- Format property access in GPU filters now uses public API (`is_opacities_ply`, `is_scales_ply`)
+- TransformValues identity check now correctly handles array/tuple comparisons
+- Improved robustness of neutral/identity detection across all value types
+
 ## [0.3.0] - 2025-01-20
 
 ### Added

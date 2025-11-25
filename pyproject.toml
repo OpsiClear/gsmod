@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gsmod"
-version = "0.1.0"
-description = "Ultra-fast CPU processing for 3D Gaussian Splatting (color, transform, filter)"
+version = "0.1.1"
+description = "Ultra-fast CPU processing for 3D Gaussian Splatting (color, transform, filter, opacity)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -61,7 +61,7 @@ Issues = "https://github.com/OpsiClear/gsmod/issues"
 Documentation = "https://github.com/OpsiClear/gsmod#readme"
 
 [tool.setuptools]
-packages = ["gsmod", "gsmod.color", "gsmod.config", "gsmod.filter", "gsmod.histogram", "gsmod.torch", "gsmod.transform"]
+packages = ["gsmod", "gsmod.color", "gsmod.config", "gsmod.filter", "gsmod.histogram", "gsmod.opacity", "gsmod.shared", "gsmod.torch", "gsmod.transform"]
 package-dir = {"" = "src"}
 zip-safe = true
 

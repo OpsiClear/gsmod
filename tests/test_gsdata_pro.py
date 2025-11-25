@@ -22,14 +22,15 @@ from gsmod.config.presets import (
 
 def create_test_data(n: int = 1000) -> GSDataPro:
     """Create test GSDataPro with random data."""
-    pro = GSDataPro.__new__(GSDataPro)
-    pro.means = np.random.randn(n, 3).astype(np.float32)
-    pro.scales = np.abs(np.random.randn(n, 3).astype(np.float32)) * 0.1
-    pro.quats = np.random.randn(n, 4).astype(np.float32)
-    pro.quats = pro.quats / np.linalg.norm(pro.quats, axis=1, keepdims=True)
-    pro.opacities = np.random.rand(n).astype(np.float32)
-    pro.sh0 = np.random.rand(n, 3).astype(np.float32)
-    pro.shN = None
+    means = np.random.randn(n, 3).astype(np.float32)
+    scales = np.abs(np.random.randn(n, 3).astype(np.float32)) * 0.1
+    quats = np.random.randn(n, 4).astype(np.float32)
+    quats = quats / np.linalg.norm(quats, axis=1, keepdims=True)
+    opacities = np.random.rand(n).astype(np.float32)
+    sh0 = np.random.rand(n, 3).astype(np.float32)
+
+    # Create GSDataPro properly using constructor
+    pro = GSDataPro(means, scales, quats, opacities, sh0, None)
     return pro
 
 
@@ -169,6 +170,103 @@ class TestGSDataProFilter:
         assert len(data.means) == original_count
         # Result should be filtered
         assert len(result.means) < original_count
+
+    def test_filter_invert_sphere(self):
+        """Invert parameter should exclude points instead of include."""
+        data = create_test_data(n=100)
+        original_count = len(data.means)
+
+        # Include mode (default): keep points inside sphere
+        data_include = data.clone()
+        data_include.filter(FilterValues(sphere_radius=2.0, sphere_center=(0, 0, 0), invert=False))
+        inside_count = len(data_include.means)
+
+        # Exclude mode: keep points outside sphere
+        data_exclude = data.clone()
+        data_exclude.filter(FilterValues(sphere_radius=2.0, sphere_center=(0, 0, 0), invert=True))
+        outside_count = len(data_exclude.means)
+
+        # Should be complementary
+        assert inside_count + outside_count == original_count
+        assert inside_count > 0  # Some points should be inside
+        assert outside_count > 0  # Some points should be outside
+
+        # Verify distances for include mode
+        distances_include = np.linalg.norm(data_include.means, axis=1)
+        assert np.all(distances_include <= 2.0)
+
+        # Verify distances for exclude mode
+        distances_exclude = np.linalg.norm(data_exclude.means, axis=1)
+        assert np.all(distances_exclude > 2.0)
+
+    def test_filter_invert_opacity(self):
+        """Invert parameter should work with opacity filters."""
+        data = create_test_data(n=100)
+        original_count = len(data.means)
+
+        # Include mode: keep high opacity
+        data_high = data.clone()
+        data_high.filter(FilterValues(min_opacity=0.5, invert=False))
+        high_count = len(data_high.means)
+
+        # Exclude mode: keep low opacity
+        data_low = data.clone()
+        data_low.filter(FilterValues(min_opacity=0.5, invert=True))
+        low_count = len(data_low.means)
+
+        # Should be complementary
+        assert high_count + low_count == original_count
+
+        # Verify opacities
+        if high_count > 0:
+            assert np.all(data_high.opacities >= 0.5)
+        if low_count > 0:
+            assert np.all(data_low.opacities < 0.5)
+
+    def test_filter_invert_box(self):
+        """Invert parameter should work with box filters."""
+        data = create_test_data(n=100)
+        original_count = len(data.means)
+
+        # Include mode: keep points inside box
+        data_inside = data.clone()
+        data_inside.filter(FilterValues(box_min=(-1, -1, -1), box_max=(1, 1, 1), invert=False))
+        inside_count = len(data_inside.means)
+
+        # Exclude mode: keep points outside box
+        data_outside = data.clone()
+        data_outside.filter(FilterValues(box_min=(-1, -1, -1), box_max=(1, 1, 1), invert=True))
+        outside_count = len(data_outside.means)
+
+        # Should be complementary
+        assert inside_count + outside_count == original_count
+
+        # Verify positions
+        if inside_count > 0:
+            assert np.all(data_inside.means >= -1)
+            assert np.all(data_inside.means <= 1)
+        if outside_count > 0:
+            # At least one axis should be outside [-1, 1]
+            outside_box = (data_outside.means < -1) | (data_outside.means > 1)
+            assert np.any(outside_box)
+
+    def test_filter_invert_combined(self):
+        """Invert parameter should work with combined filters."""
+        data = create_test_data(n=100)
+        original_count = len(data.means)
+
+        # Include mode: keep points inside sphere AND high opacity
+        data_include = data.clone()
+        data_include.filter(FilterValues(sphere_radius=2.0, min_opacity=0.5, invert=False))
+        include_count = len(data_include.means)
+
+        # Exclude mode: keep points outside sphere OR low opacity
+        data_exclude = data.clone()
+        data_exclude.filter(FilterValues(sphere_radius=2.0, min_opacity=0.5, invert=True))
+        exclude_count = len(data_exclude.means)
+
+        # Should be complementary
+        assert include_count + exclude_count == original_count
 
 
 class TestGSDataProTransform:
