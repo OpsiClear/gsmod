@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Format-aware opacity adjustment supporting both linear [0,1] and PLY (logit) formats
   - Factory methods: `OpacityValues.fade()` and `OpacityValues.boost()`
   - Multiplicative composition: combine multiple opacity adjustments
+- **Learnable Opacity Module** (`gsmod.torch.learn`)
+  - `OpacityConfig` dataclass for learnable opacity configuration
+  - `LearnableOpacity` nn.Module with full gradient support
+  - Format-aware opacity scaling for both linear and PLY (logit) formats
+  - Factory methods: `from_values()` and `to_values()` for OpacityValues integration
+  - Integration with `LearnableGSTensor.apply_opacity()` for training pipelines
 - **Unified Processing Interface** (`gsmod.processing`)
   - `GaussianProcessor` class for auto-dispatching between CPU and GPU backends
   - Single API works with both GSData/GSDataPro (CPU) and GSTensor/GSTensorPro (GPU)
@@ -40,6 +46,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `FilterValues(sphere_radius=5.0, invert=True)` - keep points outside sphere
     - Hollow shell: include r=3.0, then exclude r=1.5
     - Box with hole: include box, then exclude sphere
+- **Expanded Preset Library**
+  - 39 color presets organized by category (up from 10)
+  - Film Stock: KODAK_PORTRA, FUJI_VELVIA, KODAK_EKTACHROME, ILFORD_HP5, CINESTILL_800T
+  - Seasonal: SPRING_FRESH, SUMMER_BRIGHT, AUTUMN_WARM, WINTER_COLD
+  - Time of Day: SUNRISE, MIDDAY_SUN, SUNSET, BLUE_HOUR, OVERCAST
+  - Artistic: HIGH_KEY, LOW_KEY, TEAL_ORANGE, BLEACH_BYPASS, CROSS_PROCESS, FADED_PRINT, SEPIA_TONE
+  - Technical: LIFT_SHADOWS, COMPRESS_HIGHLIGHTS, INCREASE_CONTRAST, DESATURATE_MILD, ENHANCE_COLORS
+  - 12 opacity presets: FADE_SUBTLE through FADE_HEAVY, BOOST_MILD through BOOST_STRONG, GHOST_EFFECT, TRANSLUCENT
+  - New function: `get_opacity_preset(name)` for loading opacity presets by name
+- **Histogram-Based Learning** (`gsmod.histogram`)
+  - `HistogramResult.learn_from()`: Gradient-based color adjustment learning API
+  - Automatically learns brightness, contrast, saturation, gamma to match target histogram
+  - `HistogramResult.to_color_values()`: Rule-based adjustment suggestions (vibrant, dramatic, bright, dark, neutral)
+  - GPU acceleration support - works with both CPU and CUDA tensors
+  - Uses `MomentMatchingLoss` for fast and accurate histogram matching
 
 ### Changed
 - **Rotation utilities refactored**
@@ -57,6 +78,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Prevents false negatives from floating-point precision errors
 
 ### Fixed
+- **CRITICAL: GPU filter rotation matrix transpose bug** (`src/gsmod/torch/learn.py`)
+  - Fixed missing transpose (.T) in `_get_ellipsoid_rotation_matrix()` and `_get_box_rotation_matrix()`
+  - GPU rotated filters were oriented backwards compared to CPU (using R instead of R^T for inverse)
+  - Now correctly transposes rotation matrices to match CPU implementation
+  - Affects: `LearnableFilter` with ellipsoid/box geometry, gradient-based learning with rotated filters
+- **CRITICAL: Axis-angle to rotation matrix conversion bug** (`src/gsmod/torch/learn.py`)
+  - Fixed incorrect axis normalization in `_axis_angle_to_rotation_matrix()`
+  - Was building skew-symmetric matrix from unnormalized axis_angle, then dividing by angle
+  - Now correctly normalizes axis first, then builds K, matching Rodrigues' formula and CPU implementation
+  - Rotation matrices now mathematically correct and match CPU exactly
+  - Affects: All GPU rotated filter operations (ellipsoid, box, frustum)
 - Format property access in GPU filters now uses public API (`is_opacities_ply`, `is_scales_ply`)
 - TransformValues identity check now correctly handles array/tuple comparisons
 - Improved robustness of neutral/identity detection across all value types

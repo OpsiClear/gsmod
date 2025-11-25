@@ -53,7 +53,9 @@ from gsmod.torch.learn import (
     LearnableFilter,
     LearnableFilterConfig,
     LearnableGSTensor,
+    LearnableOpacity,
     LearnableTransform,
+    OpacityConfig,
     SoftFilter,
     SoftFilterConfig,
     TransformConfig,
@@ -71,11 +73,13 @@ __all__ = [
     # Training (gradient support) - new names
     "LearnableColor",
     "LearnableTransform",
+    "LearnableOpacity",
     "LearnableFilter",
     "LearnableGSTensor",
     # Configs
     "ColorGradingConfig",
     "TransformConfig",
+    "OpacityConfig",
     "LearnableFilterConfig",
     # Backwards compatibility aliases (deprecated)
     "LearnableColorGrading",

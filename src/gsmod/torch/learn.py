@@ -7,18 +7,23 @@ GSTensorPro methods when you need to learn parameters.
 Example:
     >>> from gsmod.torch.learn import (
     ...     LearnableGSTensor, LearnableColor, LearnableTransform,
-    ...     ColorGradingConfig, TransformConfig
+    ...     LearnableOpacity, LearnableFilter,
+    ...     ColorGradingConfig, TransformConfig, OpacityConfig
     ... )
     >>>
     >>> # Configure what to learn
     >>> config = ColorGradingConfig(learnable=['brightness', 'saturation'])
     >>> color_model = LearnableColor(config).cuda()
     >>>
+    >>> opacity_config = OpacityConfig(scale=0.8, learnable=['scale'])
+    >>> opacity_model = LearnableOpacity(opacity_config).cuda()
+    >>>
     >>> # Load data with gradient support
     >>> data = LearnableGSTensor.from_ply("scene.ply", device="cuda")
     >>>
     >>> # Apply learnable operations
     >>> result = data.apply_color(color_model)
+    >>> result = result.apply_opacity(opacity_model, is_ply_format=True)
     >>>
     >>> # Compute loss and backprop
     >>> loss = criterion(result.sh0, target)
@@ -145,6 +150,37 @@ class TransformConfig:
             self.device = "cuda" if torch.cuda.is_available() else "cpu"
         if self.learnable is None:
             self.learnable = ["translation", "scale", "rotation"]
+
+
+@dataclass
+class OpacityConfig:
+    """Configuration for learnable opacity adjustment.
+
+    :param scale: Initial opacity scale factor (1.0 = no change)
+        - Values 0.0-1.0: Multiplicative fade (reduce opacity)
+        - Values >1.0: Boost opacity (additive in remaining headroom)
+    :param learnable: List of parameter names to learn (None = all)
+    :param device: Device to create tensors on (None = auto-detect CUDA, or 'cpu', 'cuda', etc.)
+
+    Example:
+        >>> config = OpacityConfig(
+        ...     scale=0.8,
+        ...     learnable=['scale'],
+        ...     device='cuda'
+        ... )
+    """
+
+    scale: float = 1.0
+
+    learnable: list[str] | None = None
+    device: str | None = None  # None = auto-detect, or 'cpu', 'cuda', 'cuda:0', etc.
+
+    def __post_init__(self):
+        # Auto-detect device: prefer CUDA if available
+        if self.device is None:
+            self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        if self.learnable is None:
+            self.learnable = ["scale"]
 
 
 @dataclass
@@ -807,6 +843,119 @@ class LearnableTransform(nn.Module):
         )
 
 
+class LearnableOpacity(nn.Module):
+    """Learnable opacity adjustment with full gradient support.
+
+    Applies format-aware opacity scaling that correctly handles both
+    linear [0, 1] and PLY (logit) opacity formats.
+
+    Example:
+        >>> config = OpacityConfig(scale=0.8, learnable=['scale'])
+        >>> model = LearnableOpacity(config).cuda()
+        >>>
+        >>> # Forward pass
+        >>> new_opacities = model(opacities, is_ply_format=True)
+        >>>
+        >>> # Backprop
+        >>> loss = F.mse_loss(new_opacities, target)
+        >>> loss.backward()
+    """
+
+    def __init__(self, config: OpacityConfig | None = None):
+        super().__init__()
+        config = config or OpacityConfig()
+        self.config = config
+
+        # Scale parameter
+        scale = torch.tensor(config.scale, dtype=torch.float32)
+        if "scale" in config.learnable:
+            self.scale = nn.Parameter(scale)
+        else:
+            self.register_buffer("scale", scale)
+
+        # Move to device
+        self.to(config.device)
+
+    def forward(self, opacities: torch.Tensor, is_ply_format: bool = False) -> torch.Tensor:
+        """Apply opacity adjustment (fully differentiable).
+
+        :param opacities: Input opacities [N] or [N, 1]
+        :param is_ply_format: Whether opacities are in PLY (logit) format
+        :return: Adjusted opacities (same shape and format as input)
+
+        Note: The scale factor is applied in linear space even for PLY format.
+        For PLY format, the function converts to linear, scales, then converts back.
+        """
+        # Skip if scale is neutral and not learnable (optimization)
+        if "scale" not in self.config.learnable and abs(self.scale.item() - 1.0) < 1e-8:
+            return opacities
+
+        if is_ply_format:
+            # PLY format: stored as logit(opacity)
+            # Convert to linear space
+            linear = torch.sigmoid(opacities)
+
+            # Apply scaling
+            if self.scale <= 1.0:
+                # Fade: simple multiplication
+                scaled = linear * self.scale
+            else:
+                # Boost: additive in remaining headroom
+                boost_factor = (self.scale - 1.0) / 2.0
+                scaled = linear + (1.0 - linear) * boost_factor
+
+            # Clamp and convert back to logit
+            scaled = torch.clamp(scaled, 1e-7, 1.0 - 1e-7)
+            return torch.logit(scaled)
+        else:
+            # Linear format [0, 1]
+            if self.scale <= 1.0:
+                # Fade: simple multiplication
+                return torch.clamp(opacities * self.scale, 0.0, 1.0)
+            else:
+                # Boost: additive in remaining headroom
+                boost_factor = (self.scale - 1.0) / 2.0
+                return torch.clamp(
+                    opacities + (1.0 - opacities) * boost_factor,
+                    0.0,
+                    1.0,
+                )
+
+    @classmethod
+    def from_values(cls, values, learnable: list[str] | None = None):
+        """Create from OpacityValues with specified learnable parameters.
+
+        :param values: OpacityValues instance
+        :param learnable: Parameter names to make learnable (None = all)
+        :return: LearnableOpacity module
+
+        Example:
+            >>> from gsmod.config.values import OpacityValues
+            >>> model = LearnableOpacity.from_values(
+            ...     OpacityValues.fade(0.7),
+            ...     learnable=['scale']
+            ... )
+        """
+        config = OpacityConfig(
+            scale=values.scale,
+            learnable=learnable,
+        )
+        return cls(config)
+
+    def to_values(self):
+        """Export current parameter values to OpacityValues.
+
+        :return: OpacityValues with learned parameters
+
+        Example:
+            >>> learned = model.to_values()
+            >>> data.opacity(learned)
+        """
+        from gsmod.config.values import OpacityValues
+
+        return OpacityValues(scale=self.scale.detach().item())
+
+
 class LearnableFilter(nn.Module):
     """Differentiable soft filtering using sigmoid masks.
 
@@ -1036,20 +1185,22 @@ class LearnableFilter(nn.Module):
         return torch.stack([col1, col2, col3], dim=1)
 
     def _axis_angle_to_rotation_matrix(self, axis_angle: torch.Tensor) -> torch.Tensor:
-        """Convert axis-angle to rotation matrix."""
+        """Convert axis-angle to rotation matrix using Rodrigues' formula."""
         angle_sq = torch.sum(axis_angle * axis_angle)
         angle = torch.sqrt(angle_sq + 1e-12)
 
         if angle < 1e-8:
             return torch.eye(3, device=axis_angle.device, dtype=axis_angle.dtype)
 
-        # Use sinc for numerical stability
-        torch.sinc(angle / torch.pi)
+        # Normalize axis
+        axis = axis_angle / angle
+
+        # Build skew-symmetric matrix K from normalized axis
         K = torch.stack(
             [
-                torch.stack([torch.zeros_like(angle), -axis_angle[2], axis_angle[1]]),
-                torch.stack([axis_angle[2], torch.zeros_like(angle), -axis_angle[0]]),
-                torch.stack([-axis_angle[1], axis_angle[0], torch.zeros_like(angle)]),
+                torch.stack([torch.zeros_like(angle), -axis[2], axis[1]]),
+                torch.stack([axis[2], torch.zeros_like(angle), -axis[0]]),
+                torch.stack([-axis[1], axis[0], torch.zeros_like(angle)]),
             ]
         )
 
@@ -1057,22 +1208,21 @@ class LearnableFilter(nn.Module):
         sin_angle = torch.sin(angle)
         cos_angle = torch.cos(angle)
         I = torch.eye(3, device=axis_angle.device, dtype=axis_angle.dtype)  # noqa
-        K_normalized = K / angle
-        return I + sin_angle * K_normalized + (1 - cos_angle) * (K_normalized @ K_normalized)
+        return I + sin_angle * K + (1 - cos_angle) * (K @ K)
 
     def _get_ellipsoid_rotation_matrix(self) -> torch.Tensor:
         """Get rotation matrix for ellipsoid (returns transpose for inverse)."""
         if self.ellipsoid_rotation_repr == "axis_angle":
-            return self._axis_angle_to_rotation_matrix(self.ellipsoid_rotation)
+            return self._axis_angle_to_rotation_matrix(self.ellipsoid_rotation).T
         else:
-            return self._6d_to_rotation_matrix(self.ellipsoid_rotation_6d)
+            return self._6d_to_rotation_matrix(self.ellipsoid_rotation_6d).T
 
     def _get_box_rotation_matrix(self) -> torch.Tensor:
         """Get rotation matrix for box (returns transpose for inverse)."""
         if self.box_rotation_repr == "axis_angle":
-            return self._axis_angle_to_rotation_matrix(self.box_rotation)
+            return self._axis_angle_to_rotation_matrix(self.box_rotation).T
         else:
-            return self._6d_to_rotation_matrix(self.box_rotation_6d)
+            return self._6d_to_rotation_matrix(self.box_rotation_6d).T
 
     @classmethod
     def from_values(cls, values, learnable: list[str] | None = None):
@@ -1236,6 +1386,25 @@ class LearnableGSTensor:
             scales=new_scales,
             quats=new_quats,
             opacities=self.opacities,
+            sh0=self.sh0,
+            shN=self.shN,
+        )
+
+    def apply_opacity(
+        self, opacity_module: LearnableOpacity, is_ply_format: bool = False
+    ) -> LearnableGSTensor:
+        """Apply learnable opacity adjustment (creates new instance).
+
+        :param opacity_module: LearnableOpacity module
+        :param is_ply_format: Whether opacities are in PLY (logit) format
+        :return: New LearnableGSTensor with adjusted opacities
+        """
+        new_opacities = opacity_module(self.opacities, is_ply_format=is_ply_format)
+        return LearnableGSTensor(
+            means=self.means,
+            scales=self.scales,
+            quats=self.quats,
+            opacities=new_opacities,
             sh0=self.sh0,
             shN=self.shN,
         )

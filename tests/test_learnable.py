@@ -11,7 +11,9 @@ from gsmod.torch.learn import (
     LearnableFilter,
     LearnableFilterConfig,
     LearnableGSTensor,
+    LearnableOpacity,
     LearnableTransform,
+    OpacityConfig,
     TransformConfig,
 )
 
@@ -218,6 +220,177 @@ class TestLearnableTransform:
         assert torch.allclose(new_scales, torch.full_like(new_scales, 2.0))
 
 
+class TestOpacityConfig:
+    """Test OpacityConfig dataclass."""
+
+    def test_default_values(self):
+        """Test default configuration values."""
+        config = OpacityConfig()
+        assert config.scale == 1.0
+        assert len(config.learnable) == 1
+        assert "scale" in config.learnable
+
+    def test_custom_values(self):
+        """Test custom configuration values."""
+        config = OpacityConfig(scale=0.7, learnable=["scale"])
+        assert config.scale == 0.7
+        assert len(config.learnable) == 1
+
+
+class TestLearnableOpacity:
+    """Test LearnableOpacity module."""
+
+    def test_initialization(self):
+        """Test module initialization."""
+        model = LearnableOpacity().cuda()
+
+        assert hasattr(model, "scale")
+        assert model.scale.item() == 1.0
+
+    def test_parameter_registration(self):
+        """Test that scale is registered as nn.Parameter."""
+        config = OpacityConfig(scale=0.8, learnable=["scale"])
+        model = LearnableOpacity(config).cuda()
+
+        assert isinstance(model.scale, nn.Parameter)
+
+        # Check optimizer sees the parameter
+        param_count = sum(1 for _ in model.parameters())
+        assert param_count == 1
+
+    def test_forward_shape_linear(self):
+        """Test forward pass preserves shape for linear format."""
+        model = LearnableOpacity().cuda()
+        opacities = torch.rand(100, 1, device="cuda")
+
+        output = model(opacities, is_ply_format=False)
+
+        assert output.shape == opacities.shape
+        assert output.device == opacities.device
+
+    def test_forward_shape_ply(self):
+        """Test forward pass preserves shape for PLY format."""
+        model = LearnableOpacity().cuda()
+        # PLY format uses logit values (can be negative or > 1)
+        opacities = torch.randn(100, 1, device="cuda")
+
+        output = model(opacities, is_ply_format=True)
+
+        assert output.shape == opacities.shape
+        assert output.device == opacities.device
+
+    def test_gradient_flow_linear(self):
+        """Test gradients flow through the model (linear format)."""
+        config = OpacityConfig(scale=0.8, learnable=["scale"])
+        model = LearnableOpacity(config).cuda()
+        opacities = torch.rand(100, 1, device="cuda", requires_grad=True)
+
+        output = model(opacities, is_ply_format=False)
+        loss = output.sum()
+        loss.backward()
+
+        # Check gradients exist
+        assert model.scale.grad is not None
+        assert opacities.grad is not None
+
+    def test_gradient_flow_ply(self):
+        """Test gradients flow through the model (PLY format)."""
+        config = OpacityConfig(scale=0.8, learnable=["scale"])
+        model = LearnableOpacity(config).cuda()
+        opacities = torch.randn(100, 1, device="cuda", requires_grad=True)
+
+        output = model(opacities, is_ply_format=True)
+        loss = output.sum()
+        loss.backward()
+
+        # Check gradients exist
+        assert model.scale.grad is not None
+        assert opacities.grad is not None
+
+    def test_output_clamped_linear(self):
+        """Test output is clamped to [0, 1] for linear format."""
+        model = LearnableOpacity().cuda()
+        model.scale.data = torch.tensor(2.0).cuda()
+
+        opacities = torch.rand(100, 1, device="cuda")
+        output = model(opacities, is_ply_format=False)
+
+        assert output.min() >= 0.0
+        assert output.max() <= 1.0
+
+    def test_fade_behavior(self):
+        """Test fade behavior (scale < 1.0)."""
+        config = OpacityConfig(scale=0.5, learnable=[])
+        model = LearnableOpacity(config).cuda()
+
+        opacities = torch.tensor([[0.8]], device="cuda")
+        output = model(opacities, is_ply_format=False)
+
+        # Should multiply by 0.5
+        expected = 0.8 * 0.5
+        assert output.item() == pytest.approx(expected, abs=1e-6)
+
+    def test_boost_behavior(self):
+        """Test boost behavior (scale > 1.0)."""
+        config = OpacityConfig(scale=1.5, learnable=[])
+        model = LearnableOpacity(config).cuda()
+
+        opacities = torch.tensor([[0.6]], device="cuda")
+        output = model(opacities, is_ply_format=False)
+
+        # Boost formula: opacity + (1 - opacity) * (scale - 1) / 2
+        boost_factor = (1.5 - 1.0) / 2.0
+        expected = 0.6 + (1.0 - 0.6) * boost_factor
+        assert output.item() == pytest.approx(expected, abs=1e-6)
+
+    def test_ply_format_conversion(self):
+        """Test PLY format correctly converts logit to linear and back."""
+        config = OpacityConfig(scale=0.8, learnable=[])
+        model = LearnableOpacity(config).cuda()
+
+        # Create PLY format opacities (logit values)
+        linear = torch.tensor([0.3, 0.5, 0.7], device="cuda")
+        ply_opacities = torch.logit(linear)
+
+        output = model(ply_opacities, is_ply_format=True)
+
+        # Convert back to linear to verify
+        output_linear = torch.sigmoid(output)
+        expected_linear = linear * 0.8
+
+        torch.testing.assert_close(output_linear, expected_linear, rtol=1e-5, atol=1e-5)
+
+    def test_from_values(self):
+        """Test creating from OpacityValues."""
+        from gsmod.config.values import OpacityValues
+
+        values = OpacityValues.fade(0.7)
+        model = LearnableOpacity.from_values(values, learnable=["scale"]).cuda()
+
+        assert model.scale.item() == pytest.approx(0.7)
+        assert isinstance(model.scale, nn.Parameter)
+
+    def test_to_values(self):
+        """Test exporting to OpacityValues."""
+        model = LearnableOpacity().cuda()
+        model.scale.data = torch.tensor(0.85).cuda()
+
+        values = model.to_values()
+
+        assert values.scale == pytest.approx(0.85)
+
+    def test_neutral_skip_optimization(self):
+        """Test that neutral scale is skipped for non-learnable params."""
+        config = OpacityConfig(scale=1.0, learnable=[])
+        model = LearnableOpacity(config).cuda()
+
+        opacities = torch.rand(100, 1, device="cuda")
+        output = model(opacities, is_ply_format=False)
+
+        # Should return unchanged opacities
+        torch.testing.assert_close(output, opacities)
+
+
 class TestLearnableFilter:
     """Test LearnableFilter module."""
 
@@ -347,6 +520,23 @@ class TestLearnableGSTensor:
         assert torch.equal(result.sh0, data.sh0)
         # Geometry should be transformed
         assert result.means.shape == data.means.shape
+
+    def test_apply_opacity(self):
+        """Test applying opacity module."""
+        means, scales, quats, opacities, sh0 = create_test_tensors(100)
+        data = LearnableGSTensor(means, scales, quats, opacities, sh0)
+
+        opacity_model = LearnableOpacity().cuda()
+        result = data.apply_opacity(opacity_model, is_ply_format=False)
+
+        # Result should be new instance
+        assert result is not data
+        # sh0 should be unchanged
+        assert torch.equal(result.sh0, data.sh0)
+        # means should be unchanged
+        assert torch.equal(result.means, data.means)
+        # Opacities should be transformed
+        assert result.opacities.shape == data.opacities.shape
 
     def test_apply_soft_filter(self):
         """Test applying soft filter."""

@@ -135,6 +135,11 @@ class HistogramResult:
         - "dramatic": Strong contrast, darker shadows
         - "bright": Shift distribution higher
         - "dark": Shift distribution lower
+        - "warm": Warmer color temperature
+        - "cool": Cooler color temperature
+        - "cinematic": Film-like with fade and tint
+        - "muted": Lower saturation, softer look
+        - "punchy": High contrast and saturation
 
         :param profile: Target histogram profile
         :return: ColorValues to apply
@@ -219,9 +224,59 @@ class HistogramResult:
 
             return ColorValues(brightness=brightness, gamma=gamma)
 
+        elif profile == "warm":
+            # Warmer color temperature
+            return ColorValues(
+                temperature=0.3,
+                tint=0.05,
+                saturation=1.05,
+            )
+
+        elif profile == "cool":
+            # Cooler color temperature
+            return ColorValues(
+                temperature=-0.3,
+                tint=-0.05,
+                saturation=1.05,
+            )
+
+        elif profile == "cinematic":
+            # Film-like look with fade and tint
+            return ColorValues(
+                contrast=1.15,
+                saturation=0.9,
+                fade=0.08,
+                shadows=-0.1,
+                highlights=-0.05,
+                shadow_tint_hue=0.6,  # Blue shadows
+                shadow_tint_sat=0.15,
+                highlight_tint_hue=0.1,  # Orange highlights
+                highlight_tint_sat=0.1,
+            )
+
+        elif profile == "muted":
+            # Lower saturation, softer look
+            return ColorValues(
+                saturation=0.7,
+                vibrance=0.8,
+                contrast=0.9,
+                fade=0.05,
+            )
+
+        elif profile == "punchy":
+            # High contrast and saturation
+            return ColorValues(
+                contrast=1.25,
+                saturation=1.25,
+                vibrance=1.15,
+                shadows=-0.1,
+                highlights=0.1,
+            )
+
         else:
             raise ValueError(
-                f"Unknown profile: {profile}. Available: neutral, vibrant, dramatic, bright, dark"
+                f"Unknown profile: {profile}. "
+                f"Available: neutral, vibrant, dramatic, bright, dark, warm, cool, cinematic, muted, punchy"
             )
 
     def learn_from(

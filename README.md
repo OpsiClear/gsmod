@@ -17,15 +17,21 @@
 
 ## Overview
 
-**gsmod** provides processing operations for 3D Gaussian Splatting data: color grading, 3D transforms, spatial filtering, opacity adjustment, and learnable modules for auto-adjustment. Works with both CPU (NumPy) and GPU (PyTorch) backends with unified processing interface.
+**gsmod** provides processing operations for 3D Gaussian Splatting data: color grading, 3D transforms, spatial filtering, opacity adjustment, histogram-based learning, and learnable modules for auto-adjustment. Works with both CPU (NumPy) and GPU (PyTorch) backends with unified processing interface.
 
 **Included Features:**
 - **Color Grading**: 15 adjustments (brightness, contrast, saturation, temperature, tint, gamma, shadows, highlights, fade, hue shift, split toning)
+  - **39 built-in presets**: Film stocks, seasonal, time of day, artistic styles
 - **Opacity Adjustment**: Format-aware opacity scaling (fade/boost) for both PLY (logit) and linear formats
+  - **12 opacity presets**: Fade, boost, and special effects
+- **Histogram Learning**: Learn color adjustments to match target distributions
+  - Gradient-based learning with `HistogramResult.learn_from()`
+  - Rule-based suggestions with `to_color_values()`
 - **3D Transforms**: translate, rotate, scale with quaternion/euler/axis-angle support
 - **Spatial Filtering**: sphere, box, ellipsoid, frustum volumes + opacity/scale thresholds
+  - Include/Exclude modes with `invert` parameter
 - **Unified Processing**: GaussianProcessor auto-dispatches between CPU and GPU backends
-- **Learnable Modules**: PyTorch nn.Modules for gradient-based color/transform/filter optimization
+- **Learnable Modules**: PyTorch nn.Modules for gradient-based color/transform/filter/opacity optimization
 - **Composable Pipelines**: Method chaining, built-in presets, JSON serialization
 - **Scene Composition**: Concatenate, merge, deduplicate, split scenes
 - **Format-Aware**: Automatic SH/RGB format tracking and conversion
@@ -64,8 +70,15 @@
   - Composable with AND/OR/NOT operators
   - Multi-layer mask management (FilterMasks API)
 
+- **Histogram Learning**: Match target color distributions
+  - `HistogramResult.learn_from()`: Gradient-based learning API
+  - `to_color_values()`: Rule-based adjustments (vibrant, dramatic, bright, dark, neutral)
+  - GPU acceleration support
+  - Works with CPU or CUDA tensors
+
 - **Learnable Modules**: PyTorch nn.Modules for training
   - `LearnableColor`: Gradient-based color parameter optimization
+  - `LearnableOpacity`: Learnable opacity adjustment with format awareness
   - `LearnableTransform`: Learnable geometric transformations
   - `LearnableFilter`: Differentiable filtering parameters
   - Convert to/from config values for inference
@@ -84,7 +97,13 @@
   - Works in-place with automatic dtype/contiguity fixes
 
 - **Built-in Presets**: Ready-to-use configurations
-  - Color: cinematic, warm, cool, vibrant, muted, dramatic, vintage, golden_hour, moonlight
+  - Color (39 presets): cinematic, warm, cool, neutral, vibrant, muted, dramatic, vintage
+    - Film Stock: kodak_portra, fuji_velvia, kodak_ektachrome, ilford_hp5, cinestill_800t
+    - Seasonal: spring_fresh, summer_bright, autumn_warm, winter_cold
+    - Time of Day: sunrise, midday_sun, golden_hour, sunset, blue_hour, moonlight, overcast
+    - Artistic: high_key, low_key, teal_orange, bleach_bypass, cross_process, faded_print, sepia_tone
+    - Technical: lift_shadows, compress_highlights, increase_contrast, desaturate_mild, enhance_colors
+  - Opacity (12 presets): fade_subtle, fade_mild, fade_moderate, fade_heavy, boost_mild, boost_moderate, boost_strong, ghost_effect, translucent, semi_transparent
   - Filter: strict, quality, cleanup
   - Transform: double_size, half_size, flip_x/y/z
 
@@ -318,13 +337,89 @@ gsply.apply_pre_activations(
 
 `gsply.apply_pre_activations` exponentiates + clamps the scales, runs a numerically stable sigmoid on logit opacities, and normalizes quaternions—processing ~1M Gaussians in ≈1.3 ms (≈750M/sec). The helper automatically ensures float32 and contiguous buffers, so it pairs nicely with the zero-copy arrays returned by `gsply.plyread`.
 
+### Histogram-Based Learning
+
+Learn color adjustments to match a target histogram distribution using gradient descent:
+
+```python
+from gsmod import GSDataPro, ColorValues
+import torch
+
+# Step 1: Get target histogram from reference scene
+reference = GSDataPro.from_ply("reference.ply")
+target_hist = reference.histogram_colors()
+
+# Step 2: Load source data
+source = GSDataPro.from_ply("source.ply")
+source_colors = torch.tensor(source.sh0)  # Works with CPU or CUDA
+
+# Step 3: Learn color adjustment to match target (CONVENIENT API!)
+learned = target_hist.learn_from(
+    source_colors,
+    params=["brightness", "contrast", "saturation", "gamma"],
+    n_epochs=100,
+    lr=0.02,
+    verbose=True  # Print progress
+)
+
+# Step 4: Apply learned values
+source.color(learned)
+source.to_ply("matched.ply")
+```
+
+**Rule-based adjustments** (quick heuristics without learning):
+
+```python
+# Analyze histogram and suggest adjustments
+result = data.histogram_colors()
+
+adjustment = result.to_color_values("vibrant")   # Boost saturation, contrast
+# adjustment = result.to_color_values("dramatic")  # Strong contrast, dark shadows
+# adjustment = result.to_color_values("bright")    # Shift distribution higher
+# adjustment = result.to_color_values("dark")      # Shift distribution lower
+# adjustment = result.to_color_values("neutral")   # Flatten toward uniform
+
+data.color(adjustment)
+```
+
+**GPU acceleration** for histogram learning:
+
+```python
+from gsmod.torch import GSTensorPro
+
+# Load to GPU
+source_gpu = GSTensorPro.from_ply("source.ply", device="cuda")
+
+# Learn on GPU (faster)
+learned = target_hist.learn_from(
+    source_gpu.sh0,  # Already on CUDA
+    params=["brightness", "contrast"],
+    n_epochs=200,
+    lr=0.05
+)
+
+source_gpu.color(learned)
+```
+
 ### Using Presets
 
 ```python
-from gsmod import GSDataPro
+from gsmod import GSDataPro, OpacityValues
 from gsmod import (
-    # Color presets
+    # Color presets - Basic
     WARM, COOL, NEUTRAL, CINEMATIC, VIBRANT, MUTED, DRAMATIC, VINTAGE, GOLDEN_HOUR, MOONLIGHT,
+    # Color presets - Film Stock
+    KODAK_PORTRA, FUJI_VELVIA, KODAK_EKTACHROME, ILFORD_HP5, CINESTILL_800T,
+    # Color presets - Seasonal
+    SPRING_FRESH, SUMMER_BRIGHT, AUTUMN_WARM, WINTER_COLD,
+    # Color presets - Time of Day
+    SUNRISE, MIDDAY_SUN, SUNSET, BLUE_HOUR, OVERCAST,
+    # Color presets - Artistic
+    HIGH_KEY, LOW_KEY, TEAL_ORANGE, BLEACH_BYPASS, CROSS_PROCESS, FADED_PRINT, SEPIA_TONE,
+    # Color presets - Technical
+    LIFT_SHADOWS, COMPRESS_HIGHLIGHTS, INCREASE_CONTRAST, DESATURATE_MILD, ENHANCE_COLORS,
+    # Opacity presets
+    FADE_MILD, FADE_MODERATE, BOOST_MILD, BOOST_MODERATE, GHOST_EFFECT, TRANSLUCENT,
     # Filter presets
     STRICT_FILTER, QUALITY_FILTER, CLEANUP_FILTER,
     # Transform presets
@@ -334,9 +429,16 @@ from gsmod import (
 data = GSDataPro.from_ply("scene.ply")
 
 # Apply built-in color grading presets
-data.color(CINEMATIC)
-data.color(WARM)
-data.color(VIBRANT)
+data.color(CINEMATIC)         # Classic cinematic look
+data.color(WARM)              # Warm tones
+data.color(KODAK_PORTRA)      # Film stock emulation
+data.color(GOLDEN_HOUR)       # Golden hour lighting
+data.color(TEAL_ORANGE)       # Popular teal/orange look
+
+# Opacity presets
+data.opacity(FADE_MODERATE)   # Fade to 70%
+data.opacity(GHOST_EFFECT)    # Semi-transparent 20%
+data.opacity(BOOST_MILD)      # Boost opacity by 1.2x
 
 # Filter presets
 data.filter(STRICT_FILTER)    # min_opacity=0.5, max_scale=1.0, sphere_radius=10.0
@@ -354,7 +456,7 @@ from gsmod import GSDataPro
 from gsmod.config.presets import (
     color_from_dict, filter_from_dict, transform_from_dict,
     load_color_json, load_filter_json, load_transform_json,
-    get_color_preset, get_filter_preset, get_transform_preset,
+    get_color_preset, get_filter_preset, get_transform_preset, get_opacity_preset,
 )
 
 data = GSDataPro.from_ply("scene.ply")
@@ -367,7 +469,8 @@ data.color(color_from_dict(color_dict))
 data.color(load_color_json("my_color_preset.json"))
 
 # Get preset by name
-data.color(get_color_preset("cinematic"))
+data.color(get_color_preset("cinematic"))       # Or "kodak_portra", "teal_orange", etc.
+data.opacity(get_opacity_preset("fade_moderate"))  # Or "ghost_effect", "boost_mild", etc.
 data.filter(get_filter_preset("strict"))
 data.transform(get_transform_preset("double_size"))
 ```
@@ -450,6 +553,22 @@ ColorValues(
 ColorValues.from_k(4500)  # Create from color temperature in Kelvin
 ```
 
+#### OpacityValues Parameters
+
+```python
+from gsmod import OpacityValues
+
+OpacityValues(
+    scale=1.0  # Opacity scale factor
+               # 0.0-1.0: Multiplicative fade (reduce opacity)
+               # >1.0: Boost opacity (additive in remaining headroom)
+)
+
+# Factory methods
+OpacityValues.fade(0.7)    # Fade to 70% opacity
+OpacityValues.boost(1.5)   # Boost opacity by 1.5x
+```
+
 #### FilterValues Parameters
 
 ```python
@@ -464,7 +583,11 @@ FilterValues(
     sphere_center=(0, 0, 0), # Sphere filter center
     box_min=None,            # Box filter min corner (x, y, z)
     box_max=None,            # Box filter max corner (x, y, z)
+    invert=False,            # Include (False) or Exclude (True) mode
 )
+
+# Include mode (invert=False, default): Keep only what matches
+# Exclude mode (invert=True): Remove what matches, keep everything outside
 ```
 
 #### TransformValues Parameters
@@ -896,6 +1019,10 @@ data.to_ply("output.ply")
 - **Color Operations**: 15-31x speedup (brightness, saturation)
 
 - **Scalability**: Linear scaling from 1K to 2M Gaussians on both CPU and GPU
+- **CPU-GPU Consistency**: All operations produce mathematically identical results
+  - Rotation matrices correctly use transpose for inverse transformations
+  - Filter operations (ellipsoid, box, frustum) match exactly between CPU and GPU
+  - Verified via comprehensive equivalence tests
 
 ### Optimization Details
 
@@ -905,6 +1032,7 @@ data.to_ply("output.ply")
 - **Fused kernels**: Combined opacity+scale filtering in single pass
 - **Parallel processing**: Numba JIT with `prange` for multi-core utilization
 - **fastmath optimization**: Aggressive floating-point optimizations on all kernels
+- **Mathematically correct rotations**: Rodrigues' formula implementation with proper axis normalization
 
 ---
 
@@ -965,11 +1093,19 @@ ColorValues(
 ColorValues.from_k(kelvin)  # From color temperature
 ```
 
+**OpacityValues** - Opacity adjustment parameters
+```python
+OpacityValues(scale=1.0)
+OpacityValues.fade(0.7)    # Fade to 70%
+OpacityValues.boost(1.5)   # Boost by 1.5x
+```
+
 **FilterValues** - Filter parameters
 ```python
 FilterValues(
     min_opacity=0.0, max_opacity=1.0, min_scale=0.0, max_scale=inf,
-    sphere_radius=inf, sphere_center=(0,0,0), box_min=None, box_max=None
+    sphere_radius=inf, sphere_center=(0,0,0), box_min=None, box_max=None,
+    invert=False  # Include (False) or Exclude (True) mode
 )
 ```
 
@@ -984,12 +1120,90 @@ TransformValues.from_rotation_axis_angle(axis, angle)  # degrees
 TransformValues.from_axis_angle_rad(axis, angle)
 ```
 
+### Histogram Analysis and Learning
+
+**Compute Histograms:**
+```python
+from gsmod import GSDataPro, HistogramConfig
+
+data = GSDataPro.from_ply("scene.ply")
+
+# Compute color histogram
+hist = data.histogram_colors(HistogramConfig(n_bins=256))
+print(f"Mean RGB: {hist.mean}")
+print(f"Std RGB: {hist.std}")
+
+# Analysis methods
+hist.percentile(50, channel=0)  # Median of red channel
+hist.mode(channel=1)             # Most frequent green value
+hist.entropy(channel=2)          # Blue channel entropy
+hist.dynamic_range()             # 99th - 1st percentile
+```
+
+**Histogram-Based Learning:**
+```python
+import torch
+
+# Learn color adjustments from target histogram
+target_hist = reference.histogram_colors()
+source_colors = torch.tensor(source.sh0)
+
+learned = target_hist.learn_from(
+    source_colors,
+    params=["brightness", "contrast", "saturation", "gamma"],
+    n_epochs=100,
+    lr=0.02,
+    verbose=True
+)
+
+source.color(learned)
+```
+
+**Rule-Based Adjustments:**
+```python
+# Generate ColorValues from histogram profile
+hist = data.histogram_colors()
+
+adjustment = hist.to_color_values("vibrant")   # Boost saturation, contrast
+# adjustment = hist.to_color_values("dramatic")  # Strong contrast, dark shadows
+# adjustment = hist.to_color_values("bright")    # Shift distribution higher
+# adjustment = hist.to_color_values("dark")      # Shift distribution lower
+# adjustment = hist.to_color_values("neutral")   # Flatten toward uniform
+
+data.color(adjustment)
+```
+
 ### Built-in Presets
 
-**Color Presets:**
+**Color Presets (39 total):**
+
+*Basic Looks:*
 - `WARM`, `COOL`, `NEUTRAL`
 - `CINEMATIC`, `VIBRANT`, `MUTED`, `DRAMATIC`
 - `VINTAGE`, `GOLDEN_HOUR`, `MOONLIGHT`
+
+*Film Stock Emulation:*
+- `KODAK_PORTRA`, `FUJI_VELVIA`, `KODAK_EKTACHROME`
+- `ILFORD_HP5`, `CINESTILL_800T`
+
+*Seasonal Looks:*
+- `SPRING_FRESH`, `SUMMER_BRIGHT`, `AUTUMN_WARM`, `WINTER_COLD`
+
+*Time of Day:*
+- `SUNRISE`, `MIDDAY_SUN`, `SUNSET`, `BLUE_HOUR`, `OVERCAST`
+
+*Artistic Styles:*
+- `HIGH_KEY`, `LOW_KEY`, `TEAL_ORANGE`
+- `BLEACH_BYPASS`, `CROSS_PROCESS`, `FADED_PRINT`, `SEPIA_TONE`
+
+*Technical Adjustments:*
+- `LIFT_SHADOWS`, `COMPRESS_HIGHLIGHTS`, `INCREASE_CONTRAST`
+- `DESATURATE_MILD`, `ENHANCE_COLORS`
+
+**Opacity Presets (12 total):**
+- Fade: `FADE_SUBTLE`, `FADE_MILD`, `FADE_MODERATE`, `FADE_HEAVY`
+- Boost: `BOOST_MILD`, `BOOST_MODERATE`, `BOOST_STRONG`
+- Special Effects: `GHOST_EFFECT`, `TRANSLUCENT`, `SEMI_TRANSPARENT`
 
 **Filter Presets:**
 - `STRICT_FILTER` - min_opacity=0.5, max_scale=1.0, sphere_radius=10.0
@@ -1004,11 +1218,17 @@ TransformValues.from_axis_angle_rad(axis, angle)
 
 ```python
 from gsmod.config.presets import (
-    get_color_preset, get_filter_preset, get_transform_preset,
+    get_color_preset, get_filter_preset, get_transform_preset, get_opacity_preset,
     color_from_dict, filter_from_dict, transform_from_dict,
     load_color_json, load_filter_json, load_transform_json,
     save_color_json, save_filter_json, save_transform_json,
 )
+
+# Load presets by name
+color = get_color_preset("cinematic")
+opacity = get_opacity_preset("fade_moderate")
+filter_vals = get_filter_preset("strict")
+transform = get_transform_preset("double_size")
 ```
 
 ### Legacy Classes (Still Available)

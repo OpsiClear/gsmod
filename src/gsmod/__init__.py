@@ -73,17 +73,25 @@ from gsmod.config.presets import (
     # Transform presets
     DOUBLE_SIZE,
     DRAMATIC,
+    # Popular new color presets
+    FADE_MODERATE,
     FLIP_X,
     FLIP_Y,
     FLIP_Z,
+    GHOST_EFFECT,
     GOLDEN_HOUR,
     HALF_SIZE,
+    HIGH_KEY,
+    KODAK_PORTRA,
+    LOW_KEY,
     MOONLIGHT,
     MUTED,
     NEUTRAL,
     QUALITY_FILTER,
     # Filter presets
     STRICT_FILTER,
+    SUNSET,
+    TEAL_ORANGE,
     VIBRANT,
     VINTAGE,
     # Color presets
@@ -93,6 +101,7 @@ from gsmod.config.presets import (
     # Loading functions
     get_color_preset,
     get_filter_preset,
+    get_opacity_preset,
     get_transform_preset,
     load_color_json,
     load_filter_json,
@@ -169,7 +178,7 @@ __all__ = [
     "HistogramConfig",
     # Histogram
     "HistogramResult",
-    # Color presets
+    # Color presets - Basic
     "WARM",
     "COOL",
     "NEUTRAL",
@@ -180,6 +189,15 @@ __all__ = [
     "VINTAGE",
     "GOLDEN_HOUR",
     "MOONLIGHT",
+    # Color presets - Popular additions
+    "KODAK_PORTRA",
+    "HIGH_KEY",
+    "LOW_KEY",
+    "TEAL_ORANGE",
+    "SUNSET",
+    # Opacity presets
+    "FADE_MODERATE",
+    "GHOST_EFFECT",
     # Filter presets
     "STRICT_FILTER",
     "QUALITY_FILTER",
@@ -194,6 +212,7 @@ __all__ = [
     "get_color_preset",
     "get_filter_preset",
     "get_transform_preset",
+    "get_opacity_preset",
     "color_from_dict",
     "filter_from_dict",
     "transform_from_dict",

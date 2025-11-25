@@ -344,15 +344,16 @@ class FilterValues:
     # Spatial filtering - box
     box_min: tuple[float, float, float] | None = None
     box_max: tuple[float, float, float] | None = None
+    box_rot: tuple[float, float, float] | None = None  # axis-angle (radians)
 
     # Spatial filtering - ellipsoid
     ellipsoid_center: tuple[float, float, float] | None = None
     ellipsoid_radii: tuple[float, float, float] | None = None
-    ellipsoid_rotation: tuple[float, float, float] | None = None  # axis-angle (radians)
+    ellipsoid_rot: tuple[float, float, float] | None = None  # axis-angle (radians)
 
     # Spatial filtering - frustum (camera view culling)
-    frustum_position: tuple[float, float, float] | None = None
-    frustum_rotation: tuple[float, float, float] | None = None  # axis-angle (radians)
+    frustum_pos: tuple[float, float, float] | None = None
+    frustum_rot: tuple[float, float, float] | None = None  # axis-angle (radians)
     frustum_fov: float = 1.047  # vertical FOV in radians (default 60 deg)
     frustum_aspect: float = 1.0  # width/height
     frustum_near: float = 0.1
@@ -377,6 +378,7 @@ class FilterValues:
         # For box, take intersection (stricter bounds)
         box_min = None
         box_max = None
+        box_rot = None
         if self.box_min is not None and other.box_min is not None:
             box_min = (
                 max(self.box_min[0], other.box_min[0]),
@@ -388,17 +390,31 @@ class FilterValues:
                 min(self.box_max[1], other.box_max[1]),
                 min(self.box_max[2], other.box_max[2]),
             )
+            # Use rotation from smaller box (by volume)
+            self_vol = (
+                (self.box_max[0] - self.box_min[0])
+                * (self.box_max[1] - self.box_min[1])
+                * (self.box_max[2] - self.box_min[2])
+            )
+            other_vol = (
+                (other.box_max[0] - other.box_min[0])
+                * (other.box_max[1] - other.box_min[1])
+                * (other.box_max[2] - other.box_min[2])
+            )
+            box_rot = self.box_rot if self_vol <= other_vol else other.box_rot
         elif self.box_min is not None:
             box_min = self.box_min
             box_max = self.box_max
+            box_rot = self.box_rot
         elif other.box_min is not None:
             box_min = other.box_min
             box_max = other.box_max
+            box_rot = other.box_rot
 
         # For ellipsoid, use smaller volume (product of radii)
         ellipsoid_center = None
         ellipsoid_radii = None
-        ellipsoid_rotation = None
+        ellipsoid_rot = None
         if self.ellipsoid_radii is not None and other.ellipsoid_radii is not None:
             self_vol = self.ellipsoid_radii[0] * self.ellipsoid_radii[1] * self.ellipsoid_radii[2]
             other_vol = (
@@ -407,48 +423,48 @@ class FilterValues:
             if self_vol <= other_vol:
                 ellipsoid_center = self.ellipsoid_center
                 ellipsoid_radii = self.ellipsoid_radii
-                ellipsoid_rotation = self.ellipsoid_rotation
+                ellipsoid_rot = self.ellipsoid_rot
             else:
                 ellipsoid_center = other.ellipsoid_center
                 ellipsoid_radii = other.ellipsoid_radii
-                ellipsoid_rotation = other.ellipsoid_rotation
+                ellipsoid_rot = other.ellipsoid_rot
         elif self.ellipsoid_radii is not None:
             ellipsoid_center = self.ellipsoid_center
             ellipsoid_radii = self.ellipsoid_radii
-            ellipsoid_rotation = self.ellipsoid_rotation
+            ellipsoid_rot = self.ellipsoid_rot
         elif other.ellipsoid_radii is not None:
             ellipsoid_center = other.ellipsoid_center
             ellipsoid_radii = other.ellipsoid_radii
-            ellipsoid_rotation = other.ellipsoid_rotation
+            ellipsoid_rot = other.ellipsoid_rot
 
         # For frustum, use smaller far distance (stricter)
-        frustum_position = None
-        frustum_rotation = None
+        frustum_pos = None
+        frustum_rot = None
         frustum_fov = self.frustum_fov
         frustum_aspect = self.frustum_aspect
         frustum_near = self.frustum_near
         frustum_far = self.frustum_far
-        if self.frustum_position is not None and other.frustum_position is not None:
+        if self.frustum_pos is not None and other.frustum_pos is not None:
             if self.frustum_far <= other.frustum_far:
-                frustum_position = self.frustum_position
-                frustum_rotation = self.frustum_rotation
+                frustum_pos = self.frustum_pos
+                frustum_rot = self.frustum_rot
                 frustum_fov = self.frustum_fov
                 frustum_aspect = self.frustum_aspect
                 frustum_near = self.frustum_near
                 frustum_far = self.frustum_far
             else:
-                frustum_position = other.frustum_position
-                frustum_rotation = other.frustum_rotation
+                frustum_pos = other.frustum_pos
+                frustum_rot = other.frustum_rot
                 frustum_fov = other.frustum_fov
                 frustum_aspect = other.frustum_aspect
                 frustum_near = other.frustum_near
                 frustum_far = other.frustum_far
-        elif self.frustum_position is not None:
-            frustum_position = self.frustum_position
-            frustum_rotation = self.frustum_rotation
-        elif other.frustum_position is not None:
-            frustum_position = other.frustum_position
-            frustum_rotation = other.frustum_rotation
+        elif self.frustum_pos is not None:
+            frustum_pos = self.frustum_pos
+            frustum_rot = self.frustum_rot
+        elif other.frustum_pos is not None:
+            frustum_pos = other.frustum_pos
+            frustum_rot = other.frustum_rot
             frustum_fov = other.frustum_fov
             frustum_aspect = other.frustum_aspect
             frustum_near = other.frustum_near
@@ -466,11 +482,12 @@ class FilterValues:
             sphere_center=sphere_center,
             box_min=box_min,
             box_max=box_max,
+            box_rot=box_rot,
             ellipsoid_center=ellipsoid_center,
             ellipsoid_radii=ellipsoid_radii,
-            ellipsoid_rotation=ellipsoid_rotation,
-            frustum_position=frustum_position,
-            frustum_rotation=frustum_rotation,
+            ellipsoid_rot=ellipsoid_rot,
+            frustum_pos=frustum_pos,
+            frustum_rot=frustum_rot,
             frustum_fov=frustum_fov,
             frustum_aspect=frustum_aspect,
             frustum_near=frustum_near,
@@ -498,11 +515,12 @@ class FilterValues:
             sphere_center=self.sphere_center,
             box_min=self.box_min,
             box_max=self.box_max,
+            box_rot=self.box_rot,
             ellipsoid_center=self.ellipsoid_center,
             ellipsoid_radii=self.ellipsoid_radii,
-            ellipsoid_rotation=self.ellipsoid_rotation,
-            frustum_position=self.frustum_position,
-            frustum_rotation=self.frustum_rotation,
+            ellipsoid_rot=self.ellipsoid_rot,
+            frustum_pos=self.frustum_pos,
+            frustum_rot=self.frustum_rot,
             frustum_fov=max(0.01, min(3.14, self.frustum_fov)),
             frustum_aspect=max(0.1, min(10.0, self.frustum_aspect)),
             frustum_near=max(0.001, self.frustum_near),
@@ -523,7 +541,7 @@ class FilterValues:
             and self.sphere_radius == float("inf")
             and self.box_min is None
             and self.ellipsoid_radii is None
-            and self.frustum_position is None
+            and self.frustum_pos is None
         )
 
     def learn(self, *params: str) -> LearnableFilter:

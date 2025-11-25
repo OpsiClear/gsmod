@@ -69,14 +69,19 @@ def compute_filter_mask(data, values: FilterValues) -> np.ndarray:
     )
     sphere_radius_sq = values.sphere_radius**2 if has_sphere else 0.0
 
-    # Prepare box parameters
+    # Prepare box parameters (with rotation support)
     has_box = values.box_min is not None and values.box_max is not None
-    box_min = (
-        np.array(values.box_min, dtype=np.float32) if has_box else np.zeros(3, dtype=np.float32)
-    )
-    box_max = (
-        np.array(values.box_max, dtype=np.float32) if has_box else np.zeros(3, dtype=np.float32)
-    )
+    if has_box:
+        box_min = np.array(values.box_min, dtype=np.float32)
+        box_max = np.array(values.box_max, dtype=np.float32)
+        box_center = (box_min + box_max) / 2
+        box_half_extents = (box_max - box_min) / 2
+        # Transpose for world-to-local transformation
+        box_rotation = _axis_angle_to_rotation_matrix(values.box_rot).T
+    else:
+        box_center = np.zeros(3, dtype=np.float32)
+        box_half_extents = np.ones(3, dtype=np.float32)
+        box_rotation = np.eye(3, dtype=np.float32)
 
     # Prepare ellipsoid parameters
     has_ellipsoid = values.ellipsoid_radii is not None
@@ -84,18 +89,18 @@ def compute_filter_mask(data, values: FilterValues) -> np.ndarray:
         ellipsoid_center = np.array(values.ellipsoid_center, dtype=np.float32)
         ellipsoid_radii = np.array(values.ellipsoid_radii, dtype=np.float32)
         # Transpose for world-to-local transformation
-        ellipsoid_rotation = _axis_angle_to_rotation_matrix(values.ellipsoid_rotation).T
+        ellipsoid_rotation = _axis_angle_to_rotation_matrix(values.ellipsoid_rot).T
     else:
         ellipsoid_center = np.zeros(3, dtype=np.float32)
         ellipsoid_radii = np.ones(3, dtype=np.float32)
         ellipsoid_rotation = np.eye(3, dtype=np.float32)
 
     # Prepare frustum parameters
-    has_frustum = values.frustum_position is not None
+    has_frustum = values.frustum_pos is not None
     if has_frustum:
-        frustum_pos = np.array(values.frustum_position, dtype=np.float32)
+        frustum_pos = np.array(values.frustum_pos, dtype=np.float32)
         # Transpose for world-to-camera transformation
-        frustum_rotation = _axis_angle_to_rotation_matrix(values.frustum_rotation).T
+        frustum_rotation = _axis_angle_to_rotation_matrix(values.frustum_rot).T
         tan_half_fov_y = np.tan(values.frustum_fov / 2)
         tan_half_fov_x = tan_half_fov_y * values.frustum_aspect
         frustum_near = values.frustum_near
@@ -118,8 +123,9 @@ def compute_filter_mask(data, values: FilterValues) -> np.ndarray:
         scales,
         sphere_center,
         sphere_radius_sq,
-        box_min,
-        box_max,
+        box_center,
+        box_half_extents,
+        box_rotation,
         values.min_opacity,
         values.max_opacity,
         values.min_scale,

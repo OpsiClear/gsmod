@@ -288,8 +288,9 @@ def combined_filter_fused(
     scales: NDArray[np.float32],
     sphere_center: NDArray[np.float32],
     sphere_radius_sq: float,
-    box_min: NDArray[np.float32],
-    box_max: NDArray[np.float32],
+    box_center: NDArray[np.float32],
+    box_half_extents: NDArray[np.float32],
+    box_rotation: NDArray[np.float32],
     min_opacity: float,
     max_opacity: float,
     min_scale: float,
@@ -322,8 +323,9 @@ def combined_filter_fused(
         scales: Gaussian scales [N, 3]
         sphere_center: Sphere center [3]
         sphere_radius_sq: Squared sphere radius
-        box_min: Box minimum bounds [3]
-        box_max: Box maximum bounds [3]
+        box_center: Box center [3]
+        box_half_extents: Box half extents [3] (half size in each dimension)
+        box_rotation: Box rotation matrix [3, 3] (world-to-local)
         min_opacity: Minimum opacity threshold
         max_opacity: Maximum opacity threshold
         min_scale: Minimum scale threshold
@@ -372,15 +374,21 @@ def combined_filter_fused(
             if dist_sq > sphere_radius_sq:
                 passed = False
 
-        # Box filter
+        # Box filter (with rotation support)
         if passed and has_box:
+            # Translate to box center
+            dx = positions[i, 0] - box_center[0]
+            dy = positions[i, 1] - box_center[1]
+            dz = positions[i, 2] - box_center[2]
+            # Apply rotation to get local coordinates
+            lx = box_rotation[0, 0] * dx + box_rotation[0, 1] * dy + box_rotation[0, 2] * dz
+            ly = box_rotation[1, 0] * dx + box_rotation[1, 1] * dy + box_rotation[1, 2] * dz
+            lz = box_rotation[2, 0] * dx + box_rotation[2, 1] * dy + box_rotation[2, 2] * dz
+            # Check if inside box (abs local coords <= half extents)
             if (
-                positions[i, 0] < box_min[0]
-                or positions[i, 0] > box_max[0]
-                or positions[i, 1] < box_min[1]
-                or positions[i, 1] > box_max[1]
-                or positions[i, 2] < box_min[2]
-                or positions[i, 2] > box_max[2]
+                abs(lx) > box_half_extents[0]
+                or abs(ly) > box_half_extents[1]
+                or abs(lz) > box_half_extents[2]
             ):
                 passed = False
 

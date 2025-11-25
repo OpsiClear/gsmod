@@ -446,10 +446,10 @@ class GSTensorPro(GSTensor):
             radii = torch.tensor(values.ellipsoid_radii, dtype=self.dtype, device=self.device)
 
             # Get rotation matrix
-            if values.ellipsoid_rotation is not None:
+            if values.ellipsoid_rot is not None:
                 # Convert axis-angle to rotation matrix
                 axis_angle = torch.tensor(
-                    values.ellipsoid_rotation, dtype=self.dtype, device=self.device
+                    values.ellipsoid_rot, dtype=self.dtype, device=self.device
                 )
                 angle = torch.norm(axis_angle)
                 if angle > 1e-8:
@@ -478,14 +478,12 @@ class GSTensorPro(GSTensor):
             mask &= dist_sq <= 1.0
 
         # Frustum filtering
-        if values.frustum_position is not None:
-            camera_pos = torch.tensor(values.frustum_position, dtype=self.dtype, device=self.device)
+        if values.frustum_pos is not None:
+            camera_pos = torch.tensor(values.frustum_pos, dtype=self.dtype, device=self.device)
 
             # Get rotation matrix
-            if values.frustum_rotation is not None:
-                axis_angle = torch.tensor(
-                    values.frustum_rotation, dtype=self.dtype, device=self.device
-                )
+            if values.frustum_rot is not None:
+                axis_angle = torch.tensor(values.frustum_rot, dtype=self.dtype, device=self.device)
                 angle = torch.norm(axis_angle)
                 if angle > 1e-8:
                     axis = axis_angle / angle

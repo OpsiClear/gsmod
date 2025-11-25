@@ -10,12 +10,12 @@ import json
 import logging
 from pathlib import Path
 
-from gsmod.config.values import ColorValues, FilterValues, TransformValues
+from gsmod.config.values import ColorValues, FilterValues, OpacityValues, TransformValues
 
 logger = logging.getLogger(__name__)
 
 # ============================================================================
-# Color Presets
+# Color Presets - Basic
 # ============================================================================
 
 WARM = ColorValues.from_k(3200)
@@ -37,6 +37,250 @@ VINTAGE = ColorValues.from_k(4000) + ColorValues(saturation=0.8, contrast=0.9, g
 GOLDEN_HOUR = ColorValues.from_k(3000) + ColorValues(brightness=1.1, saturation=1.1, shadows=0.05)
 
 MOONLIGHT = ColorValues.from_k(9000) + ColorValues(brightness=0.8, contrast=1.1, saturation=0.85)
+
+# ============================================================================
+# Color Presets - Film Stock Emulation
+# ============================================================================
+
+KODAK_PORTRA = ColorValues.from_k(5200) + ColorValues(
+    saturation=1.05,
+    contrast=0.95,
+    shadows=0.08,
+    highlights=-0.03,
+    shadow_tint_hue=-20,
+    shadow_tint_sat=0.15,
+)
+
+FUJI_VELVIA = ColorValues(
+    saturation=1.4,
+    vibrance=1.3,
+    contrast=1.15,
+    brightness=1.02,
+    shadows=0.1,
+)
+
+KODAK_EKTACHROME = ColorValues.from_k(5800) + ColorValues(
+    saturation=1.2,
+    contrast=1.1,
+    brightness=1.05,
+    highlights=-0.05,
+)
+
+ILFORD_HP5 = ColorValues(
+    saturation=0.0,
+    contrast=1.2,
+    gamma=1.05,
+    shadows=0.12,
+    highlights=-0.08,
+)
+
+CINESTILL_800T = ColorValues.from_k(3200) + ColorValues(
+    saturation=1.15,
+    contrast=0.95,
+    highlights=-0.1,
+    highlight_tint_hue=180,
+    highlight_tint_sat=0.25,
+)
+
+# ============================================================================
+# Color Presets - Seasonal Looks
+# ============================================================================
+
+SPRING_FRESH = ColorValues.from_k(6000) + ColorValues(
+    brightness=1.08,
+    saturation=1.15,
+    vibrance=1.2,
+    shadows=0.05,
+    shadow_tint_hue=120,
+    shadow_tint_sat=0.1,
+)
+
+SUMMER_BRIGHT = ColorValues.from_k(6500) + ColorValues(
+    brightness=1.12,
+    saturation=1.25,
+    vibrance=1.15,
+    contrast=1.05,
+    fade=0.05,
+)
+
+AUTUMN_WARM = ColorValues.from_k(3500) + ColorValues(
+    saturation=1.2,
+    contrast=1.08,
+    shadows=0.08,
+    hue_shift=10,
+)
+
+WINTER_COLD = ColorValues.from_k(8000) + ColorValues(
+    brightness=0.95,
+    saturation=0.85,
+    contrast=1.15,
+    shadows=0.1,
+    tint=-0.1,
+)
+
+# ============================================================================
+# Color Presets - Time of Day
+# ============================================================================
+
+SUNRISE = ColorValues.from_k(2800) + ColorValues(
+    brightness=1.05,
+    saturation=1.15,
+    shadows=0.15,
+    highlights=-0.05,
+    shadow_tint_hue=-140,
+    shadow_tint_sat=0.2,
+)
+
+MIDDAY_SUN = ColorValues.from_k(5500) + ColorValues(
+    brightness=1.1,
+    contrast=1.1,
+    saturation=1.05,
+)
+
+SUNSET = ColorValues.from_k(2500) + ColorValues(
+    brightness=1.08,
+    saturation=1.2,
+    shadows=0.1,
+    highlight_tint_hue=25,
+    highlight_tint_sat=0.3,
+)
+
+BLUE_HOUR = ColorValues.from_k(12000) + ColorValues(
+    brightness=0.85,
+    saturation=1.15,
+    contrast=1.05,
+    tint=-0.15,
+)
+
+OVERCAST = ColorValues.from_k(7000) + ColorValues(
+    saturation=0.9,
+    contrast=0.95,
+    brightness=0.98,
+)
+
+# ============================================================================
+# Color Presets - Artistic Styles
+# ============================================================================
+
+HIGH_KEY = ColorValues(
+    brightness=1.15,
+    contrast=0.85,
+    saturation=0.9,
+    fade=0.15,
+    highlights=-0.1,
+)
+
+LOW_KEY = ColorValues(
+    brightness=0.85,
+    contrast=1.35,
+    saturation=0.95,
+    shadows=0.2,
+    highlights=-0.15,
+)
+
+TEAL_ORANGE = ColorValues(
+    saturation=1.2,
+    contrast=1.1,
+    shadow_tint_hue=180,
+    shadow_tint_sat=0.3,
+    highlight_tint_hue=30,
+    highlight_tint_sat=0.25,
+)
+
+BLEACH_BYPASS = ColorValues(
+    saturation=0.5,
+    contrast=1.3,
+    brightness=1.05,
+    highlights=-0.15,
+)
+
+CROSS_PROCESS = ColorValues(
+    saturation=1.4,
+    contrast=1.2,
+    hue_shift=15,
+    shadow_tint_hue=120,
+    shadow_tint_sat=0.2,
+    highlight_tint_hue=-120,
+    highlight_tint_sat=0.15,
+)
+
+FADED_PRINT = ColorValues(
+    saturation=0.75,
+    contrast=0.9,
+    fade=0.12,
+    gamma=1.08,
+)
+
+SEPIA_TONE = ColorValues(
+    saturation=0.2,
+    temperature=0.4,
+    tint=0.1,
+    contrast=0.95,
+    gamma=1.05,
+)
+
+# ============================================================================
+# Color Presets - Technical Adjustments
+# ============================================================================
+
+LIFT_SHADOWS = ColorValues(
+    shadows=0.2,
+    brightness=1.02,
+)
+
+COMPRESS_HIGHLIGHTS = ColorValues(
+    highlights=-0.2,
+    contrast=1.05,
+)
+
+BOOST_MIDTONES = ColorValues(
+    gamma=0.9,
+    contrast=1.05,
+)
+
+INCREASE_CONTRAST = ColorValues(
+    contrast=1.3,
+    shadows=0.1,
+    highlights=-0.1,
+)
+
+DECREASE_CONTRAST = ColorValues(
+    contrast=0.8,
+    gamma=1.1,
+)
+
+DESATURATE_MILD = ColorValues(
+    saturation=0.7,
+)
+
+DESATURATE_STRONG = ColorValues(
+    saturation=0.3,
+)
+
+ENHANCE_COLORS = ColorValues(
+    saturation=1.25,
+    vibrance=1.3,
+    contrast=1.08,
+)
+
+# ============================================================================
+# Opacity Presets
+# ============================================================================
+
+FADE_SUBTLE = OpacityValues.fade(0.9)
+FADE_MILD = OpacityValues.fade(0.8)
+FADE_MODERATE = OpacityValues.fade(0.7)
+FADE_STRONG = OpacityValues.fade(0.5)
+FADE_HEAVY = OpacityValues.fade(0.3)
+
+BOOST_SUBTLE = OpacityValues.boost(1.1)
+BOOST_MILD = OpacityValues.boost(1.2)
+BOOST_MODERATE = OpacityValues.boost(1.3)
+BOOST_STRONG = OpacityValues.boost(1.5)
+
+GHOST_EFFECT = OpacityValues.fade(0.2)
+TRANSLUCENT = OpacityValues.fade(0.6)
+SEMI_TRANSPARENT = OpacityValues.fade(0.4)
 
 # ============================================================================
 # Filter Presets
@@ -64,6 +308,7 @@ FLIP_Z = TransformValues.from_rotation_euler(0, 0, 180)
 # ============================================================================
 
 COLOR_PRESETS: dict[str, ColorValues] = {
+    # Basic
     "warm": WARM,
     "cool": COOL,
     "neutral": NEUTRAL,
@@ -74,6 +319,58 @@ COLOR_PRESETS: dict[str, ColorValues] = {
     "vintage": VINTAGE,
     "golden_hour": GOLDEN_HOUR,
     "moonlight": MOONLIGHT,
+    # Film Stock
+    "kodak_portra": KODAK_PORTRA,
+    "fuji_velvia": FUJI_VELVIA,
+    "kodak_ektachrome": KODAK_EKTACHROME,
+    "ilford_hp5": ILFORD_HP5,
+    "cinestill_800t": CINESTILL_800T,
+    # Seasonal
+    "spring_fresh": SPRING_FRESH,
+    "summer_bright": SUMMER_BRIGHT,
+    "autumn_warm": AUTUMN_WARM,
+    "winter_cold": WINTER_COLD,
+    # Time of Day
+    "sunrise": SUNRISE,
+    "midday_sun": MIDDAY_SUN,
+    "sunset": SUNSET,
+    "blue_hour": BLUE_HOUR,
+    "overcast": OVERCAST,
+    # Artistic
+    "high_key": HIGH_KEY,
+    "low_key": LOW_KEY,
+    "teal_orange": TEAL_ORANGE,
+    "bleach_bypass": BLEACH_BYPASS,
+    "cross_process": CROSS_PROCESS,
+    "faded_print": FADED_PRINT,
+    "sepia_tone": SEPIA_TONE,
+    # Technical
+    "lift_shadows": LIFT_SHADOWS,
+    "compress_highlights": COMPRESS_HIGHLIGHTS,
+    "boost_midtones": BOOST_MIDTONES,
+    "increase_contrast": INCREASE_CONTRAST,
+    "decrease_contrast": DECREASE_CONTRAST,
+    "desaturate_mild": DESATURATE_MILD,
+    "desaturate_strong": DESATURATE_STRONG,
+    "enhance_colors": ENHANCE_COLORS,
+}
+
+OPACITY_PRESETS: dict[str, OpacityValues] = {
+    # Fade
+    "fade_subtle": FADE_SUBTLE,
+    "fade_mild": FADE_MILD,
+    "fade_moderate": FADE_MODERATE,
+    "fade_strong": FADE_STRONG,
+    "fade_heavy": FADE_HEAVY,
+    # Boost
+    "boost_subtle": BOOST_SUBTLE,
+    "boost_mild": BOOST_MILD,
+    "boost_moderate": BOOST_MODERATE,
+    "boost_strong": BOOST_STRONG,
+    # Effects
+    "ghost_effect": GHOST_EFFECT,
+    "translucent": TRANSLUCENT,
+    "semi_transparent": SEMI_TRANSPARENT,
 }
 
 FILTER_PRESETS: dict[str, FilterValues] = {
@@ -135,6 +432,20 @@ def get_transform_preset(name: str) -> TransformValues:
         available = ", ".join(TRANSFORM_PRESETS.keys())
         raise KeyError(f"Unknown transform preset '{name}'. Available: {available}")
     return TRANSFORM_PRESETS[name_lower]
+
+
+def get_opacity_preset(name: str) -> OpacityValues:
+    """Get opacity preset by name.
+
+    :param name: Preset name (case-insensitive)
+    :return: OpacityValues preset
+    :raises KeyError: If preset not found
+    """
+    name_lower = name.lower()
+    if name_lower not in OPACITY_PRESETS:
+        available = ", ".join(OPACITY_PRESETS.keys())
+        raise KeyError(f"Unknown opacity preset '{name}'. Available: {available}")
+    return OPACITY_PRESETS[name_lower]
 
 
 # ============================================================================
