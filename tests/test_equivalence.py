@@ -370,6 +370,286 @@ class TestFilterEquivalence:
                 err_msg="Combined filter results differ between CPU and GPU",
             )
 
+    def test_rotated_box_filter(self):
+        """Test rotated box filter equivalence."""
+        data = create_test_data(n_gaussians=5000)
+        rotation = (0.0, np.pi / 4, 0.0)  # 45 deg around Y
+
+        # CPU operation
+        cpu_data = GSDataPro.from_gsdata(data.copy())
+        cpu_data.filter(
+            FilterValues(
+                box_min=(-2.0, -2.0, -2.0),
+                box_max=(2.0, 2.0, 2.0),
+                box_rot=rotation,
+            )
+        )
+
+        # GPU operation
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        gstensor = GSTensorPro.from_gsdata(data.copy(), device=device)
+        gstensor.filter(
+            FilterValues(
+                box_min=(-2.0, -2.0, -2.0),
+                box_max=(2.0, 2.0, 2.0),
+                box_rot=rotation,
+            ),
+            inplace=True,
+        )
+        gpu_data = gstensor.to_gsdata()
+
+        # Compare lengths
+        assert len(cpu_data) == len(
+            gpu_data
+        ), f"Rotated box filter: CPU={len(cpu_data)}, GPU={len(gpu_data)}"
+
+        if len(cpu_data) > 0:
+            np.testing.assert_allclose(
+                cpu_data.means,
+                gpu_data.means,
+                rtol=1e-5,
+                atol=1e-6,
+                err_msg="Rotated box filter results differ between CPU and GPU",
+            )
+
+    def test_ellipsoid_filter(self):
+        """Test ellipsoid filter equivalence."""
+        data = create_test_data(n_gaussians=5000)
+        rotation = (0.0, 0.0, np.pi / 6)  # 30 deg around Z
+
+        # CPU operation
+        cpu_data = GSDataPro.from_gsdata(data.copy())
+        cpu_data.filter(
+            FilterValues(
+                ellipsoid_center=(0.0, 0.0, 0.0),
+                ellipsoid_radii=(3.0, 2.0, 2.0),
+                ellipsoid_rot=rotation,
+            )
+        )
+
+        # GPU operation
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        gstensor = GSTensorPro.from_gsdata(data.copy(), device=device)
+        gstensor.filter(
+            FilterValues(
+                ellipsoid_center=(0.0, 0.0, 0.0),
+                ellipsoid_radii=(3.0, 2.0, 2.0),
+                ellipsoid_rot=rotation,
+            ),
+            inplace=True,
+        )
+        gpu_data = gstensor.to_gsdata()
+
+        # Compare lengths
+        assert len(cpu_data) == len(
+            gpu_data
+        ), f"Ellipsoid filter: CPU={len(cpu_data)}, GPU={len(gpu_data)}"
+
+        if len(cpu_data) > 0:
+            np.testing.assert_allclose(
+                cpu_data.means,
+                gpu_data.means,
+                rtol=1e-5,
+                atol=1e-6,
+                err_msg="Ellipsoid filter results differ between CPU and GPU",
+            )
+
+    def test_frustum_filter(self):
+        """Test frustum filter equivalence."""
+        data = create_test_data(n_gaussians=5000)
+
+        # CPU operation
+        cpu_data = GSDataPro.from_gsdata(data.copy())
+        cpu_data.filter(
+            FilterValues(
+                frustum_pos=(0.0, 0.0, 8.0),
+                frustum_rot=None,
+                frustum_fov=1.047,  # 60 degrees
+                frustum_aspect=1.0,
+                frustum_near=0.1,
+                frustum_far=20.0,
+            )
+        )
+
+        # GPU operation
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        gstensor = GSTensorPro.from_gsdata(data.copy(), device=device)
+        gstensor.filter(
+            FilterValues(
+                frustum_pos=(0.0, 0.0, 8.0),
+                frustum_rot=None,
+                frustum_fov=1.047,
+                frustum_aspect=1.0,
+                frustum_near=0.1,
+                frustum_far=20.0,
+            ),
+            inplace=True,
+        )
+        gpu_data = gstensor.to_gsdata()
+
+        # Compare lengths
+        assert len(cpu_data) == len(
+            gpu_data
+        ), f"Frustum filter: CPU={len(cpu_data)}, GPU={len(gpu_data)}"
+
+        if len(cpu_data) > 0:
+            np.testing.assert_allclose(
+                cpu_data.means,
+                gpu_data.means,
+                rtol=1e-5,
+                atol=1e-6,
+                err_msg="Frustum filter results differ between CPU and GPU",
+            )
+
+    def test_frustum_filter_with_rotation(self):
+        """Test frustum filter with rotation equivalence."""
+        data = create_test_data(n_gaussians=5000)
+        rotation = (0.0, np.pi / 4, 0.0)  # 45 deg around Y
+
+        # CPU operation
+        cpu_data = GSDataPro.from_gsdata(data.copy())
+        cpu_data.filter(
+            FilterValues(
+                frustum_pos=(0.0, 0.0, 8.0),
+                frustum_rot=rotation,
+                frustum_fov=1.047,
+                frustum_aspect=1.0,
+                frustum_near=0.1,
+                frustum_far=20.0,
+            )
+        )
+
+        # GPU operation
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        gstensor = GSTensorPro.from_gsdata(data.copy(), device=device)
+        gstensor.filter(
+            FilterValues(
+                frustum_pos=(0.0, 0.0, 8.0),
+                frustum_rot=rotation,
+                frustum_fov=1.047,
+                frustum_aspect=1.0,
+                frustum_near=0.1,
+                frustum_far=20.0,
+            ),
+            inplace=True,
+        )
+        gpu_data = gstensor.to_gsdata()
+
+        # Compare lengths
+        assert len(cpu_data) == len(
+            gpu_data
+        ), f"Rotated frustum filter: CPU={len(cpu_data)}, GPU={len(gpu_data)}"
+
+        if len(cpu_data) > 0:
+            np.testing.assert_allclose(
+                cpu_data.means,
+                gpu_data.means,
+                rtol=1e-5,
+                atol=1e-6,
+                err_msg="Rotated frustum filter results differ between CPU and GPU",
+            )
+
+    def test_filter_pipeline_rotated_box(self):
+        """Test FilterGPU pipeline rotated box equivalence."""
+        data = create_test_data(n_gaussians=5000)
+        rotation = [0.0, np.pi / 4, 0.0]
+
+        # CPU via FilterValues
+        cpu_data = GSDataPro.from_gsdata(data.copy())
+        cpu_data.filter(
+            FilterValues(
+                box_min=(-2.0, -2.0, -2.0),
+                box_max=(2.0, 2.0, 2.0),
+                box_rot=tuple(rotation),
+            )
+        )
+
+        # GPU via FilterGPU pipeline - use center and size
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        gstensor = GSTensorPro.from_gsdata(data.copy(), device=device)
+        gpu_pipeline = FilterGPU().within_rotated_box(
+            center=[0.0, 0.0, 0.0],
+            size=[4.0, 4.0, 4.0],
+            rotation=rotation,
+        )
+        mask = gpu_pipeline.compute_mask(gstensor)
+        gpu_result = gstensor[mask]
+        gpu_data = gpu_result.to_gsdata()
+
+        # Compare lengths
+        assert len(cpu_data) == len(
+            gpu_data
+        ), f"FilterGPU rotated box: CPU={len(cpu_data)}, GPU={len(gpu_data)}"
+
+    def test_filter_pipeline_ellipsoid(self):
+        """Test FilterGPU pipeline ellipsoid equivalence."""
+        data = create_test_data(n_gaussians=5000)
+        rotation = [0.0, 0.0, np.pi / 6]
+
+        # CPU via FilterValues
+        cpu_data = GSDataPro.from_gsdata(data.copy())
+        cpu_data.filter(
+            FilterValues(
+                ellipsoid_center=(0.0, 0.0, 0.0),
+                ellipsoid_radii=(3.0, 2.0, 2.0),
+                ellipsoid_rot=tuple(rotation),
+            )
+        )
+
+        # GPU via FilterGPU pipeline
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        gstensor = GSTensorPro.from_gsdata(data.copy(), device=device)
+        gpu_pipeline = FilterGPU().within_ellipsoid(
+            center=[0.0, 0.0, 0.0],
+            radii=[3.0, 2.0, 2.0],
+            rotation=rotation,
+        )
+        mask = gpu_pipeline.compute_mask(gstensor)
+        gpu_result = gstensor[mask]
+        gpu_data = gpu_result.to_gsdata()
+
+        # Compare lengths
+        assert len(cpu_data) == len(
+            gpu_data
+        ), f"FilterGPU ellipsoid: CPU={len(cpu_data)}, GPU={len(gpu_data)}"
+
+    def test_filter_pipeline_frustum(self):
+        """Test FilterGPU pipeline frustum equivalence."""
+        data = create_test_data(n_gaussians=5000)
+
+        # CPU via FilterValues
+        cpu_data = GSDataPro.from_gsdata(data.copy())
+        cpu_data.filter(
+            FilterValues(
+                frustum_pos=(0.0, 0.0, 8.0),
+                frustum_rot=None,
+                frustum_fov=1.047,
+                frustum_aspect=1.0,
+                frustum_near=0.1,
+                frustum_far=20.0,
+            )
+        )
+
+        # GPU via FilterGPU pipeline
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        gstensor = GSTensorPro.from_gsdata(data.copy(), device=device)
+        gpu_pipeline = FilterGPU().within_frustum(
+            position=[0.0, 0.0, 8.0],
+            rotation=None,
+            fov=1.047,
+            aspect=1.0,
+            near=0.1,
+            far=20.0,
+        )
+        mask = gpu_pipeline.compute_mask(gstensor)
+        gpu_result = gstensor[mask]
+        gpu_data = gpu_result.to_gsdata()
+
+        # Compare lengths
+        assert len(cpu_data) == len(
+            gpu_data
+        ), f"FilterGPU frustum: CPU={len(cpu_data)}, GPU={len(gpu_data)}"
+
 
 class TestFullPipelineEquivalence:
     """Test full pipeline produces equivalent results."""

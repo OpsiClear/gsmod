@@ -49,7 +49,7 @@ Example - Parameterized Templates:
     >>> result = template(data, params={"b": 1.5, "c": 1.2})
 """
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 
 # Import GSData from gsply
 from gsply import GSData
@@ -119,6 +119,7 @@ from gsmod.config.values import (
 )
 
 # Filtering utilities
+from gsmod.filter.atomic import Filter
 from gsmod.filter.bounds import (
     SceneBounds,
     calculate_recommended_max_scale,
@@ -133,6 +134,9 @@ from gsmod.histogram import HistogramResult
 
 # Parameterized pipelines
 from gsmod.params import Param
+
+# Unified pipeline
+from gsmod.pipeline import Pipeline
 
 # Unified processing
 from gsmod.processing import GaussianProcessor, get_processor
@@ -223,6 +227,8 @@ __all__ = [
     "Color",
     "ColorPreset",
     "Transform",
+    "Filter",
+    "Pipeline",
     # Parameterization
     "Param",
     # Unified processing

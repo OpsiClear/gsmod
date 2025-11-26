@@ -147,6 +147,166 @@ class FilterGPU:
         self._operations.append(("outside_box", (min_bounds, max_bounds)))
         return self
 
+    def within_rotated_box(
+        self,
+        center: list[float] | np.ndarray | torch.Tensor,
+        size: list[float] | np.ndarray | torch.Tensor,
+        rotation: list[float] | np.ndarray | torch.Tensor | None = None,
+    ) -> FilterGPU:
+        """Add rotated box (OBB) filter.
+
+        :param center: Box center [x, y, z]
+        :param size: Box full size [width, height, depth]
+        :param rotation: Rotation as axis-angle [rx, ry, rz] in radians, or None
+        :returns: Self for chaining
+
+        Example:
+            >>> import numpy as np
+            >>> # Box rotated 45 degrees around Y axis
+            >>> pipeline = FilterGPU().within_rotated_box(
+            ...     center=[0, 0, 0],
+            ...     size=[2, 2, 2],
+            ...     rotation=[0, np.pi/4, 0]
+            ... )
+        """
+        self._operations.append(("within_rotated_box", (center, size, rotation)))
+        return self
+
+    def outside_rotated_box(
+        self,
+        center: list[float] | np.ndarray | torch.Tensor,
+        size: list[float] | np.ndarray | torch.Tensor,
+        rotation: list[float] | np.ndarray | torch.Tensor | None = None,
+    ) -> FilterGPU:
+        """Add filter for points outside rotated box (OBB).
+
+        :param center: Box center [x, y, z]
+        :param size: Box full size [width, height, depth]
+        :param rotation: Rotation as axis-angle [rx, ry, rz] in radians, or None
+        :returns: Self for chaining
+
+        Example:
+            >>> pipeline = FilterGPU().outside_rotated_box(
+            ...     center=[0, 0, 0],
+            ...     size=[1, 1, 1],
+            ...     rotation=[0, 0.5, 0]
+            ... )
+        """
+        self._operations.append(("outside_rotated_box", (center, size, rotation)))
+        return self
+
+    def within_ellipsoid(
+        self,
+        center: list[float] | np.ndarray | torch.Tensor = None,
+        radii: list[float] | np.ndarray | torch.Tensor = None,
+        rotation: list[float] | np.ndarray | torch.Tensor | None = None,
+    ) -> FilterGPU:
+        """Add ellipsoid filter.
+
+        :param center: Ellipsoid center [x, y, z] (default: origin)
+        :param radii: Ellipsoid radii [rx, ry, rz] (default: [1, 1, 1])
+        :param rotation: Rotation as axis-angle [rx, ry, rz] in radians, or None
+        :returns: Self for chaining
+
+        Example:
+            >>> # Ellipsoid stretched along X axis, rotated 30 deg around Z
+            >>> pipeline = FilterGPU().within_ellipsoid(
+            ...     center=[0, 0, 0],
+            ...     radii=[3.0, 1.0, 1.0],
+            ...     rotation=[0, 0, 0.52]
+            ... )
+        """
+        self._operations.append(("within_ellipsoid", (center, radii, rotation)))
+        return self
+
+    def outside_ellipsoid(
+        self,
+        center: list[float] | np.ndarray | torch.Tensor = None,
+        radii: list[float] | np.ndarray | torch.Tensor = None,
+        rotation: list[float] | np.ndarray | torch.Tensor | None = None,
+    ) -> FilterGPU:
+        """Add filter for points outside ellipsoid.
+
+        :param center: Ellipsoid center [x, y, z] (default: origin)
+        :param radii: Ellipsoid radii [rx, ry, rz] (default: [1, 1, 1])
+        :param rotation: Rotation as axis-angle [rx, ry, rz] in radians, or None
+        :returns: Self for chaining
+
+        Example:
+            >>> pipeline = FilterGPU().outside_ellipsoid(
+            ...     center=[0, 0, 0],
+            ...     radii=[2.0, 1.0, 1.0]
+            ... )
+        """
+        self._operations.append(("outside_ellipsoid", (center, radii, rotation)))
+        return self
+
+    def within_frustum(
+        self,
+        position: list[float] | np.ndarray | torch.Tensor = None,
+        rotation: list[float] | np.ndarray | torch.Tensor | None = None,
+        fov: float = 1.047,
+        aspect: float = 1.0,
+        near: float = 0.1,
+        far: float = 100.0,
+    ) -> FilterGPU:
+        """Add camera frustum filter.
+
+        Camera convention: -Z is forward, +X is right, +Y is up.
+
+        :param position: Camera position [x, y, z] (default: origin)
+        :param rotation: Camera rotation as axis-angle [rx, ry, rz] in radians, or None
+        :param fov: Vertical field of view in radians (default: 60 degrees)
+        :param aspect: Aspect ratio width/height (default: 1.0)
+        :param near: Near clipping plane distance (default: 0.1)
+        :param far: Far clipping plane distance (default: 100.0)
+        :returns: Self for chaining
+
+        Example:
+            >>> import numpy as np
+            >>> # Frustum looking down -Z with 90 degree FOV
+            >>> pipeline = FilterGPU().within_frustum(
+            ...     position=[0, 0, 10],
+            ...     rotation=None,
+            ...     fov=np.pi/2,
+            ...     aspect=16/9,
+            ...     near=0.1,
+            ...     far=100.0
+            ... )
+        """
+        self._operations.append(("within_frustum", (position, rotation, fov, aspect, near, far)))
+        return self
+
+    def outside_frustum(
+        self,
+        position: list[float] | np.ndarray | torch.Tensor = None,
+        rotation: list[float] | np.ndarray | torch.Tensor | None = None,
+        fov: float = 1.047,
+        aspect: float = 1.0,
+        near: float = 0.1,
+        far: float = 100.0,
+    ) -> FilterGPU:
+        """Add filter for points outside camera frustum.
+
+        :param position: Camera position [x, y, z] (default: origin)
+        :param rotation: Camera rotation as axis-angle [rx, ry, rz] in radians, or None
+        :param fov: Vertical field of view in radians (default: 60 degrees)
+        :param aspect: Aspect ratio width/height (default: 1.0)
+        :param near: Near clipping plane distance (default: 0.1)
+        :param far: Far clipping plane distance (default: 100.0)
+        :returns: Self for chaining
+
+        Example:
+            >>> pipeline = FilterGPU().outside_frustum(
+            ...     position=[0, 0, 10],
+            ...     fov=1.047,
+            ...     near=0.1,
+            ...     far=50.0
+            ... )
+        """
+        self._operations.append(("outside_frustum", (position, rotation, fov, aspect, near, far)))
+        return self
+
     def near_plane(self, distance: float = 0.1, axis: str = "z") -> FilterGPU:
         """Add near plane filter (keep points beyond distance).
 
@@ -224,6 +384,26 @@ class FilterGPU:
             elif op_name == "far_plane":
                 distance, axis = op_value
                 mask = self._filter_plane(data, distance, axis, "far")
+            elif op_name == "within_rotated_box":
+                center, size, rotation = op_value
+                mask = self._filter_rotated_box(data, center, size, rotation)
+            elif op_name == "outside_rotated_box":
+                center, size, rotation = op_value
+                mask = ~self._filter_rotated_box(data, center, size, rotation)
+            elif op_name == "within_ellipsoid":
+                center, radii, rotation = op_value
+                mask = self._filter_ellipsoid(data, center, radii, rotation)
+            elif op_name == "outside_ellipsoid":
+                center, radii, rotation = op_value
+                mask = ~self._filter_ellipsoid(data, center, radii, rotation)
+            elif op_name == "within_frustum":
+                position, rotation, fov, aspect, near, far = op_value
+                mask = self._filter_frustum(data, position, rotation, fov, aspect, near, far)
+            elif op_name == "outside_frustum":
+                position, rotation, fov, aspect, near, far = op_value
+                mask = ~self._filter_frustum(data, position, rotation, fov, aspect, near, far)
+            else:
+                raise ValueError(f"Unknown filter operation: {op_name}")
 
             masks.append(mask)
 
@@ -334,6 +514,216 @@ class FilterGPU:
             # Keep points within distance
             return positions <= distance
 
+    def _axis_angle_to_rotation_matrix(
+        self,
+        axis_angle: list[float] | np.ndarray | torch.Tensor,
+        device: torch.device,
+        dtype: torch.dtype,
+    ) -> torch.Tensor:
+        """Convert axis-angle rotation to 3x3 rotation matrix.
+
+        :param axis_angle: Rotation vector [3] where magnitude is angle in radians
+        :param device: Target device
+        :param dtype: Target dtype
+        :returns: Rotation matrix [3, 3]
+        """
+        if not isinstance(axis_angle, torch.Tensor):
+            axis_angle = torch.tensor(axis_angle, dtype=dtype, device=device)
+        else:
+            axis_angle = axis_angle.to(dtype=dtype, device=device)
+
+        angle = torch.norm(axis_angle)
+
+        if angle < 1e-8:
+            return torch.eye(3, dtype=dtype, device=device)
+
+        # Normalize axis
+        axis = axis_angle / angle
+
+        # Rodrigues' rotation formula
+        K = torch.tensor(
+            [[0, -axis[2], axis[1]], [axis[2], 0, -axis[0]], [-axis[1], axis[0], 0]],
+            dtype=dtype,
+            device=device,
+        )
+
+        # R = I + sin(angle) * K + (1 - cos(angle)) * K^2
+        R = (
+            torch.eye(3, dtype=dtype, device=device)
+            + torch.sin(angle) * K
+            + (1 - torch.cos(angle)) * (K @ K)
+        )
+
+        return R
+
+    def _filter_rotated_box(
+        self,
+        data: GSTensorPro,
+        center: list[float] | np.ndarray | torch.Tensor,
+        size: list[float] | np.ndarray | torch.Tensor,
+        rotation: list[float] | np.ndarray | torch.Tensor | None,
+    ) -> torch.Tensor:
+        """Filter Gaussians within rotated box (OBB).
+
+        :param data: GSTensorPro
+        :param center: Box center [x, y, z]
+        :param size: Box full size [width, height, depth]
+        :param rotation: Rotation as axis-angle [rx, ry, rz] in radians, or None
+        :returns: Boolean mask
+        """
+        device = data.device
+        dtype = data.dtype
+
+        # Convert center and compute half extents
+        if not isinstance(center, torch.Tensor):
+            center = torch.tensor(center, dtype=dtype, device=device)
+        else:
+            center = center.to(dtype=dtype, device=device)
+
+        if not isinstance(size, torch.Tensor):
+            size = torch.tensor(size, dtype=dtype, device=device)
+        else:
+            size = size.to(dtype=dtype, device=device)
+
+        half_extents = size * 0.5
+
+        # Get rotation matrix
+        if rotation is not None:
+            rot_matrix = self._axis_angle_to_rotation_matrix(rotation, device, dtype)
+            rot_matrix = rot_matrix.T  # Transpose for world-to-local
+        else:
+            rot_matrix = torch.eye(3, dtype=dtype, device=device)
+
+        # Transform to local coordinates
+        delta = data.means - center
+        local = delta @ rot_matrix.T
+
+        # Check if inside box (abs local coords <= half extents)
+        mask = torch.all(torch.abs(local) <= half_extents, dim=1)
+
+        return mask
+
+    def _filter_ellipsoid(
+        self,
+        data: GSTensorPro,
+        center: list[float] | np.ndarray | torch.Tensor | None,
+        radii: list[float] | np.ndarray | torch.Tensor | None,
+        rotation: list[float] | np.ndarray | torch.Tensor | None,
+    ) -> torch.Tensor:
+        """Filter Gaussians within ellipsoid.
+
+        :param data: GSTensorPro
+        :param center: Ellipsoid center [x, y, z] (default: origin)
+        :param radii: Ellipsoid radii [rx, ry, rz] (default: [1, 1, 1])
+        :param rotation: Rotation as axis-angle [rx, ry, rz] in radians, or None
+        :returns: Boolean mask
+        """
+        device = data.device
+        dtype = data.dtype
+
+        # Default center to origin
+        if center is None:
+            center = torch.zeros(3, dtype=dtype, device=device)
+        elif not isinstance(center, torch.Tensor):
+            center = torch.tensor(center, dtype=dtype, device=device)
+        else:
+            center = center.to(dtype=dtype, device=device)
+
+        # Default radii to unit sphere
+        if radii is None:
+            radii = torch.ones(3, dtype=dtype, device=device)
+        elif not isinstance(radii, torch.Tensor):
+            radii = torch.tensor(radii, dtype=dtype, device=device)
+        else:
+            radii = radii.to(dtype=dtype, device=device)
+
+        # Get rotation matrix
+        if rotation is not None:
+            rot_matrix = self._axis_angle_to_rotation_matrix(rotation, device, dtype)
+            rot_matrix = rot_matrix.T  # Transpose for world-to-local
+        else:
+            rot_matrix = torch.eye(3, dtype=dtype, device=device)
+
+        # Transform to local coordinates
+        delta = data.means - center
+        local = delta @ rot_matrix.T
+
+        # Normalize by radii and compute ellipsoid distance
+        normalized = local / radii
+        dist_sq = torch.sum(normalized**2, dim=1)
+
+        # Point is inside if normalized distance <= 1
+        mask = dist_sq <= 1.0
+
+        return mask
+
+    def _filter_frustum(
+        self,
+        data: GSTensorPro,
+        position: list[float] | np.ndarray | torch.Tensor | None,
+        rotation: list[float] | np.ndarray | torch.Tensor | None,
+        fov: float,
+        aspect: float,
+        near: float,
+        far: float,
+    ) -> torch.Tensor:
+        """Filter Gaussians within camera frustum.
+
+        Camera convention: -Z is forward, +X is right, +Y is up.
+
+        :param data: GSTensorPro
+        :param position: Camera position [x, y, z] (default: origin)
+        :param rotation: Camera rotation as axis-angle [rx, ry, rz] in radians, or None
+        :param fov: Vertical field of view in radians
+        :param aspect: Aspect ratio width/height
+        :param near: Near clipping plane distance
+        :param far: Far clipping plane distance
+        :returns: Boolean mask
+        """
+        device = data.device
+        dtype = data.dtype
+
+        # Default position to origin
+        if position is None:
+            camera_pos = torch.zeros(3, dtype=dtype, device=device)
+        elif not isinstance(position, torch.Tensor):
+            camera_pos = torch.tensor(position, dtype=dtype, device=device)
+        else:
+            camera_pos = position.to(dtype=dtype, device=device)
+
+        # Get rotation matrix
+        if rotation is not None:
+            rot_matrix = self._axis_angle_to_rotation_matrix(rotation, device, dtype)
+            rot_matrix = rot_matrix.T  # Transpose for world-to-camera
+        else:
+            rot_matrix = torch.eye(3, dtype=dtype, device=device)
+
+        # Transform to camera coordinates
+        delta = data.means - camera_pos
+        local = delta @ rot_matrix.T
+
+        # Calculate FOV tangents
+        tan_half_fov_y = torch.tan(torch.tensor(fov / 2, device=device))
+        tan_half_fov_x = tan_half_fov_y * aspect
+
+        # Check frustum bounds (camera looks down -Z)
+        lx = local[:, 0]
+        ly = local[:, 1]
+        lz = local[:, 2]
+
+        # Depth check: must be in front of camera and within near/far
+        in_depth = (lz < -near) & (lz > -far)
+
+        # FOV check using absolute Z (since -Z is forward)
+        abs_z = -lz
+        in_fov_x = torch.abs(lx) <= abs_z * tan_half_fov_x
+        in_fov_y = torch.abs(ly) <= abs_z * tan_half_fov_y
+
+        # Combine all conditions
+        mask = in_depth & in_fov_x & in_fov_y
+
+        return mask
+
     def reset(self) -> FilterGPU:
         """Reset pipeline, removing all operations.
 
@@ -382,6 +772,18 @@ class FilterGPU:
                 new_pipeline._operations.append(("outside_box", op_value))
             elif op_name == "outside_box":
                 new_pipeline._operations.append(("within_box", op_value))
+            elif op_name == "within_rotated_box":
+                new_pipeline._operations.append(("outside_rotated_box", op_value))
+            elif op_name == "outside_rotated_box":
+                new_pipeline._operations.append(("within_rotated_box", op_value))
+            elif op_name == "within_ellipsoid":
+                new_pipeline._operations.append(("outside_ellipsoid", op_value))
+            elif op_name == "outside_ellipsoid":
+                new_pipeline._operations.append(("within_ellipsoid", op_value))
+            elif op_name == "within_frustum":
+                new_pipeline._operations.append(("outside_frustum", op_value))
+            elif op_name == "outside_frustum":
+                new_pipeline._operations.append(("within_frustum", op_value))
             elif op_name == "min_opacity":
                 # min_opacity >= threshold becomes < threshold
                 new_pipeline._operations.append(("max_opacity", op_value - 1e-6))

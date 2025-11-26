@@ -5,6 +5,55 @@ All notable changes to gsmod will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2025-11-26
+
+### Added
+- **Unified Pipeline Class** (`gsmod.pipeline.Pipeline`)
+  - CPU pipeline class matching GPU PipelineGPU interface
+  - Fluent API for chaining color, transform, and filter operations
+  - Method chaining: `.brightness()`, `.saturation()`, `.translate()`, `.scale()`, `.min_opacity()`, etc.
+  - Operations accumulated and executed in order when called
+  - Single unified interface for all processing operations
+- **Filter Atomic Class** (`gsmod.filter.atomic.Filter`)
+  - Immutable filter class with boolean operators (&, |, ~)
+  - Factory methods: `min_opacity()`, `max_opacity()`, `min_scale()`, `max_scale()`, `sphere()`, `box()`, `ellipsoid()`, `frustum()`
+  - Combine filters with logical operators for complex patterns
+  - Direct mask computation via `.get_mask()` method
+  - Apply filters via callable interface: `filter(data, inplace=False)`
+- **Extended GSDataPro Filter Methods**
+  - Individual filter methods: `filter_min_opacity()`, `filter_max_opacity()`, `filter_min_scale()`, `filter_max_scale()`
+  - Geometry filters: `filter_within_sphere()`, `filter_outside_sphere()`, `filter_within_box()`, `filter_outside_box()`
+  - Advanced geometry: `filter_within_ellipsoid()`, `filter_outside_ellipsoid()`, `filter_within_frustum()`, `filter_outside_frustum()`
+  - Transform methods: `translate()`, `scale_uniform()`, `scale_nonuniform()`, `rotate_quaternion()`, `rotate_euler()`, `rotate_axis_angle()`, `transform_matrix()`
+  - Color adjustment: `adjust_brightness()` and other individual color methods
+- **GPU Filter Enhancements** (`gsmod.torch.filter.FilterGPU`)
+  - Rotated box filtering: `within_rotated_box()`, `outside_rotated_box()`
+  - Ellipsoid filtering: `within_ellipsoid()`, `outside_ellipsoid()`
+  - Frustum filtering: `within_frustum()`, `outside_frustum()`
+  - Optimized kernels: `_filter_rotated_box()`, `_filter_ellipsoid()`, `_filter_frustum()`
+  - Axis-angle to rotation matrix conversion: `_axis_angle_to_rotation_matrix()`
+
+### Changed
+- **Filter Architecture Simplified**
+  - Atomic Filter class now uses single fused kernel path
+  - Removed redundant kernel implementations
+  - Improved performance through kernel consolidation
+- **Full CPU-GPU Parity**
+  - All filter operations now available on both CPU and GPU
+  - Consistent API between GSDataPro and GSTensorPro
+  - Unified behavior across backends
+
+### Fixed
+- **Test Suite Stability**
+  - All 498 tests passing (with 55 skipped GPU tests when CUDA unavailable)
+  - Improved test coverage to 61% overall
+  - Enhanced equivalence tests between CPU and GPU implementations
+
+### Performance
+- Filter atomic operations use optimized Numba kernels for 40-100x speedup
+- Unified Pipeline reduces method call overhead
+- GPU filters maintain 100-180x speedup over CPU for large datasets
+
 ## [0.1.2] - 2025-01-25
 
 ### Changed

@@ -433,12 +433,43 @@ class GSTensorPro(GSTensor):
             distances = torch.norm(self.means - center, dim=1)
             mask &= distances <= values.sphere_radius
 
-        # Box filtering
+        # Box filtering (with optional rotation support)
         if values.box_min is not None and values.box_max is not None:
             box_min = torch.tensor(values.box_min, dtype=self.dtype, device=self.device)
             box_max = torch.tensor(values.box_max, dtype=self.dtype, device=self.device)
-            mask &= torch.all(self.means >= box_min, dim=1)
-            mask &= torch.all(self.means <= box_max, dim=1)
+
+            if values.box_rot is not None:
+                # Rotated box (OBB) - compute center and half extents
+                center = (box_min + box_max) / 2
+                half_extents = (box_max - box_min) / 2
+
+                # Convert axis-angle to rotation matrix
+                axis_angle = torch.tensor(values.box_rot, dtype=self.dtype, device=self.device)
+                angle = torch.norm(axis_angle)
+                if angle > 1e-8:
+                    axis = axis_angle / angle
+                    K = torch.tensor(
+                        [[0, -axis[2], axis[1]], [axis[2], 0, -axis[0]], [-axis[1], axis[0], 0]],
+                        dtype=self.dtype,
+                        device=self.device,
+                    )
+                    rot_matrix = (
+                        torch.eye(3, dtype=self.dtype, device=self.device)
+                        + torch.sin(angle) * K
+                        + (1 - torch.cos(angle)) * (K @ K)
+                    )
+                    rot_matrix = rot_matrix.T  # Transpose for world-to-local
+                else:
+                    rot_matrix = torch.eye(3, dtype=self.dtype, device=self.device)
+
+                # Transform to local coordinates and check box bounds
+                delta = self.means - center
+                local = delta @ rot_matrix.T
+                mask &= torch.all(torch.abs(local) <= half_extents, dim=1)
+            else:
+                # Axis-aligned box (AABB) - simple bounds check
+                mask &= torch.all(self.means >= box_min, dim=1)
+                mask &= torch.all(self.means <= box_max, dim=1)
 
         # Ellipsoid filtering
         if values.ellipsoid_radii is not None:

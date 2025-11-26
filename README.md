@@ -303,6 +303,34 @@ data = GSDataPro.from_ply("scene.ply")
 data.to_ply("output.ply")
 ```
 
+### Unified Pipeline Class
+
+The Pipeline class provides a fluent interface for building complex processing workflows. It matches the PipelineGPU interface for consistency:
+
+```python
+from gsmod import Pipeline, GSDataPro
+
+data = GSDataPro.from_ply("scene.ply")
+
+# Build pipeline with method chaining
+pipe = (Pipeline()
+    .brightness(1.2)
+    .saturation(1.3)
+    .contrast(1.1)
+    .translate([1, 0, 0])
+    .scale(2.0)
+    .min_opacity(0.1))
+
+# Apply pipeline to data
+result = pipe(data, inplace=True)
+
+# Reuse pipeline on different data
+data2 = GSDataPro.from_ply("scene2.ply")
+result2 = pipe(data2, inplace=False)
+```
+
+The Pipeline class supports all color, transform, and filter operations as methods. Operations are accumulated and executed in order when the pipeline is called.
+
 ### Copy vs Inplace
 
 ```python
@@ -1231,12 +1259,17 @@ filter_vals = get_filter_preset("strict")
 transform = get_transform_preset("double_size")
 ```
 
-### Legacy Classes (Still Available)
+### Advanced Classes
 
-For advanced use cases like mask computation:
+For advanced use cases like mask computation and fine-grained control:
 ```python
 from gsmod import Pipeline, Color, Transform, Filter, FilterMasks
 ```
+
+- **Pipeline**: Unified CPU pipeline (new in 0.1.3) - matches PipelineGPU interface
+- **Filter**: Atomic filter with boolean operators (new in 0.1.3)
+- **Color, Transform**: Legacy pipeline classes for backward compatibility
+- **FilterMasks**: Multi-layer mask management
 
 ### Low-Level Utilities
 

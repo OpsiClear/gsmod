@@ -223,6 +223,285 @@ class TestFilterOperations:
         assert len(mask) == len(sample_gstensor)
 
 
+class TestAdvancedFilterOperations:
+    """Test advanced GPU filter operations (rotated box, ellipsoid, frustum)."""
+
+    def test_filter_rotated_box(self, sample_gstensor):
+        """Test rotated box filter via FilterGPU pipeline."""
+        pipeline = FilterGPU().within_rotated_box(
+            center=[0, 0, 0],
+            size=[2, 2, 2],
+            rotation=[0, np.pi / 4, 0],  # 45 deg around Y
+        )
+        mask = pipeline.compute_mask(sample_gstensor)
+
+        assert isinstance(mask, torch.Tensor)
+        assert mask.dtype == torch.bool
+        assert len(mask) == len(sample_gstensor)
+        # Should filter some points
+        assert mask.sum() < len(sample_gstensor)
+
+    def test_filter_rotated_box_no_rotation(self, sample_gstensor):
+        """Test rotated box filter without rotation (should match AABB)."""
+        pipeline = FilterGPU().within_rotated_box(
+            center=[0, 0, 0],
+            size=[2, 2, 2],
+            rotation=None,
+        )
+        mask_rotated = pipeline.compute_mask(sample_gstensor)
+
+        # Compare with AABB filter
+        mask_aabb = sample_gstensor.filter_within_box([-1, -1, -1], [1, 1, 1])
+
+        assert torch.equal(mask_rotated, mask_aabb)
+
+    def test_filter_rotated_box_outside(self, sample_gstensor):
+        """Test outside rotated box filter."""
+        pipeline = FilterGPU().outside_rotated_box(
+            center=[0, 0, 0],
+            size=[2, 2, 2],
+            rotation=[0, np.pi / 4, 0],
+        )
+        mask = pipeline.compute_mask(sample_gstensor)
+
+        # Should be inverse of within_rotated_box
+        pipeline_within = FilterGPU().within_rotated_box(
+            center=[0, 0, 0],
+            size=[2, 2, 2],
+            rotation=[0, np.pi / 4, 0],
+        )
+        mask_within = pipeline_within.compute_mask(sample_gstensor)
+
+        assert torch.equal(mask, ~mask_within)
+
+    def test_filter_ellipsoid(self, sample_gstensor):
+        """Test ellipsoid filter via FilterGPU pipeline."""
+        pipeline = FilterGPU().within_ellipsoid(
+            center=[0, 0, 0],
+            radii=[2.0, 1.0, 1.5],
+            rotation=None,
+        )
+        mask = pipeline.compute_mask(sample_gstensor)
+
+        assert isinstance(mask, torch.Tensor)
+        assert mask.dtype == torch.bool
+        assert len(mask) == len(sample_gstensor)
+
+    def test_filter_ellipsoid_with_rotation(self, sample_gstensor):
+        """Test ellipsoid filter with rotation."""
+        pipeline = FilterGPU().within_ellipsoid(
+            center=[0, 0, 0],
+            radii=[3.0, 1.0, 1.0],
+            rotation=[0, 0, np.pi / 6],  # 30 deg around Z
+        )
+        mask = pipeline.compute_mask(sample_gstensor)
+
+        assert isinstance(mask, torch.Tensor)
+        assert mask.dtype == torch.bool
+
+    def test_filter_ellipsoid_outside(self, sample_gstensor):
+        """Test outside ellipsoid filter."""
+        pipeline = FilterGPU().outside_ellipsoid(
+            center=[0, 0, 0],
+            radii=[2.0, 1.0, 1.5],
+        )
+        mask = pipeline.compute_mask(sample_gstensor)
+
+        pipeline_within = FilterGPU().within_ellipsoid(
+            center=[0, 0, 0],
+            radii=[2.0, 1.0, 1.5],
+        )
+        mask_within = pipeline_within.compute_mask(sample_gstensor)
+
+        assert torch.equal(mask, ~mask_within)
+
+    def test_filter_frustum(self, sample_gstensor):
+        """Test frustum filter via FilterGPU pipeline."""
+        pipeline = FilterGPU().within_frustum(
+            position=[0, 0, 5],
+            rotation=None,
+            fov=np.pi / 2,  # 90 deg
+            aspect=1.0,
+            near=0.1,
+            far=20.0,
+        )
+        mask = pipeline.compute_mask(sample_gstensor)
+
+        assert isinstance(mask, torch.Tensor)
+        assert mask.dtype == torch.bool
+        assert len(mask) == len(sample_gstensor)
+
+    def test_filter_frustum_with_rotation(self, sample_gstensor):
+        """Test frustum filter with rotation."""
+        # Camera looking down +X axis (rotated 90 deg around Y)
+        pipeline = FilterGPU().within_frustum(
+            position=[0, 0, 0],
+            rotation=[0, np.pi / 2, 0],
+            fov=1.047,  # 60 deg
+            aspect=16 / 9,
+            near=0.1,
+            far=50.0,
+        )
+        mask = pipeline.compute_mask(sample_gstensor)
+
+        assert isinstance(mask, torch.Tensor)
+        assert mask.dtype == torch.bool
+
+    def test_filter_frustum_outside(self, sample_gstensor):
+        """Test outside frustum filter."""
+        pipeline = FilterGPU().outside_frustum(
+            position=[0, 0, 5],
+            fov=np.pi / 2,
+            near=0.1,
+            far=20.0,
+        )
+        mask = pipeline.compute_mask(sample_gstensor)
+
+        pipeline_within = FilterGPU().within_frustum(
+            position=[0, 0, 5],
+            fov=np.pi / 2,
+            near=0.1,
+            far=20.0,
+        )
+        mask_within = pipeline_within.compute_mask(sample_gstensor)
+
+        assert torch.equal(mask, ~mask_within)
+
+    def test_filter_pipeline_invert_new_filters(self, sample_gstensor):
+        """Test that invert() works for new filter types."""
+        pipeline = (
+            FilterGPU()
+            .within_rotated_box([0, 0, 0], [2, 2, 2], [0, 0.5, 0])
+            .within_ellipsoid([0, 0, 0], [2, 1, 1])
+            .within_frustum([0, 0, 5], None, 1.0, 1.0, 0.1, 20.0)
+        )
+
+        inverted = pipeline.invert()
+
+        # Check that operations were inverted
+        assert len(inverted._operations) == 3
+        assert inverted._operations[0][0] == "outside_rotated_box"
+        assert inverted._operations[1][0] == "outside_ellipsoid"
+        assert inverted._operations[2][0] == "outside_frustum"
+
+    def test_filter_combined_advanced(self, sample_gstensor):
+        """Test combining multiple advanced filters."""
+        pipeline = (
+            FilterGPU()
+            .within_rotated_box([0, 0, 0], [4, 4, 4], [0, np.pi / 4, 0])
+            .within_ellipsoid([0, 0, 0], [3, 2, 2])
+            .min_opacity(0.1)
+        )
+
+        mask = pipeline.compute_mask(sample_gstensor, mode="and")
+        filtered = sample_gstensor[mask]
+
+        assert len(filtered) <= len(sample_gstensor)
+
+
+class TestGSTensorProFilterWithRotation:
+    """Test GSTensorPro.filter() with rotation parameters."""
+
+    def test_filter_with_box_rotation(self, sample_gstensor):
+        """Test GSTensorPro.filter() with box_rot parameter."""
+        from gsmod.config.values import FilterValues
+
+        # Filter with rotated box
+        values = FilterValues(
+            box_min=(-1.0, -1.0, -1.0),
+            box_max=(1.0, 1.0, 1.0),
+            box_rot=(0.0, np.pi / 4, 0.0),  # 45 deg around Y
+        )
+
+        original_len = len(sample_gstensor)
+        result = sample_gstensor.clone()
+        result.filter(values, inplace=True)
+
+        assert len(result) <= original_len
+
+    def test_filter_with_ellipsoid_rotation(self, sample_gstensor):
+        """Test GSTensorPro.filter() with ellipsoid_rot parameter."""
+        from gsmod.config.values import FilterValues
+
+        values = FilterValues(
+            ellipsoid_center=(0.0, 0.0, 0.0),
+            ellipsoid_radii=(2.0, 1.0, 1.5),
+            ellipsoid_rot=(0.0, 0.0, np.pi / 6),  # 30 deg around Z
+        )
+
+        original_len = len(sample_gstensor)
+        result = sample_gstensor.clone()
+        result.filter(values, inplace=True)
+
+        assert len(result) <= original_len
+
+    def test_filter_with_frustum_rotation(self, sample_gstensor):
+        """Test GSTensorPro.filter() with frustum_rot parameter."""
+        from gsmod.config.values import FilterValues
+
+        values = FilterValues(
+            frustum_pos=(0.0, 0.0, 5.0),
+            frustum_rot=(0.0, 0.0, 0.0),  # No rotation
+            frustum_fov=1.047,
+            frustum_aspect=1.0,
+            frustum_near=0.1,
+            frustum_far=20.0,
+        )
+
+        original_len = len(sample_gstensor)
+        result = sample_gstensor.clone()
+        result.filter(values, inplace=True)
+
+        assert len(result) <= original_len
+
+    def test_filter_combined_with_rotations(self, sample_gstensor):
+        """Test combined filters with rotations."""
+        from gsmod.config.values import FilterValues
+
+        values = FilterValues(
+            min_opacity=0.1,
+            box_min=(-2.0, -2.0, -2.0),
+            box_max=(2.0, 2.0, 2.0),
+            box_rot=(0.0, np.pi / 4, 0.0),
+            ellipsoid_center=(0.0, 0.0, 0.0),
+            ellipsoid_radii=(3.0, 2.0, 2.0),
+            ellipsoid_rot=(0.0, 0.0, np.pi / 6),
+        )
+
+        original_len = len(sample_gstensor)
+        result = sample_gstensor.clone()
+        result.filter(values, inplace=True)
+
+        assert len(result) <= original_len
+
+    def test_filter_box_rotation_vs_aabb(self, sample_gstensor):
+        """Test that box with no rotation matches AABB."""
+        from gsmod.config.values import FilterValues
+
+        # With rotation=None (AABB path)
+        values_aabb = FilterValues(
+            box_min=(-1.0, -1.0, -1.0),
+            box_max=(1.0, 1.0, 1.0),
+            box_rot=None,
+        )
+
+        # With rotation=(0,0,0) (OBB path with identity rotation)
+        values_obb = FilterValues(
+            box_min=(-1.0, -1.0, -1.0),
+            box_max=(1.0, 1.0, 1.0),
+            box_rot=(0.0, 0.0, 0.0),
+        )
+
+        result_aabb = sample_gstensor.clone()
+        result_aabb.filter(values_aabb, inplace=True)
+
+        result_obb = sample_gstensor.clone()
+        result_obb.filter(values_obb, inplace=True)
+
+        # Both should produce same result
+        assert len(result_aabb) == len(result_obb)
+
+
 class TestPipelines:
     """Test GPU pipeline classes."""
 

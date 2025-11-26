@@ -22,6 +22,7 @@ Example:
     >>> data.filter(FilterValues(sphere_radius=2.0, invert=True))
 """
 
+from gsmod.filter.atomic import Filter
 from gsmod.filter.bounds import (
     SceneBounds,
     calculate_recommended_max_scale,
@@ -38,6 +39,8 @@ from gsmod.filter.config import (
 )
 
 __all__ = [
+    # Atomic Filter API
+    "Filter",
     # Config types (for apply_geometry_filter)
     "SphereFilter",
     "BoxFilter",

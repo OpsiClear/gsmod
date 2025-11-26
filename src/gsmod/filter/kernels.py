@@ -248,7 +248,7 @@ def opacity_filter_numba(
     out: NDArray[np.bool_],
 ) -> None:
     """
-    Apply opacity filter with Numba optimization.
+    Apply opacity filter with Numba optimization (min opacity).
 
     Args:
         opacities: Gaussian opacities [N]

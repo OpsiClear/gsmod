@@ -166,6 +166,554 @@ class GSDataPro(GSData):
         return self
 
     # ========================================================================
+    # Individual Filter Methods
+    # ========================================================================
+
+    def filter_min_opacity(self, threshold: float, inplace: bool = True) -> Self:
+        """Filter by minimum opacity threshold.
+
+        :param threshold: Minimum opacity value [0.0, 1.0]
+        :param inplace: If True, modify self; if False, return filtered copy
+        :returns: Self (filtered) or filtered copy
+        """
+        return self.filter(FilterValues(min_opacity=threshold), inplace=inplace)
+
+    def filter_max_opacity(self, threshold: float, inplace: bool = True) -> Self:
+        """Filter by maximum opacity threshold.
+
+        :param threshold: Maximum opacity value [0.0, 1.0]
+        :param inplace: If True, modify self; if False, return filtered copy
+        :returns: Self (filtered) or filtered copy
+        """
+        return self.filter(FilterValues(max_opacity=threshold), inplace=inplace)
+
+    def filter_min_scale(self, threshold: float, inplace: bool = True) -> Self:
+        """Filter by minimum scale threshold.
+
+        :param threshold: Minimum scale value
+        :param inplace: If True, modify self; if False, return filtered copy
+        :returns: Self (filtered) or filtered copy
+        """
+        return self.filter(FilterValues(min_scale=threshold), inplace=inplace)
+
+    def filter_max_scale(self, threshold: float, inplace: bool = True) -> Self:
+        """Filter by maximum scale threshold.
+
+        :param threshold: Maximum scale value
+        :param inplace: If True, modify self; if False, return filtered copy
+        :returns: Self (filtered) or filtered copy
+        """
+        return self.filter(FilterValues(max_scale=threshold), inplace=inplace)
+
+    def filter_within_sphere(
+        self,
+        radius: float,
+        center: tuple[float, float, float] | None = None,
+        inplace: bool = True,
+    ) -> Self:
+        """Filter to keep Gaussians inside sphere.
+
+        :param radius: Sphere radius in world units
+        :param center: Sphere center [x, y, z], defaults to origin
+        :param inplace: If True, modify self; if False, return filtered copy
+        :returns: Self (filtered) or filtered copy
+        """
+        values = FilterValues(
+            sphere_radius=radius,
+            sphere_center=center if center is not None else (0.0, 0.0, 0.0),
+        )
+        return self.filter(values, inplace=inplace)
+
+    def filter_outside_sphere(
+        self,
+        radius: float,
+        center: tuple[float, float, float] | None = None,
+        inplace: bool = True,
+    ) -> Self:
+        """Filter to keep Gaussians outside sphere.
+
+        :param radius: Sphere radius in world units
+        :param center: Sphere center [x, y, z], defaults to origin
+        :param inplace: If True, modify self; if False, return filtered copy
+        :returns: Self (filtered) or filtered copy
+        """
+        values = FilterValues(
+            sphere_radius=radius,
+            sphere_center=center if center is not None else (0.0, 0.0, 0.0),
+            invert=True,
+        )
+        return self.filter(values, inplace=inplace)
+
+    def filter_within_box(
+        self,
+        min_corner: tuple[float, float, float],
+        max_corner: tuple[float, float, float],
+        rotation: tuple[float, float, float] | None = None,
+        inplace: bool = True,
+    ) -> Self:
+        """Filter to keep Gaussians inside box.
+
+        :param min_corner: Box minimum corner [x, y, z]
+        :param max_corner: Box maximum corner [x, y, z]
+        :param rotation: Optional axis-angle rotation (radians)
+        :param inplace: If True, modify self; if False, return filtered copy
+        :returns: Self (filtered) or filtered copy
+        """
+        values = FilterValues(box_min=min_corner, box_max=max_corner, box_rot=rotation)
+        return self.filter(values, inplace=inplace)
+
+    def filter_outside_box(
+        self,
+        min_corner: tuple[float, float, float],
+        max_corner: tuple[float, float, float],
+        rotation: tuple[float, float, float] | None = None,
+        inplace: bool = True,
+    ) -> Self:
+        """Filter to keep Gaussians outside box.
+
+        :param min_corner: Box minimum corner [x, y, z]
+        :param max_corner: Box maximum corner [x, y, z]
+        :param rotation: Optional axis-angle rotation (radians)
+        :param inplace: If True, modify self; if False, return filtered copy
+        :returns: Self (filtered) or filtered copy
+        """
+        values = FilterValues(box_min=min_corner, box_max=max_corner, box_rot=rotation, invert=True)
+        return self.filter(values, inplace=inplace)
+
+    def filter_within_ellipsoid(
+        self,
+        center: tuple[float, float, float],
+        radii: tuple[float, float, float],
+        rotation: tuple[float, float, float] | None = None,
+        inplace: bool = True,
+    ) -> Self:
+        """Filter to keep Gaussians inside ellipsoid.
+
+        :param center: Ellipsoid center [x, y, z]
+        :param radii: Ellipsoid radii [rx, ry, rz]
+        :param rotation: Optional axis-angle rotation (radians)
+        :param inplace: If True, modify self; if False, return filtered copy
+        :returns: Self (filtered) or filtered copy
+        """
+        values = FilterValues(
+            ellipsoid_center=center, ellipsoid_radii=radii, ellipsoid_rot=rotation
+        )
+        return self.filter(values, inplace=inplace)
+
+    def filter_outside_ellipsoid(
+        self,
+        center: tuple[float, float, float],
+        radii: tuple[float, float, float],
+        rotation: tuple[float, float, float] | None = None,
+        inplace: bool = True,
+    ) -> Self:
+        """Filter to keep Gaussians outside ellipsoid.
+
+        :param center: Ellipsoid center [x, y, z]
+        :param radii: Ellipsoid radii [rx, ry, rz]
+        :param rotation: Optional axis-angle rotation (radians)
+        :param inplace: If True, modify self; if False, return filtered copy
+        :returns: Self (filtered) or filtered copy
+        """
+        values = FilterValues(
+            ellipsoid_center=center, ellipsoid_radii=radii, ellipsoid_rot=rotation, invert=True
+        )
+        return self.filter(values, inplace=inplace)
+
+    def filter_within_frustum(
+        self,
+        position: tuple[float, float, float],
+        rotation: tuple[float, float, float] | None,
+        fov: float,
+        aspect: float,
+        near: float,
+        far: float,
+        inplace: bool = True,
+    ) -> Self:
+        """Filter to keep Gaussians inside camera frustum.
+
+        :param position: Camera position [x, y, z]
+        :param rotation: Camera rotation as axis-angle (radians) or None
+        :param fov: Vertical field of view in radians
+        :param aspect: Aspect ratio (width/height)
+        :param near: Near clipping plane distance
+        :param far: Far clipping plane distance
+        :param inplace: If True, modify self; if False, return filtered copy
+        :returns: Self (filtered) or filtered copy
+        """
+        values = FilterValues(
+            frustum_pos=position,
+            frustum_rot=rotation,
+            frustum_fov=fov,
+            frustum_aspect=aspect,
+            frustum_near=near,
+            frustum_far=far,
+        )
+        return self.filter(values, inplace=inplace)
+
+    def filter_outside_frustum(
+        self,
+        position: tuple[float, float, float],
+        rotation: tuple[float, float, float] | None,
+        fov: float,
+        aspect: float,
+        near: float,
+        far: float,
+        inplace: bool = True,
+    ) -> Self:
+        """Filter to keep Gaussians outside camera frustum.
+
+        :param position: Camera position [x, y, z]
+        :param rotation: Camera rotation as axis-angle (radians) or None
+        :param fov: Vertical field of view in radians
+        :param aspect: Aspect ratio (width/height)
+        :param near: Near clipping plane distance
+        :param far: Far clipping plane distance
+        :param inplace: If True, modify self; if False, return filtered copy
+        :returns: Self (filtered) or filtered copy
+        """
+        values = FilterValues(
+            frustum_pos=position,
+            frustum_rot=rotation,
+            frustum_fov=fov,
+            frustum_aspect=aspect,
+            frustum_near=near,
+            frustum_far=far,
+            invert=True,
+        )
+        return self.filter(values, inplace=inplace)
+
+    # ========================================================================
+    # Individual Transform Methods
+    # ========================================================================
+
+    def translate(self, translation: list[float] | tuple[float, ...], inplace: bool = True) -> Self:
+        """Translate (move) the scene.
+
+        :param translation: Translation vector [x, y, z]
+        :param inplace: If True, modify self; if False, return modified copy
+        :returns: Self (modified) or copy with modifications
+        """
+        import numpy as np
+
+        t = np.asarray(translation, dtype=np.float32)
+        if np.allclose(t, 0):
+            return self if inplace else self.clone()
+        return self.transform(TransformValues.from_translation(t[0], t[1], t[2]), inplace=inplace)
+
+    def scale_uniform(self, factor: float, inplace: bool = True) -> Self:
+        """Apply uniform scale.
+
+        :param factor: Scale factor (1.0 = no change)
+        :param inplace: If True, modify self; if False, return modified copy
+        :returns: Self (modified) or copy with modifications
+        """
+        if factor == 1.0:
+            return self if inplace else self.clone()
+        return self.transform(TransformValues.from_scale(factor), inplace=inplace)
+
+    def scale_nonuniform(
+        self, factors: list[float] | tuple[float, ...], inplace: bool = True
+    ) -> Self:
+        """Apply non-uniform scale.
+
+        :param factors: Scale factors [sx, sy, sz]
+        :param inplace: If True, modify self; if False, return modified copy
+        :returns: Self (modified) or copy with modifications
+        """
+        import numpy as np
+
+        f = np.asarray(factors, dtype=np.float32)
+        if np.allclose(f, 1):
+            return self if inplace else self.clone()
+
+        if not inplace:
+            data = self.clone()
+            return data.scale_nonuniform(factors, inplace=True)
+
+        # Apply non-uniform scale directly to positions and scales
+        self.means = self.means * f
+        self.scales = self.scales * f
+        return self
+
+    def rotate_quaternion(
+        self, quat: list[float] | tuple[float, ...], inplace: bool = True
+    ) -> Self:
+        """Rotate by quaternion.
+
+        :param quat: Quaternion [w, x, y, z] (wxyz format)
+        :param inplace: If True, modify self; if False, return modified copy
+        :returns: Self (modified) or copy with modifications
+        """
+        import numpy as np
+
+        q = np.asarray(quat, dtype=np.float32)
+        # Identity quaternion is [1, 0, 0, 0]
+        if np.allclose(q, [1, 0, 0, 0]):
+            return self if inplace else self.clone()
+        return self.transform(TransformValues(rotation=tuple(q.tolist())), inplace=inplace)
+
+    def rotate_euler(
+        self, angles: list[float] | tuple[float, ...], order: str = "XYZ", inplace: bool = True
+    ) -> Self:
+        """Rotate by Euler angles.
+
+        :param angles: Rotation angles [rx, ry, rz] in degrees
+        :param order: Rotation order (default 'XYZ')
+        :param inplace: If True, modify self; if False, return modified copy
+        :returns: Self (modified) or copy with modifications
+        """
+        import numpy as np
+
+        a = np.asarray(angles, dtype=np.float32)
+        if np.allclose(a, 0):
+            return self if inplace else self.clone()
+        return self.transform(
+            TransformValues.from_rotation_euler(a[0], a[1], a[2]), inplace=inplace
+        )
+
+    def rotate_axis_angle(
+        self, axis: list[float] | tuple[float, ...], angle: float, inplace: bool = True
+    ) -> Self:
+        """Rotate by axis-angle.
+
+        :param axis: Rotation axis [x, y, z]
+        :param angle: Rotation angle in degrees
+        :param inplace: If True, modify self; if False, return modified copy
+        :returns: Self (modified) or copy with modifications
+        """
+        if angle == 0.0:
+            return self if inplace else self.clone()
+        return self.transform(
+            TransformValues.from_rotation_axis_angle(tuple(axis), angle), inplace=inplace
+        )
+
+    def transform_matrix(self, matrix, inplace: bool = True) -> Self:
+        """Apply 4x4 transformation matrix.
+
+        :param matrix: 4x4 homogeneous transformation matrix
+        :param inplace: If True, modify self; if False, return modified copy
+        :returns: Self (modified) or copy with modifications
+        """
+        import numpy as np
+
+        M = np.asarray(matrix, dtype=np.float32)
+        if np.allclose(M, np.eye(4)):
+            return self if inplace else self.clone()
+        return self.transform(TransformValues.from_matrix(M), inplace=inplace)
+
+    # ========================================================================
+    # Individual Color Methods
+    # ========================================================================
+
+    def adjust_brightness(self, factor: float, inplace: bool = True) -> Self:
+        """Adjust brightness by multiplicative factor.
+
+        :param factor: Brightness multiplier (1.0 = no change)
+        :param inplace: If True, modify self; if False, return modified copy
+        :returns: Self (modified) or copy with modifications
+        """
+        if factor == 1.0:
+            return self if inplace else self.clone()
+        return self.color(ColorValues(brightness=factor), inplace=inplace)
+
+    def adjust_contrast(self, factor: float, inplace: bool = True) -> Self:
+        """Adjust contrast by multiplicative factor.
+
+        :param factor: Contrast multiplier (1.0 = no change)
+        :param inplace: If True, modify self; if False, return modified copy
+        :returns: Self (modified) or copy with modifications
+        """
+        if factor == 1.0:
+            return self if inplace else self.clone()
+        return self.color(ColorValues(contrast=factor), inplace=inplace)
+
+    def adjust_saturation(self, factor: float, inplace: bool = True) -> Self:
+        """Adjust saturation by multiplicative factor.
+
+        :param factor: Saturation multiplier (1.0 = no change)
+        :param inplace: If True, modify self; if False, return modified copy
+        :returns: Self (modified) or copy with modifications
+        """
+        if factor == 1.0:
+            return self if inplace else self.clone()
+        return self.color(ColorValues(saturation=factor), inplace=inplace)
+
+    def adjust_gamma(self, value: float, inplace: bool = True) -> Self:
+        """Adjust gamma (power curve).
+
+        :param value: Gamma value (1.0 = linear, no change)
+        :param inplace: If True, modify self; if False, return modified copy
+        :returns: Self (modified) or copy with modifications
+        """
+        if value == 1.0:
+            return self if inplace else self.clone()
+        return self.color(ColorValues(gamma=value), inplace=inplace)
+
+    def adjust_temperature(self, temp: float, inplace: bool = True) -> Self:
+        """Adjust color temperature.
+
+        :param temp: Temperature (-1.0 cool/blue to 1.0 warm/orange, 0.0 = neutral)
+        :param inplace: If True, modify self; if False, return modified copy
+        :returns: Self (modified) or copy with modifications
+        """
+        if temp == 0.0:
+            return self if inplace else self.clone()
+        return self.color(ColorValues(temperature=temp), inplace=inplace)
+
+    def adjust_vibrance(self, factor: float, inplace: bool = True) -> Self:
+        """Adjust vibrance (smart saturation).
+
+        :param factor: Vibrance multiplier (1.0 = no change)
+        :param inplace: If True, modify self; if False, return modified copy
+        :returns: Self (modified) or copy with modifications
+        """
+        if factor == 1.0:
+            return self if inplace else self.clone()
+        return self.color(ColorValues(vibrance=factor), inplace=inplace)
+
+    def adjust_hue_shift(self, degrees: float, inplace: bool = True) -> Self:
+        """Shift hue by specified degrees.
+
+        :param degrees: Hue shift in degrees (-180 to 180)
+        :param inplace: If True, modify self; if False, return modified copy
+        :returns: Self (modified) or copy with modifications
+        """
+        if degrees == 0.0:
+            return self if inplace else self.clone()
+        return self.color(ColorValues(hue_shift=degrees), inplace=inplace)
+
+    def adjust_shadows(self, factor: float, inplace: bool = True) -> Self:
+        """Adjust shadow tones.
+
+        :param factor: Shadow adjustment (-1.0 darker to 1.0 lighter, 0.0 = no change)
+        :param inplace: If True, modify self; if False, return modified copy
+        :returns: Self (modified) or copy with modifications
+        """
+        if factor == 0.0:
+            return self if inplace else self.clone()
+        return self.color(ColorValues(shadows=factor), inplace=inplace)
+
+    def adjust_highlights(self, factor: float, inplace: bool = True) -> Self:
+        """Adjust highlight tones.
+
+        :param factor: Highlight adjustment (-1.0 darker to 1.0 lighter, 0.0 = no change)
+        :param inplace: If True, modify self; if False, return modified copy
+        :returns: Self (modified) or copy with modifications
+        """
+        if factor == 0.0:
+            return self if inplace else self.clone()
+        return self.color(ColorValues(highlights=factor), inplace=inplace)
+
+    def adjust_tint(self, value: float, inplace: bool = True) -> Self:
+        """Adjust tint (green-magenta balance).
+
+        :param value: Tint value (-1.0 green to 1.0 magenta, 0.0 = neutral)
+        :param inplace: If True, modify self; if False, return modified copy
+        :returns: Self (modified) or copy with modifications
+        """
+        if value == 0.0:
+            return self if inplace else self.clone()
+        return self.color(ColorValues(tint=value), inplace=inplace)
+
+    def adjust_fade(self, value: float, inplace: bool = True) -> Self:
+        """Apply fade effect (black point lift).
+
+        :param value: Fade amount (0.0 = no fade, 1.0 = full lift to white)
+        :param inplace: If True, modify self; if False, return modified copy
+        :returns: Self (modified) or copy with modifications
+        """
+        if value == 0.0:
+            return self if inplace else self.clone()
+        return self.color(ColorValues(fade=value), inplace=inplace)
+
+    # ========================================================================
+    # Scene Utilities
+    # ========================================================================
+
+    def compute_bounds(self) -> tuple:
+        """Compute axis-aligned bounding box of the scene.
+
+        :returns: Tuple of (min_bounds, max_bounds) as shape (3,) arrays
+
+        Example:
+            >>> min_b, max_b = data.compute_bounds()
+            >>> scene_size = max_b - min_b
+        """
+        import numpy as np
+
+        return np.min(self.means, axis=0), np.max(self.means, axis=0)
+
+    def get_centroid(self):
+        """Compute centroid (center of mass) of all Gaussian positions.
+
+        :returns: Centroid as shape (3,) array
+
+        Example:
+            >>> center = data.get_centroid()
+            >>> print(f"Scene center: {center}")
+        """
+        import numpy as np
+
+        return np.mean(self.means, axis=0)
+
+    def center_at_origin(self, inplace: bool = True) -> Self:
+        """Translate scene so centroid is at origin.
+
+        :param inplace: If True, modify self; if False, return modified copy
+        :returns: Self (modified) or copy with modifications
+
+        Example:
+            >>> data.center_at_origin()  # Scene is now centered at (0, 0, 0)
+        """
+        import numpy as np
+
+        if not inplace:
+            data = self.clone()
+            return data.center_at_origin(inplace=True)
+
+        centroid = self.get_centroid()
+        if np.allclose(centroid, 0):
+            return self
+
+        self.means = self.means - centroid
+        return self
+
+    def normalize_scale(self, target_size: float = 2.0, inplace: bool = True) -> Self:
+        """Normalize scene to fit within target bounding box size.
+
+        Uniformly scales the scene so the largest dimension equals target_size.
+
+        :param target_size: Target size for largest dimension (default 2.0)
+        :param inplace: If True, modify self; if False, return modified copy
+        :returns: Self (modified) or copy with modifications
+
+        Example:
+            >>> data.normalize_scale(target_size=2.0)  # Scene now fits in [-1, 1]^3
+        """
+        import numpy as np
+
+        if not inplace:
+            data = self.clone()
+            return data.normalize_scale(target_size=target_size, inplace=True)
+
+        min_b, max_b = self.compute_bounds()
+        current_size = np.max(max_b - min_b)
+
+        if current_size < 1e-8:
+            return self  # Scene too small to scale
+
+        scale_factor = target_size / current_size
+
+        if np.isclose(scale_factor, 1.0):
+            return self
+
+        # Scale positions and scales
+        self.means = self.means * scale_factor
+        self.scales = self.scales * scale_factor
+        return self
+
+    # ========================================================================
     # Histogram Methods
     # ========================================================================
 
