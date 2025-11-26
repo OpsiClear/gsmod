@@ -3,6 +3,10 @@
 Provides a composable filter API using factory methods and operators.
 Filters are immutable and can be combined with &, |, ~ operators.
 
+Performance:
+    - AND operations use fused kernel (fast): Filter.a() & Filter.b()
+    - OR/NOT operations use mask combination (flexible): Filter.a() | Filter.b()
+
 Example:
     >>> from gsmod import Filter
     >>>
@@ -10,7 +14,7 @@ Example:
     >>> opacity = Filter.min_opacity(0.5)
     >>> sphere = Filter.sphere(radius=5.0)
     >>>
-    >>> # Combine with operators
+    >>> # Combine with operators (AND uses fused kernel)
     >>> combined = opacity & sphere
     >>>
     >>> # Apply to data
@@ -28,6 +32,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 if TYPE_CHECKING:
+    from gsmod.config.values import FilterValues
     from gsmod.gsdata_pro import GSDataPro
 
 logger = logging.getLogger(__name__)
@@ -38,16 +43,31 @@ class Filter:
     """Atomic filter with boolean operators.
 
     Filters are immutable and composable via operators:
-    - & (AND): Both conditions must pass
-    - | (OR): Either condition passes
-    - ~ (NOT): Invert the filter
+    - & (AND): Both conditions must pass (uses fused kernel - fast)
+    - | (OR): Either condition passes (uses mask combination)
+    - ~ (NOT): Invert the filter (uses mask inversion)
 
-    Factory methods create atomic filters that delegate to optimized
-    Numba kernels for mask computation.
+    Factory methods create atomic filters with FilterValues internally,
+    enabling fast fused kernel execution for AND combinations.
     """
 
-    _mask_fn: Callable[[GSDataPro], np.ndarray]
+    _values: FilterValues | None  # For filters that can use fused kernel
+    _mask_fn: Callable[[GSDataPro], np.ndarray] | None  # For complex filters
     _description: str
+
+    # ========================================================================
+    # Internal helpers
+    # ========================================================================
+
+    @classmethod
+    def _from_values(cls, values: FilterValues, description: str) -> Filter:
+        """Create filter from FilterValues (fast path)."""
+        return cls(_values=values, _mask_fn=None, _description=description)
+
+    @classmethod
+    def _from_mask_fn(cls, mask_fn: Callable[[GSDataPro], np.ndarray], description: str) -> Filter:
+        """Create filter from mask function (slow path for OR/NOT)."""
+        return cls(_values=None, _mask_fn=mask_fn, _description=description)
 
     # ========================================================================
     # Factory methods - Quality filters
@@ -60,14 +80,9 @@ class Filter:
         :param threshold: Minimum opacity value [0.0, 1.0]
         :returns: Filter instance
         """
+        from gsmod.config.values import FilterValues
 
-        def mask_fn(data: GSDataPro) -> np.ndarray:
-            from gsmod.config.values import FilterValues
-            from gsmod.filter.apply import compute_filter_mask
-
-            return compute_filter_mask(data, FilterValues(min_opacity=threshold))
-
-        return cls(_mask_fn=mask_fn, _description=f"min_opacity({threshold})")
+        return cls._from_values(FilterValues(min_opacity=threshold), f"min_opacity({threshold})")
 
     @classmethod
     def max_opacity(cls, threshold: float) -> Filter:
@@ -76,14 +91,9 @@ class Filter:
         :param threshold: Maximum opacity value [0.0, 1.0]
         :returns: Filter instance
         """
+        from gsmod.config.values import FilterValues
 
-        def mask_fn(data: GSDataPro) -> np.ndarray:
-            from gsmod.config.values import FilterValues
-            from gsmod.filter.apply import compute_filter_mask
-
-            return compute_filter_mask(data, FilterValues(max_opacity=threshold))
-
-        return cls(_mask_fn=mask_fn, _description=f"max_opacity({threshold})")
+        return cls._from_values(FilterValues(max_opacity=threshold), f"max_opacity({threshold})")
 
     @classmethod
     def min_scale(cls, threshold: float) -> Filter:
@@ -92,14 +102,9 @@ class Filter:
         :param threshold: Minimum scale value
         :returns: Filter instance
         """
+        from gsmod.config.values import FilterValues
 
-        def mask_fn(data: GSDataPro) -> np.ndarray:
-            from gsmod.config.values import FilterValues
-            from gsmod.filter.apply import compute_filter_mask
-
-            return compute_filter_mask(data, FilterValues(min_scale=threshold))
-
-        return cls(_mask_fn=mask_fn, _description=f"min_scale({threshold})")
+        return cls._from_values(FilterValues(min_scale=threshold), f"min_scale({threshold})")
 
     @classmethod
     def max_scale(cls, threshold: float) -> Filter:
@@ -108,14 +113,9 @@ class Filter:
         :param threshold: Maximum scale value
         :returns: Filter instance
         """
+        from gsmod.config.values import FilterValues
 
-        def mask_fn(data: GSDataPro) -> np.ndarray:
-            from gsmod.config.values import FilterValues
-            from gsmod.filter.apply import compute_filter_mask
-
-            return compute_filter_mask(data, FilterValues(max_scale=threshold))
-
-        return cls(_mask_fn=mask_fn, _description=f"max_scale({threshold})")
+        return cls._from_values(FilterValues(max_scale=threshold), f"max_scale({threshold})")
 
     # ========================================================================
     # Factory methods - Spatial filters (inside)
@@ -133,20 +133,16 @@ class Filter:
         :param center: Sphere center [x, y, z], defaults to origin
         :returns: Filter instance
         """
+        from gsmod.config.values import FilterValues
+
         if center is None:
             center = (0.0, 0.0, 0.0)
-        # Convert to tuple for FilterValues
         center_tuple = tuple(center) if not isinstance(center, tuple) else center
 
-        def mask_fn(data: GSDataPro) -> np.ndarray:
-            from gsmod.config.values import FilterValues
-            from gsmod.filter.apply import compute_filter_mask
-
-            return compute_filter_mask(
-                data, FilterValues(sphere_radius=radius, sphere_center=center_tuple)
-            )
-
-        return cls(_mask_fn=mask_fn, _description=f"sphere(r={radius})")
+        return cls._from_values(
+            FilterValues(sphere_radius=radius, sphere_center=center_tuple),
+            f"sphere(r={radius})",
+        )
 
     @classmethod
     def box(
@@ -162,7 +158,8 @@ class Filter:
         :param rotation: Optional axis-angle rotation (radians)
         :returns: Filter instance
         """
-        # Convert to tuples for FilterValues
+        from gsmod.config.values import FilterValues
+
         min_tuple = tuple(min_corner) if not isinstance(min_corner, tuple) else min_corner
         max_tuple = tuple(max_corner) if not isinstance(max_corner, tuple) else max_corner
         rot_tuple = (
@@ -171,18 +168,13 @@ class Filter:
             else rotation
         )
 
-        def mask_fn(data: GSDataPro) -> np.ndarray:
-            from gsmod.config.values import FilterValues
-            from gsmod.filter.apply import compute_filter_mask
-
-            return compute_filter_mask(
-                data, FilterValues(box_min=min_tuple, box_max=max_tuple, box_rot=rot_tuple)
-            )
-
         desc = f"box(min={min_corner}, max={max_corner})"
         if rotation is not None:
             desc = f"rotated_{desc}"
-        return cls(_mask_fn=mask_fn, _description=desc)
+
+        return cls._from_values(
+            FilterValues(box_min=min_tuple, box_max=max_tuple, box_rot=rot_tuple), desc
+        )
 
     @classmethod
     def ellipsoid(
@@ -198,7 +190,8 @@ class Filter:
         :param rotation: Optional axis-angle rotation (radians)
         :returns: Filter instance
         """
-        # Convert to tuples for FilterValues
+        from gsmod.config.values import FilterValues
+
         center_tuple = tuple(center) if not isinstance(center, tuple) else center
         radii_tuple = tuple(radii) if not isinstance(radii, tuple) else radii
         rot_tuple = (
@@ -207,23 +200,18 @@ class Filter:
             else rotation
         )
 
-        def mask_fn(data: GSDataPro) -> np.ndarray:
-            from gsmod.config.values import FilterValues
-            from gsmod.filter.apply import compute_filter_mask
-
-            return compute_filter_mask(
-                data,
-                FilterValues(
-                    ellipsoid_center=center_tuple,
-                    ellipsoid_radii=radii_tuple,
-                    ellipsoid_rot=rot_tuple,
-                ),
-            )
-
         desc = f"ellipsoid(center={center}, radii={radii})"
         if rotation is not None:
             desc = f"rotated_{desc}"
-        return cls(_mask_fn=mask_fn, _description=desc)
+
+        return cls._from_values(
+            FilterValues(
+                ellipsoid_center=center_tuple,
+                ellipsoid_radii=radii_tuple,
+                ellipsoid_rot=rot_tuple,
+            ),
+            desc,
+        )
 
     @classmethod
     def frustum(
@@ -245,7 +233,8 @@ class Filter:
         :param far: Far clipping plane distance
         :returns: Filter instance
         """
-        # Convert to tuples for FilterValues
+        from gsmod.config.values import FilterValues
+
         pos_tuple = tuple(position) if not isinstance(position, tuple) else position
         rot_tuple = (
             tuple(rotation)
@@ -253,25 +242,16 @@ class Filter:
             else rotation
         )
 
-        def mask_fn(data: GSDataPro) -> np.ndarray:
-            from gsmod.config.values import FilterValues
-            from gsmod.filter.apply import compute_filter_mask
-
-            return compute_filter_mask(
-                data,
-                FilterValues(
-                    frustum_pos=pos_tuple,
-                    frustum_rot=rot_tuple,
-                    frustum_fov=fov,
-                    frustum_aspect=aspect,
-                    frustum_near=near,
-                    frustum_far=far,
-                ),
-            )
-
-        return cls(
-            _mask_fn=mask_fn,
-            _description=f"frustum(fov={np.degrees(fov):.1f}deg, near={near}, far={far})",
+        return cls._from_values(
+            FilterValues(
+                frustum_pos=pos_tuple,
+                frustum_rot=rot_tuple,
+                frustum_fov=fov,
+                frustum_aspect=aspect,
+                frustum_near=near,
+                frustum_far=far,
+            ),
+            f"frustum(fov={np.degrees(fov):.1f}deg, near={near}, far={far})",
         )
 
     # ========================================================================
@@ -353,25 +333,30 @@ class Filter:
     def __and__(self, other: Filter) -> Filter:
         """AND operator: both filters must pass.
 
+        Uses fused kernel when both filters have FilterValues (fast).
+        Falls back to mask combination otherwise.
+
         :param other: Another Filter
         :returns: Combined filter (AND logic)
         """
         if not isinstance(other, Filter):
             return NotImplemented
 
-        self_fn = self._mask_fn
-        other_fn = other._mask_fn
+        # Fast path: merge FilterValues for fused kernel
+        if self._values is not None and other._values is not None:
+            merged = self._values + other._values
+            return Filter._from_values(merged, f"({self._description} & {other._description})")
 
+        # Slow path: mask combination (for complex filters)
         def combined_fn(data: GSDataPro) -> np.ndarray:
-            return self_fn(data) & other_fn(data)
+            return self.get_mask(data) & other.get_mask(data)
 
-        return Filter(
-            _mask_fn=combined_fn,
-            _description=f"({self._description} & {other._description})",
-        )
+        return Filter._from_mask_fn(combined_fn, f"({self._description} & {other._description})")
 
     def __or__(self, other: Filter) -> Filter:
         """OR operator: either filter passes.
+
+        Always uses mask combination (cannot be expressed in single fused kernel).
 
         :param other: Another Filter
         :returns: Combined filter (OR logic)
@@ -379,31 +364,23 @@ class Filter:
         if not isinstance(other, Filter):
             return NotImplemented
 
-        self_fn = self._mask_fn
-        other_fn = other._mask_fn
-
         def combined_fn(data: GSDataPro) -> np.ndarray:
-            return self_fn(data) | other_fn(data)
+            return self.get_mask(data) | other.get_mask(data)
 
-        return Filter(
-            _mask_fn=combined_fn,
-            _description=f"({self._description} | {other._description})",
-        )
+        return Filter._from_mask_fn(combined_fn, f"({self._description} | {other._description})")
 
     def __invert__(self) -> Filter:
         """NOT operator: invert filter.
 
+        Always uses mask inversion (cannot be expressed in fused kernel).
+
         :returns: Inverted filter
         """
-        self_fn = self._mask_fn
 
         def inverted_fn(data: GSDataPro) -> np.ndarray:
-            return ~self_fn(data)
+            return ~self.get_mask(data)
 
-        return Filter(
-            _mask_fn=inverted_fn,
-            _description=f"~({self._description})",
-        )
+        return Filter._from_mask_fn(inverted_fn, f"~({self._description})")
 
     # ========================================================================
     # Application methods
@@ -412,10 +389,20 @@ class Filter:
     def get_mask(self, data: GSDataPro) -> np.ndarray:
         """Compute boolean mask from filter.
 
+        Uses fused kernel for FilterValues-based filters (fast).
+
         :param data: GSDataPro instance
         :returns: Boolean mask [N] where True = keep
         """
-        mask = self._mask_fn(data)
+        from gsmod.filter.apply import compute_filter_mask
+
+        if self._values is not None:
+            # Fast path: use fused kernel
+            mask = compute_filter_mask(data, self._values)
+        else:
+            # Slow path: use mask function (for OR/NOT)
+            mask = self._mask_fn(data)
+
         logger.debug(f"Filter {self._description}: kept {mask.sum()}/{len(mask)}")
         return mask
 
@@ -445,121 +432,63 @@ class Filter:
     # ========================================================================
 
     @classmethod
-    def from_values(cls, values) -> Filter:
+    def from_values(cls, values: FilterValues) -> Filter:
         """Create Filter from FilterValues.
-
-        Converts FilterValues into a Filter with equivalent mask logic.
-        All active filter criteria are combined with AND.
 
         :param values: FilterValues instance
         :returns: Filter instance
         """
-        from gsmod.config.values import FilterValues
+        from gsmod.config.values import FilterValues as FilterValuesType
 
-        if not isinstance(values, FilterValues):
+        if not isinstance(values, FilterValuesType):
             raise TypeError(f"Expected FilterValues, got {type(values)}")
 
-        filters: list[Filter] = []
-
-        # Quality filters
+        # Build description from active filters
+        parts = []
         if values.min_opacity > 0.0:
-            filters.append(cls.min_opacity(values.min_opacity))
+            parts.append(f"min_opacity({values.min_opacity})")
         if values.max_opacity < 1.0:
-            filters.append(cls.max_opacity(values.max_opacity))
+            parts.append(f"max_opacity({values.max_opacity})")
         if values.min_scale > 0.0:
-            filters.append(cls.min_scale(values.min_scale))
+            parts.append(f"min_scale({values.min_scale})")
         if values.max_scale < 100.0:
-            filters.append(cls.max_scale(values.max_scale))
-
-        # Sphere filter
+            parts.append(f"max_scale({values.max_scale})")
         if values.sphere_radius < float("inf"):
-            filters.append(cls.sphere(values.sphere_radius, values.sphere_center))
-
-        # Box filter
-        if values.box_min is not None and values.box_max is not None:
-            filters.append(cls.box(values.box_min, values.box_max, values.box_rot))
-
-        # Ellipsoid filter
+            parts.append(f"sphere(r={values.sphere_radius})")
+        if values.box_min is not None:
+            parts.append("box")
         if values.ellipsoid_radii is not None:
-            filters.append(
-                cls.ellipsoid(
-                    values.ellipsoid_center or (0.0, 0.0, 0.0),
-                    values.ellipsoid_radii,
-                    values.ellipsoid_rot,
-                )
-            )
-
-        # Frustum filter
+            parts.append("ellipsoid")
         if values.frustum_pos is not None:
-            filters.append(
-                cls.frustum(
-                    values.frustum_pos,
-                    values.frustum_rot,
-                    values.frustum_fov,
-                    values.frustum_aspect,
-                    values.frustum_near,
-                    values.frustum_far,
-                )
-            )
+            parts.append("frustum")
 
-        # Combine all filters with AND
-        if not filters:
-            # No-op filter: pass everything
-            return cls(
-                _mask_fn=lambda data: np.ones(len(data.means), dtype=bool), _description="all"
-            )
-
-        result = filters[0]
-        for f in filters[1:]:
-            result = result & f
-
-        # Apply invert if requested
+        desc = " & ".join(parts) if parts else "all"
         if values.invert:
-            result = ~result
+            desc = f"~({desc})"
 
-        return result
+        return cls._from_values(values, desc)
 
-    def to_values(self):
-        """Convert simple Filter to FilterValues.
+    def to_values(self) -> FilterValues:
+        """Convert Filter to FilterValues.
 
-        Only works for simple atomic filters (single filter type).
-        Complex combined filters raise ValueError.
+        Only works for filters with internal FilterValues.
+        Complex filters (OR/NOT combinations) raise ValueError.
 
         :returns: FilterValues instance
-        :raises ValueError: If filter is too complex to convert
+        :raises ValueError: If filter cannot be converted
         """
-        from gsmod.config.values import FilterValues
+        if self._values is not None:
+            return self._values
 
-        desc = self._description
+        raise ValueError(f"Cannot convert complex filter to FilterValues: {self._description}")
 
-        # Parse simple filters
-        if desc.startswith("min_opacity("):
-            val = float(desc[12:-1])
-            return FilterValues(min_opacity=val)
-        elif desc.startswith("max_opacity("):
-            val = float(desc[12:-1])
-            return FilterValues(max_opacity=val)
-        elif desc.startswith("min_scale("):
-            val = float(desc[10:-1])
-            return FilterValues(min_scale=val)
-        elif desc.startswith("max_scale("):
-            val = float(desc[10:-1])
-            return FilterValues(max_scale=val)
-        elif desc.startswith("sphere(r="):
-            val = float(desc[9:-1])
-            return FilterValues(sphere_radius=val)
-        elif desc == "all":
-            return FilterValues()
-        elif desc.startswith("~("):
-            # Inverted filter - try to convert inner and invert
-            # This is a heuristic - may not work for complex cases
-            inner_desc = desc[2:-1]
-            if inner_desc.startswith("sphere(r="):
-                val = float(inner_desc[9:-1])
-                return FilterValues(sphere_radius=val, invert=True)
-            raise ValueError(f"Cannot convert complex inverted filter to FilterValues: {desc}")
-        else:
-            raise ValueError(f"Cannot convert complex filter to FilterValues: {desc}")
+    @property
+    def can_use_fused_kernel(self) -> bool:
+        """Check if filter can use fast fused kernel path.
+
+        :returns: True if filter has internal FilterValues
+        """
+        return self._values is not None
 
     def __repr__(self) -> str:
         """Return string representation."""

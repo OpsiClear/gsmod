@@ -302,9 +302,22 @@ class TestFilterConversion:
         values = f.to_values()
         assert values.sphere_radius == 5.0
 
-    def test_to_values_complex_raises(self):
-        """Test to_values raises for complex filter."""
+    def test_to_values_and_combination(self):
+        """Test to_values works for AND combinations (uses fused kernel)."""
         f = Filter.min_opacity(0.5) & Filter.sphere(radius=5.0)
+        values = f.to_values()
+        assert values.min_opacity == 0.5
+        assert values.sphere_radius == 5.0
+
+    def test_to_values_or_raises(self):
+        """Test to_values raises for OR combinations."""
+        f = Filter.min_opacity(0.5) | Filter.sphere(radius=5.0)
+        with pytest.raises(ValueError, match="Cannot convert complex"):
+            f.to_values()
+
+    def test_to_values_not_raises(self):
+        """Test to_values raises for NOT combinations."""
+        f = ~Filter.min_opacity(0.5)
         with pytest.raises(ValueError, match="Cannot convert complex"):
             f.to_values()
 
