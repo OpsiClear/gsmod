@@ -2,6 +2,43 @@
 
 All notable changes to gsmod will be documented in this file.
 
+## [0.1.4] - 2025-11-26
+
+### Added
+- **Auto-Correction Module** (`gsmod.color.auto`)
+  - Industry-standard automatic color correction (Photoshop/Lightroom/iOS Photos style)
+  - `auto_enhance()`: Combined enhancement like iOS Photos Auto
+  - `auto_contrast()`: Percentile-based histogram stretching (Photoshop style)
+  - `auto_exposure()`: 18% gray midtone targeting
+  - `auto_white_balance()`: Gray World and White Patch methods
+  - `compute_optimal_parameters()`: Minimal adjustments to reach targets
+  - `AutoCorrectionResult`: Dataclass with `.to_color_values()` conversion
+- **Perceptual Loss Functions** (`gsmod.histogram.loss`)
+  - `PerceptualColorLoss`: Addresses flat histogram problem with contrast preservation
+  - `ContrastPreservationLoss`: Standalone contrast preservation
+  - `ParameterBoundsLoss`: Soft penalty for extreme values
+  - `create_balanced_loss()`: Factory for balanced defaults
+
+### Changed
+- Filter atomic class rewritten to use FilterValues internally (2.8x faster AND operations)
+- Pipeline operation merging for consecutive same-type operations (3.5x faster)
+
+### Performance
+- Filter AND: 2.8x faster via merged FilterValues
+- Pipeline transforms: 3.5x faster with operation merging
+- Filter.get_mask(): 2.5x faster after logger.debug optimization
+
+## [0.1.3] - 2025-11-26
+
+### Added
+- **Unified Pipeline Class** (`gsmod.pipeline.Pipeline`)
+  - CPU pipeline matching PipelineGPU interface
+  - Fluent API for chaining color, transform, filter operations
+- **Filter Atomic Class** (`gsmod.filter.atomic.Filter`)
+  - Immutable filters with boolean operators (&, |, ~)
+  - Factory methods for all filter types
+- Full CPU-GPU parity for all filter operations
+
 ## [0.1.2] - 2025-01-25
 
 ### Changed

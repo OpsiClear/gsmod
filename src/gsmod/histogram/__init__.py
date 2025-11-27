@@ -33,12 +33,26 @@ __all__ = [
 # Optional torch-dependent imports (for learning/GPU features)
 try:
     from gsmod.histogram.loss import (  # noqa: F401
+        ContrastPreservationLoss,
         MomentMatchingLoss,
+        ParameterBoundsLoss,
+        PerceptualColorLoss,
+        create_balanced_loss,
         soft_histogram,
         soft_histogram_rgb,
     )
 
-    __all__.extend(["MomentMatchingLoss", "soft_histogram", "soft_histogram_rgb"])
+    __all__.extend(
+        [
+            "MomentMatchingLoss",
+            "PerceptualColorLoss",
+            "ContrastPreservationLoss",
+            "ParameterBoundsLoss",
+            "create_balanced_loss",
+            "soft_histogram",
+            "soft_histogram_rgb",
+        ]
+    )
 except ImportError:
     # torch not installed - learning features will not be available
     pass

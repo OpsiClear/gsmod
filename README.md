@@ -70,9 +70,17 @@
   - Composable with AND/OR/NOT operators
   - Multi-layer mask management (FilterMasks API)
 
+- **Auto-Correction**: Industry-standard automatic color correction (NEW!)
+  - `auto_enhance()`: Combined enhancement like iOS Photos Auto Enhance
+  - `auto_contrast()`: Photoshop-style percentile stretching (0.1% clipping)
+  - `auto_exposure()`: 18% gray midtone targeting
+  - `auto_white_balance()`: Gray World / White Patch methods
+  - Self-referential analysis (no target histogram required)
+
 - **Histogram Learning**: Match target color distributions
   - `HistogramResult.learn_from()`: Gradient-based learning API
   - `to_color_values()`: Rule-based adjustments (vibrant, dramatic, bright, dark, neutral)
+  - Perceptual loss functions with contrast preservation
   - GPU acceleration support
   - Works with CPU or CUDA tensors
 
@@ -428,6 +436,44 @@ learned = target_hist.learn_from(
 
 source_gpu.color(learned)
 ```
+
+### Auto-Correction (Photoshop/Lightroom Style)
+
+Industry-standard automatic color correction without requiring a target histogram:
+
+```python
+from gsmod import GSDataPro
+from gsmod.color import auto_enhance, auto_contrast, auto_exposure, auto_white_balance
+
+data = GSDataPro.from_ply("scene.ply")
+
+# Quick auto-enhance (like iOS Photos Auto)
+result = auto_enhance(data, strength=0.8)
+data.color(result.to_color_values())
+
+# Or use individual corrections:
+
+# Auto Contrast - Photoshop style (0.1% percentile clipping)
+contrast_result = auto_contrast(data, clip_percent=0.1)
+data.color(contrast_result.to_color_values())
+
+# Auto Exposure - targets 18% gray midtone
+exposure_result = auto_exposure(data, target_midtone=0.45)
+data.color(exposure_result.to_color_values())
+
+# Auto White Balance - Gray World assumption
+wb_result = auto_white_balance(data, method="gray_world")
+print(f"Temperature: {wb_result.temperature}, Tint: {wb_result.tint}")
+data.color(wb_result.to_color_values())
+
+data.to_ply("auto_corrected.ply")
+```
+
+**Auto-correction algorithms:**
+- **auto_enhance**: Combines exposure, contrast, and white balance (iOS Photos style)
+- **auto_contrast**: Percentile-based histogram stretching (Photoshop Auto Contrast)
+- **auto_exposure**: Adjusts to 18% gray midtone target (0.45 in gamma space)
+- **auto_white_balance**: Gray World (avg=neutral) or White Patch (brightest=white)
 
 ### Using Presets
 
@@ -1200,6 +1246,50 @@ adjustment = hist.to_color_values("vibrant")   # Boost saturation, contrast
 
 data.color(adjustment)
 ```
+
+### Auto-Correction Functions
+
+Industry-standard automatic color correction algorithms:
+
+```python
+from gsmod.color import (
+    auto_enhance,
+    auto_contrast,
+    auto_exposure,
+    auto_white_balance,
+    compute_optimal_parameters,
+    AutoCorrectionResult,
+)
+```
+
+**auto_enhance(data, strength=1.0, preserve_warmth=True)**
+- Combined enhancement like iOS Photos Auto
+- Blends exposure, contrast, and white balance
+- `strength`: How strong to apply (0-1)
+- `preserve_warmth`: Keep some original warmth if True
+
+**auto_contrast(data, clip_percent=0.1, per_channel=False)**
+- Photoshop-style percentile stretching
+- `clip_percent`: Pixels to clip at each end (default 0.1%)
+- `per_channel`: Stretch RGB independently (like Auto Levels)
+
+**auto_exposure(data, target_midtone=0.45, clip_percent=1.0)**
+- Targets 18% gray midtone (0.45 in gamma space)
+- `target_midtone`: Target for average luminance
+- `clip_percent`: Exclude extremes from calculation
+
+**auto_white_balance(data, clip_percent=1.0, method="gray_world")**
+- `method="gray_world"`: Average color should be neutral gray
+- `method="white_patch"`: Brightest pixels should be white
+
+**compute_optimal_parameters(data, target_mean=None, target_std=None)**
+- Compute minimal adjustments to reach target statistics
+- Preserves original character while matching targets
+
+**AutoCorrectionResult**
+- Dataclass with computed adjustments
+- Convert to ColorValues: `result.to_color_values()`
+- Fields: exposure, brightness, contrast, blacks, whites, temperature, tint, r_gain, g_gain, b_gain
 
 ### Built-in Presets
 

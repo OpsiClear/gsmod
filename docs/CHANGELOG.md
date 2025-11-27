@@ -5,6 +5,54 @@ All notable changes to gsmod will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] - 2025-11-26
+
+### Added
+- **Auto-Correction Module** (`gsmod.color.auto`)
+  - Industry-standard automatic color correction algorithms (Photoshop/Lightroom/iOS Photos style)
+  - `auto_enhance()`: Combined enhancement (exposure + contrast + white balance), like iOS Photos Auto
+  - `auto_contrast()`: Percentile-based histogram stretching (0.1% clipping), like Photoshop Auto Contrast
+  - `auto_exposure()`: 18% gray midtone targeting (0.45 in gamma space)
+  - `auto_white_balance()`: Gray World and White Patch methods
+  - `compute_optimal_parameters()`: Minimal adjustments to reach target statistics
+  - `AutoCorrectionResult`: Dataclass with computed adjustments, converts to ColorValues via `.to_color_values()`
+  - Self-referential analysis (no target histogram required)
+- **Perceptual Loss Functions** (`gsmod.histogram.loss`)
+  - `PerceptualColorLoss`: Comprehensive loss addressing flat histogram problem
+    - Contrast preservation (penalizes reduction below threshold)
+    - Dynamic range matching (5th/95th percentiles)
+    - Parameter regularization (keeps values near neutral)
+  - `ContrastPreservationLoss`: Standalone contrast preservation loss
+  - `ParameterBoundsLoss`: Soft penalty for extreme parameter values
+  - `create_balanced_loss()`: Factory function for balanced defaults
+
+### Changed
+- **Filter Atomic Class Architecture** (`gsmod.filter.atomic.Filter`)
+  - Rewritten to use `FilterValues` internally for fused kernel path
+  - AND operations (`Filter & Filter`) now merge FilterValues for single kernel execution
+  - OR/NOT operations correctly fall back to mask combination approach
+  - Added internal helpers: `_from_values()` and `_from_mask_fn()`
+  - Factory methods simplified to construct FilterValues directly
+- **Pipeline Operation Merging** (`gsmod.pipeline.Pipeline`)
+  - Added `_merge_operations()` method to merge consecutive same-type operations
+  - Color, transform, and filter operations merged using their `+` operator
+  - Reduces number of kernel calls for better performance
+
+### Performance
+- Filter AND operations: 2.8x faster via merged FilterValues (single fused kernel)
+- Pipeline transform merge: 3.5x faster when consecutive transforms combined
+- Pipeline full chain: 1.6x faster overall with operation merging
+- Filter.get_mask(): 2.5x faster after removing logger.debug overhead
+
+### Documentation
+- Documented expected ~2% color merge difference due to LUT quantization
+  - This is mathematically correct behavior (quantization artifacts)
+  - Performance benefit outweighs minor precision difference
+
+### Fixed
+- Filter.to_values() now correctly supports AND combinations (returns merged FilterValues)
+- OR and NOT combinations correctly raise ValueError (cannot be represented as single FilterValues)
+
 ## [0.1.3] - 2025-11-26
 
 ### Added

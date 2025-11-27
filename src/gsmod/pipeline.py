@@ -362,18 +362,70 @@ class Pipeline:
     # Execution
     # ========================================================================
 
+    def _merge_operations(self) -> list[tuple[str, Any]]:
+        """Merge consecutive operations of the same type for optimization.
+
+        Consecutive color, transform, and filter operations are merged
+        using their `+` operator to reduce the number of kernel calls.
+
+        Note:
+            Color merging uses mathematically correct composition rules
+            (multiply for brightness/contrast/etc, add for temperature/shadows).
+            Due to LUT quantization, merged results may differ from sequential
+            application by up to ~2% - this is expected and acceptable.
+
+        :returns: Optimized list of operations
+        """
+        if not self._operations:
+            return []
+
+        merged: list[tuple[str, Any]] = []
+        current_type = None
+        current_value = None
+
+        for op_type, op_value in self._operations:
+            # Types that can be merged
+            if op_type in ("color", "transform", "filter"):
+                if current_type == op_type:
+                    # Merge with current
+                    current_value = current_value + op_value
+                else:
+                    # Flush previous and start new
+                    if current_type is not None:
+                        merged.append((current_type, current_value))
+                    current_type = op_type
+                    current_value = op_value
+            else:
+                # Non-mergeable operation - flush and add
+                if current_type is not None:
+                    merged.append((current_type, current_value))
+                    current_type = None
+                    current_value = None
+                merged.append((op_type, op_value))
+
+        # Flush remaining
+        if current_type is not None:
+            merged.append((current_type, current_value))
+
+        return merged
+
     def __call__(self, data: GSDataPro, inplace: bool = True) -> GSDataPro:
         """Execute pipeline on data.
+
+        Consecutive operations of the same type are automatically merged
+        for optimal performance.
 
         :param data: GSDataPro to process
         :param inplace: If True, modify in place; if False, work on copy
         :returns: Processed GSDataPro
         """
-
         if not inplace:
             data = data.clone()
 
-        for op_type, op_value in self._operations:
+        # Merge consecutive operations for performance
+        merged_ops = self._merge_operations()
+
+        for op_type, op_value in merged_ops:
             if op_type == "color":
                 data.color(op_value, inplace=True)
             elif op_type == "transform":

@@ -403,7 +403,8 @@ class Filter:
             # Slow path: use mask function (for OR/NOT)
             mask = self._mask_fn(data)
 
-        logger.debug(f"Filter {self._description}: kept {mask.sum()}/{len(mask)}")
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("Filter %s: kept %d/%d", self._description, mask.sum(), len(mask))
         return mask
 
     def __call__(self, data: GSDataPro, inplace: bool = False) -> GSDataPro:
