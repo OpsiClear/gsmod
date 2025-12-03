@@ -168,6 +168,27 @@ def elementwise_multiply_scalar_numba(
 
 
 @njit(parallel=True, fastmath=True, cache=True, nogil=True)
+def elementwise_add_scalar_numba(
+    arr: NDArray[np.float32], scalar: float, out: NDArray[np.float32]
+) -> None:
+    """
+    Add scalar to array element-wise: arr + scalar
+
+    Used for log-space scale transforms where multiplication becomes addition.
+
+    Args:
+        arr: Input array [N, M]
+        scalar: Scalar to add
+        out: Output array [N, M] (pre-allocated)
+    """
+    N = arr.shape[0]
+    M = arr.shape[1]
+    for i in prange(N):
+        for j in range(M):
+            out[i, j] = arr[i, j] + scalar
+
+
+@njit(parallel=True, fastmath=True, cache=True, nogil=True)
 def elementwise_multiply_vector_numba(
     arr: NDArray[np.float32], vec: NDArray[np.float32], out: NDArray[np.float32]
 ) -> None:
@@ -307,6 +328,7 @@ def warmup_transform_kernels() -> None:
     quaternion_multiply_batched_numba(q2, q2, out_q)
     apply_transform_matrix_numba(points, R, t, out_p)
     elementwise_multiply_scalar_numba(points, 2.0, out_p)
+    elementwise_add_scalar_numba(points, 0.5, out_p)
     elementwise_multiply_vector_numba(points, t, out_p)
 
     # Warmup fused transform kernel

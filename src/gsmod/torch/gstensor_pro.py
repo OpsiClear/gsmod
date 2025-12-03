@@ -43,6 +43,15 @@ except ImportError:
 # Import DataFormat enum for format tracking
 from gsply.gsdata import DataFormat
 
+# Import Triton-accelerated kernels
+from gsmod.torch.triton_kernels import (
+    triton_adjust_brightness,
+    triton_adjust_contrast,
+    triton_adjust_gamma,
+    triton_adjust_saturation,
+    triton_adjust_temperature,
+)
+
 
 class GSTensorPro(GSTensor):
     """GPU-accelerated Gaussian Splatting processing with PyTorch tensors.
@@ -108,6 +117,54 @@ class GSTensorPro(GSTensor):
             result.copy_format_from(base_tensor)
         elif hasattr(base_tensor, "_format"):
             result._format = base_tensor._format.copy()
+
+        return result
+
+    @classmethod
+    def from_gstensor(
+        cls,
+        tensor: GSTensor,
+        device: str | torch.device | None = None,
+        dtype: torch.dtype | None = None,
+    ) -> GSTensorPro:
+        """Convert GSTensor to GSTensorPro while preserving format state.
+
+        This is the recommended way to wrap a GSTensor as GSTensorPro for
+        gsmod processing operations (color, transform, filter, opacity).
+
+        :param tensor: Source GSTensor instance
+        :param device: Optional target device (if None, keeps current device)
+        :param dtype: Optional target dtype (if None, keeps current dtype)
+        :returns: GSTensorPro with format state preserved
+
+        Example:
+            >>> gstensor = gsply.plyread_gpu("scene.ply", device="cuda")
+            >>> gstensor = gstensor.to_rgb(inplace=True)  # is_sh0_rgb=True
+            >>> pro = GSTensorPro.from_gstensor(gstensor)  # Preserves is_sh0_rgb=True
+            >>> edited = pro.color(ColorValues(brightness=1.1), inplace=False)
+        """
+        # Handle device/dtype conversion if requested
+        source = tensor
+        if device is not None or dtype is not None:
+            target_device = device if device is not None else tensor.means.device
+            target_dtype = dtype if dtype is not None else tensor.means.dtype
+            source = tensor.to(target_device, dtype=target_dtype)
+
+        # Create GSTensorPro with same tensor data
+        result = cls(
+            means=source.means,
+            scales=source.scales,
+            quats=source.quats,
+            opacities=source.opacities,
+            sh0=source.sh0,
+            shN=source.shN,
+            masks=getattr(source, "masks", None),
+            _base=getattr(source, "_base", None),
+        )
+
+        # Preserve format state (is_sh0_rgb, is_scales_ply, etc.)
+        if hasattr(tensor, "_format"):
+            result.copy_format_from(tensor)
 
         return result
 
@@ -287,6 +344,8 @@ class GSTensorPro(GSTensor):
     def _apply_shadows_highlights(self, shadows: float, highlights: float):
         """Apply shadows and highlights adjustment (GPU-optimized).
 
+        Uses smoothstep curves matching supersplat shader for smooth transitions.
+
         :param shadows: Shadow adjustment (-1 to 1)
         :param highlights: Highlight adjustment (-1 to 1)
         """
@@ -295,17 +354,18 @@ class GSTensorPro(GSTensor):
             self.sh0 * torch.tensor([0.299, 0.587, 0.114], device=self.device), dim=-1, keepdim=True
         )
 
-        # Create masks for shadows and highlights
-        shadow_mask = (luminance < 0.5).float()
-        highlight_mask = 1.0 - shadow_mask
+        # Smoothstep curves matching supersplat shader
+        # shadowCurve = 1.0 - smoothstep(0.0, 0.5, lum)
+        # highlightCurve = smoothstep(0.5, 1.0, lum)
+        t_shadow = torch.clamp(luminance / 0.5, 0.0, 1.0)
+        shadow_curve = 1.0 - t_shadow * t_shadow * (3.0 - 2.0 * t_shadow)
 
-        # Apply adjustments
-        shadow_factor = shadow_mask * shadows
-        highlight_factor = highlight_mask * highlights
-        factor = shadow_factor + highlight_factor
+        t_highlight = torch.clamp((luminance - 0.5) / 0.5, 0.0, 1.0)
+        highlight_curve = t_highlight * t_highlight * (3.0 - 2.0 * t_highlight)
 
-        self.sh0 = self.sh0 + self.sh0 * factor
-        self.sh0.clamp_(0, 1)
+        # Multiplicative adjustment: color * (1 + shadows * shadowCurve + highlights * highlightCurve)
+        adjustment = 1.0 + shadows * shadow_curve + highlights * highlight_curve
+        self.sh0 = self.sh0 * adjustment
 
     def _apply_shadow_tint(self, hue: float, sat: float):
         """Apply shadow tinting (split toning for shadows).
@@ -760,9 +820,10 @@ class GSTensorPro(GSTensor):
     # ==========================================================================
 
     def adjust_brightness(self, factor: float, inplace: bool = False) -> GSTensorPro:
-        """Adjust brightness of colors (GPU-optimized, format-aware).
+        """Adjust brightness of colors (GPU-optimized with Triton, format-aware).
 
-        Scales color values by the given factor. Works correctly on both SH and RGB formats.
+        Uses Triton-accelerated kernel when available for maximum GPU efficiency.
+        Falls back to PyTorch operations if Triton is not available.
 
         :param factor: Brightness factor (1.0 = no change, >1.0 = brighter, <1.0 = darker)
         :param inplace: If True, modify in-place; if False, return new object
@@ -776,8 +837,11 @@ class GSTensorPro(GSTensor):
             return self if inplace else self.clone()
 
         if inplace:
-            # Works correctly on both SH and RGB formats
-            self.sh0.mul_(factor).clamp_(0, 1)
+            # Use Triton-accelerated brightness adjustment
+            sh0_out, shN_out = triton_adjust_brightness(self.sh0, self.shN, factor)
+            self.sh0 = sh0_out.clamp_(0, 1)
+            if shN_out is not None:
+                self.shN = shN_out
             self._base = None  # Invalidate base
             return self
 
@@ -786,8 +850,9 @@ class GSTensorPro(GSTensor):
         return result.adjust_brightness(factor, inplace=True)
 
     def adjust_contrast(self, factor: float, inplace: bool = False) -> GSTensorPro:
-        """Adjust contrast of colors (GPU-optimized, format-aware).
+        """Adjust contrast of colors (GPU-optimized with Triton, format-aware).
 
+        Uses Triton-accelerated kernel when available for maximum GPU efficiency.
         Adjusts contrast around midpoint. Works correctly on both SH and RGB formats.
 
         :param factor: Contrast factor (1.0 = no change, >1.0 = more contrast, <1.0 = less)
@@ -802,8 +867,8 @@ class GSTensorPro(GSTensor):
             return self if inplace else self.clone()
 
         if inplace:
-            # Works correctly on both SH and RGB formats (both use 0.5 as midpoint)
-            self.sh0.sub_(0.5).mul_(factor).add_(0.5).clamp_(0, 1)
+            # Use Triton-accelerated contrast adjustment
+            self.sh0 = triton_adjust_contrast(self.sh0, factor).clamp_(0, 1)
             self._base = None
             return self
 
@@ -811,7 +876,10 @@ class GSTensorPro(GSTensor):
         return result.adjust_contrast(factor, inplace=True)
 
     def adjust_saturation(self, factor: float, inplace: bool = False) -> GSTensorPro:
-        """Adjust saturation of colors (GPU-optimized, format-aware).
+        """Adjust saturation of colors (GPU-optimized with Triton, format-aware).
+
+        Uses Triton-accelerated kernel when available for maximum GPU efficiency.
+        Falls back to PyTorch operations if Triton is not available.
 
         Note: Saturation adjustment requires RGB format for accurate color space operations.
         Will convert to RGB if in SH format, but preserves format if already RGB.
@@ -832,16 +900,11 @@ class GSTensorPro(GSTensor):
             if not self.is_sh0_rgb:
                 self.to_rgb(inplace=True)
 
-            # Compute grayscale (luminance)
-            gray = torch.sum(
-                self.sh0 * torch.tensor([0.299, 0.587, 0.114], device=self.device),
-                dim=-1,
-                keepdim=True,
-            )
-
-            # Interpolate between grayscale and color
-            self.sh0 = gray * (1 - factor) + self.sh0 * factor
-            self.sh0.clamp_(0, 1)
+            # Use Triton-accelerated saturation adjustment
+            sh0_out, shN_out = triton_adjust_saturation(self.sh0, self.shN, factor)
+            self.sh0 = sh0_out.clamp_(0, 1)
+            if shN_out is not None:
+                self.shN = shN_out
             self._base = None
 
             # Note: Keep in RGB format since conversion happened
@@ -852,10 +915,10 @@ class GSTensorPro(GSTensor):
         return result.adjust_saturation(factor, inplace=True)
 
     def adjust_gamma(self, gamma: float, inplace: bool = False) -> GSTensorPro:
-        """Apply gamma correction (GPU-optimized, format-aware).
+        """Apply gamma correction (GPU-optimized with Triton, format-aware).
 
-        Works correctly on both SH and RGB formats. Note that gamma on SH coefficients
-        may produce different visual results than gamma on RGB values.
+        Uses Triton-accelerated kernel when available for maximum GPU efficiency.
+        Works correctly on both SH and RGB formats.
 
         :param gamma: Gamma value (1.0 = no change, <1.0 = brighter, >1.0 = darker)
         :param inplace: If True, modify in-place; if False, return new object
@@ -869,9 +932,8 @@ class GSTensorPro(GSTensor):
             return self if inplace else self.clone()
 
         if inplace:
-            # Apply gamma correction: color^gamma
-            # Works on both SH and RGB formats, though results may differ visually
-            self.sh0 = torch.pow(torch.clamp(self.sh0, min=1e-8), gamma).clamp_(0, 1)
+            # Use Triton-accelerated gamma correction
+            self.sh0 = triton_adjust_gamma(self.sh0, gamma).clamp_(0, 1)
             self._base = None
             return self
 
@@ -879,10 +941,11 @@ class GSTensorPro(GSTensor):
         return result.adjust_gamma(gamma, inplace=True)
 
     def adjust_temperature(self, temp: float, inplace: bool = False) -> GSTensorPro:
-        """Adjust color temperature (GPU-optimized, format-aware).
+        """Adjust color temperature (GPU-optimized with Triton, format-aware).
 
+        Uses Triton-accelerated kernel when available for maximum GPU efficiency.
         Note: Temperature adjustment requires RGB format for accurate color temperature shifts.
-        Will convert to RGB if in SH format, but preserves format if already RGB.
+        Will convert to RGB if in SH format.
 
         :param temp: Temperature adjustment (-1.0 = cold/blue, 0 = neutral, 1.0 = warm/orange)
         :param inplace: If True, modify in-place; if False, return new object
@@ -900,14 +963,8 @@ class GSTensorPro(GSTensor):
             if not self.is_sh0_rgb:
                 self.to_rgb(inplace=True)
 
-            # Temperature adjustment: positive = warm (more red, less blue)
-            # negative = cool (less red, more blue)
-            r_factor = 1.0 + temp * 0.3
-            b_factor = 1.0 - temp * 0.3
-
-            self.sh0[:, 0] *= r_factor
-            self.sh0[:, 2] *= b_factor
-            self.sh0.clamp_(0, 1)
+            # Use Triton-accelerated temperature adjustment
+            self.sh0 = triton_adjust_temperature(self.sh0, temp).clamp_(0, 1)
             self._base = None
             return self
 

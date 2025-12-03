@@ -69,22 +69,30 @@ class TestFormatTracking:
         assert gstensor._format.get("sh0") == original_format
 
     def test_saturation_converts_to_rgb(self, gstensor):
-        """Test that saturation converts to RGB when in SH format."""
+        """Test that saturation converts to RGB format for accurate color space operations."""
+        # Saturation requires RGB color space for correct math
+        assert gstensor._format.get("sh0") == DataFormat.SH0_SH
         gstensor.adjust_saturation(1.3, inplace=True)
         assert gstensor._format.get("sh0") == DataFormat.SH0_RGB
 
     def test_temperature_converts_to_rgb(self, gstensor):
-        """Test that temperature converts to RGB when in SH format."""
+        """Test that temperature converts to RGB format for accurate color space operations."""
+        # Temperature adjustment requires RGB color space for correct math
+        assert gstensor._format.get("sh0") == DataFormat.SH0_SH
         gstensor.adjust_temperature(0.2, inplace=True)
         assert gstensor._format.get("sh0") == DataFormat.SH0_RGB
 
     def test_vibrance_converts_to_rgb(self, gstensor):
-        """Test that vibrance converts to RGB when in SH format."""
+        """Test that vibrance converts to RGB format for accurate color space operations."""
+        # Vibrance requires RGB color space for correct math
+        assert gstensor._format.get("sh0") == DataFormat.SH0_SH
         gstensor.adjust_vibrance(1.2, inplace=True)
         assert gstensor._format.get("sh0") == DataFormat.SH0_RGB
 
     def test_hue_shift_converts_to_rgb(self, gstensor):
-        """Test that hue shift converts to RGB when in SH format."""
+        """Test that hue shift converts to RGB format for accurate color space operations."""
+        # Hue shift requires RGB color space for correct math
+        assert gstensor._format.get("sh0") == DataFormat.SH0_SH
         gstensor.adjust_hue_shift(30, inplace=True)
         assert gstensor._format.get("sh0") == DataFormat.SH0_RGB
 

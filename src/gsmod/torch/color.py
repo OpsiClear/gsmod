@@ -346,7 +346,9 @@ class ColorGPU:
         return len(self._operations) > 0
 
     def _apply_shadows(self, data: GSTensorPro, factor: float):
-        """Apply shadow adjustment (GPU-optimized).
+        """Apply shadow adjustment (GPU-optimized, supersplat-compatible).
+
+        Uses smoothstep curves matching supersplat shader for consistency.
 
         :param data: GSTensorPro to modify in-place
         :param factor: Shadow factor (-1.0 to 1.0)
@@ -356,16 +358,18 @@ class ColorGPU:
             data.sh0 * torch.tensor([0.299, 0.587, 0.114], device=data.device), dim=-1, keepdim=True
         )
 
-        # Create shadow mask (inverse luminance)
-        shadow_mask = 1.0 - luminance
+        # Smoothstep curve matching supersplat: shadowCurve = 1.0 - smoothstep(0.0, 0.5, lum)
+        t = torch.clamp(luminance / 0.5, 0.0, 1.0)
+        shadow_curve = 1.0 - t * t * (3.0 - 2.0 * t)
 
-        # Apply adjustment weighted by shadow mask
-        adjustment = 1.0 + factor * 0.5 * shadow_mask
+        # Multiplicative adjustment matching supersplat
+        adjustment = 1.0 + factor * shadow_curve
         data.sh0 *= adjustment
-        data.sh0.clamp_(0, 1)
 
     def _apply_highlights(self, data: GSTensorPro, factor: float):
-        """Apply highlight adjustment (GPU-optimized).
+        """Apply highlight adjustment (GPU-optimized, supersplat-compatible).
+
+        Uses smoothstep curves matching supersplat shader for consistency.
 
         :param data: GSTensorPro to modify in-place
         :param factor: Highlight factor (-1.0 to 1.0)
@@ -375,13 +379,13 @@ class ColorGPU:
             data.sh0 * torch.tensor([0.299, 0.587, 0.114], device=data.device), dim=-1, keepdim=True
         )
 
-        # Create highlight mask (luminance)
-        highlight_mask = luminance
+        # Smoothstep curve matching supersplat: highlightCurve = smoothstep(0.5, 1.0, lum)
+        t = torch.clamp((luminance - 0.5) / 0.5, 0.0, 1.0)
+        highlight_curve = t * t * (3.0 - 2.0 * t)
 
-        # Apply adjustment weighted by highlight mask
-        adjustment = 1.0 + factor * 0.5 * highlight_mask
+        # Multiplicative adjustment matching supersplat
+        adjustment = 1.0 + factor * highlight_curve
         data.sh0 *= adjustment
-        data.sh0.clamp_(0, 1)
 
     def _apply_tint(self, data: GSTensorPro, value: float):
         """Apply green/magenta tint (GPU-optimized).

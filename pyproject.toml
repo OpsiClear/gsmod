@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gsmod"
-version = "0.1.4"
+version = "0.1.5"
 description = "Ultra-fast CPU processing for 3D Gaussian Splatting (color, transform, filter, opacity)"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -34,7 +34,7 @@ classifiers = [
 dependencies = [
     "numpy>=1.24.0",
     "numba>=0.59.0",
-    "gsply==0.2.10",
+    "gsply==0.2.11",
     "pre-commit>=4.4.0",
 ]
 

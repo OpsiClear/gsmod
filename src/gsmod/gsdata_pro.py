@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Self
 
 from gsply import GSData
+from gsply.gsdata import DataFormat
 
 if TYPE_CHECKING:
     from gsmod.torch.gstensor_pro import GSTensorPro
@@ -58,10 +59,14 @@ class GSDataPro(GSData):
         if values.is_neutral():
             return self
 
-        # Apply color using fused kernel
+        # Apply color using SH-aware implementation
         from gsmod.color.apply import apply_color_values
 
-        self.sh0 = apply_color_values(self.sh0, values)
+        # Determine if sh0 is in RGB format
+        is_sh0_rgb = self._format.get("sh0") == DataFormat.SH0_RGB
+
+        # Apply to all SH bands
+        self.sh0, self.shN = apply_color_values(self.sh0, values, self.shN, is_sh0_rgb=is_sh0_rgb)
 
         return self
 
@@ -129,7 +134,11 @@ class GSDataPro(GSData):
         from gsmod.transform.apply import apply_transform_values
 
         self.means, self.quats, self.scales = apply_transform_values(
-            self.means, self.quats, self.scales, values
+            self.means,
+            self.quats,
+            self.scales,
+            values,
+            is_scales_ply=self.is_scales_ply,
         )
 
         return self

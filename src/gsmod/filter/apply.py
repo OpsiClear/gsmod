@@ -57,8 +57,45 @@ def compute_filter_mask(data, values: FilterValues) -> np.ndarray:
 
     # Use fused Numba kernel for all filters in single pass
     positions = np.ascontiguousarray(data.means, dtype=np.float32)
-    opacities = np.ascontiguousarray(data.opacities.flatten(), dtype=np.float32)
-    scales = np.ascontiguousarray(data.scales, dtype=np.float32)
+    opacities_raw = np.ascontiguousarray(data.opacities.flatten(), dtype=np.float32)
+    scales_raw = np.ascontiguousarray(data.scales, dtype=np.float32)
+
+    # Check data format for PLY (logit opacities, log scales)
+    is_opacities_ply = getattr(data, "is_opacities_ply", False)
+    is_scales_ply = getattr(data, "is_scales_ply", False)
+
+    # Convert thresholds to match data format (GPU/CPU consistency)
+    min_opacity = values.min_opacity
+    max_opacity = values.max_opacity
+    min_scale = values.min_scale
+    max_scale = values.max_scale
+
+    if is_opacities_ply:
+        # Convert linear opacity thresholds to logit space
+        # logit(x) = log(x / (1 - x))
+        if min_opacity > 0:
+            min_opacity = np.log(min_opacity / (1.0 - min_opacity + 1e-7))
+        else:
+            min_opacity = -np.inf
+        if max_opacity < 1.0:
+            max_opacity = np.log(max_opacity / (1.0 - max_opacity + 1e-7))
+        else:
+            max_opacity = np.inf
+
+    if is_scales_ply:
+        # Convert linear scale thresholds to log space
+        if min_scale > 0:
+            min_scale = np.log(min_scale)
+        else:
+            min_scale = -np.inf
+        if max_scale < 100.0:
+            max_scale = np.log(max_scale)
+        else:
+            max_scale = np.inf
+
+    # Use converted thresholds for filtering
+    opacities = opacities_raw
+    scales = scales_raw
 
     # Prepare sphere parameters
     has_sphere = values.sphere_radius < float("inf")
@@ -116,7 +153,7 @@ def compute_filter_mask(data, values: FilterValues) -> np.ndarray:
     # Output mask
     mask = np.empty(N, dtype=np.bool_)
 
-    # Run fused kernel
+    # Run fused kernel with format-converted thresholds
     combined_filter_fused(
         positions,
         opacities,
@@ -126,10 +163,10 @@ def compute_filter_mask(data, values: FilterValues) -> np.ndarray:
         box_center,
         box_half_extents,
         box_rotation,
-        values.min_opacity,
-        values.max_opacity,
-        values.min_scale,
-        values.max_scale,
+        min_opacity,  # Converted to logit if PLY format
+        max_opacity,  # Converted to logit if PLY format
+        min_scale,  # Converted to log if PLY format
+        max_scale,  # Converted to log if PLY format
         has_sphere,
         has_box,
         ellipsoid_center,

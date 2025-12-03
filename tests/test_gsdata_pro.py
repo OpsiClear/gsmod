@@ -22,6 +22,8 @@ from gsmod.config.presets import (
 
 def create_test_data(n: int = 1000) -> GSDataPro:
     """Create test GSDataPro with random data."""
+    from gsply.gsdata import DataFormat
+
     means = np.random.randn(n, 3).astype(np.float32)
     scales = np.abs(np.random.randn(n, 3).astype(np.float32)) * 0.1
     quats = np.random.randn(n, 4).astype(np.float32)
@@ -31,6 +33,8 @@ def create_test_data(n: int = 1000) -> GSDataPro:
 
     # Create GSDataPro properly using constructor
     pro = GSDataPro(means, scales, quats, opacities, sh0, None)
+    # Explicitly set format to RGB (gsply 0.2.11+ may auto-detect as SH)
+    pro._format["sh0"] = DataFormat.SH0_RGB
     return pro
 
 

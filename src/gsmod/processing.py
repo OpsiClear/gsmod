@@ -92,7 +92,13 @@ class GaussianProcessor:
         if not inplace:
             data = data.clone()
 
-        data.sh0 = apply_color_values(data.sh0, values)
+        # Determine if sh0 is in RGB format
+        is_sh0_rgb = getattr(data, "_format", {}).get("sh0") == "sh0_rgb"
+        if hasattr(data, "is_sh0_rgb"):
+            is_sh0_rgb = data.is_sh0_rgb
+
+        # Apply to all SH bands (matching GSDataPro.color behavior)
+        data.sh0, data.shN = apply_color_values(data.sh0, values, data.shN, is_sh0_rgb=is_sh0_rgb)
         return data
 
     def _color_gpu_impl(self, data, values: ColorValues, inplace: bool):
@@ -119,7 +125,7 @@ class GaussianProcessor:
             self._color_gpu.saturation(values.saturation)
         if values.vibrance != 1.0:
             self._color_gpu.vibrance(values.vibrance)
-        if abs(values.hue_shift) >= 0.5:
+        if values.hue_shift != 0.0:
             self._color_gpu.hue_shift(values.hue_shift)
         if values.shadows != 0.0:
             self._color_gpu.shadows(values.shadows)
@@ -174,8 +180,15 @@ class GaussianProcessor:
         if not inplace:
             data = data.clone()
 
+        # Check if scales are in PLY format (log space)
+        is_scales_ply = getattr(data, "is_scales_ply", False)
+
         data.means, data.quats, data.scales = apply_transform_values(
-            data.means, data.quats, data.scales, values
+            data.means,
+            data.quats,
+            data.scales,
+            values,
+            is_scales_ply=is_scales_ply,
         )
         return data
 

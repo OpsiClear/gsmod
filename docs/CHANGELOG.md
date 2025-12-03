@@ -5,6 +5,69 @@ All notable changes to gsmod will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.5] - 2025-12-02
+
+### Added
+- **Spherical Harmonics (SH) Color Support** (`gsmod.color.sh_kernels`, `gsmod.color.sh_utils`)
+  - Full SH-aware color operations matching GPU ground truth behavior
+  - Brightness and Saturation: Apply to BOTH sh0 (DC) and shN (higher-order SH bands)
+  - All other operations: Apply to sh0 ONLY (contrast, gamma, temperature, tint, hue, vibrance, fade)
+  - Numba-optimized kernels: `apply_scale_to_sh_numba()`, `apply_matrix_to_sh_numba()`, `apply_contrast_to_sh_numba()`, etc.
+  - SH utilities: `sh_to_rgb()`, `compute_luminance()`, matrix builders for saturation/temperature/hue
+  - CPU/GPU consistency: CPU now matches GPU SH handling exactly
+- **Triton GPU Kernels** (`gsmod.torch.triton_kernels`)
+  - Fused GPU kernels for maximum performance on NVIDIA GPUs
+  - Kernels: `triton_adjust_brightness()`, `triton_adjust_contrast()`, `triton_adjust_gamma()`, `triton_adjust_saturation()`, `triton_adjust_temperature()`
+  - Graceful fallback to PyTorch operations if Triton unavailable
+  - Block-based parallelization optimized for GPU architecture
+- **GSTensorPro.from_gstensor() Factory Method**
+  - Convert gsply GSTensor to GSTensorPro while preserving format state
+  - Recommended workflow: load with gsply, convert formats, then wrap with GSTensorPro
+  - Preserves `is_sh0_rgb`, `is_scales_ply`, `is_opacities_ply` format tracking
+  - Optional device/dtype conversion during wrapping
+- **Format-Aware CPU Filtering** (`gsmod.filter.apply`)
+  - CPU filters now handle PLY format (logit opacities, log scales) correctly
+  - Automatic threshold conversion: linear -> logit/log when filtering PLY format data
+  - Matches GPU FilterGPU behavior for CPU/GPU consistency
+  - Uses `is_opacities_ply` and `is_scales_ply` format properties from gsply 0.2.11
+- **Transform Log-Space Kernel** (`gsmod.transform.kernels`)
+  - Added `elementwise_add_scalar_numba()` for log-space scale transforms
+  - Enables efficient scale operations in PLY format (log space) where multiplication becomes addition
+- **New Benchmarks**
+  - `benchmarks/benchmark_sh_color.py`: NumPy vs Numba performance for SH operations
+  - `benchmarks/benchmark_triton.py`: PyTorch vs Triton kernel performance comparison
+  - `benchmarks/benchmark_gpu_vs_cpu.py`: Comprehensive GPU vs CPU performance analysis
+
+### Changed
+- **Color Application Refactored** (`gsmod.color.apply`)
+  - `apply_color_values()` now accepts `shN` parameter and returns tuple `(sh0, shN)`
+  - Matches GPU ground truth: brightness/saturation on both sh0+shN, all else on sh0 only
+  - Removed LUT-based implementation in favor of direct operations for better SH support
+  - Breaking change: Return type changed from `np.ndarray` to `tuple[np.ndarray, np.ndarray | None]`
+- **GPU Color Methods Enhanced** (`gsmod.torch.gstensor_pro`)
+  - All color adjustment methods now use Triton kernels when available
+  - Shadows/highlights now use smoothstep curves matching supersplat shader
+  - Better visual quality with smooth shadow/highlight transitions
+  - Temperature and tint operations preserve format awareness
+- **Dependencies Updated**
+  - gsply requirement updated from `0.2.10` to `0.2.11`
+  - Supports latest format query properties and performance improvements
+
+### Performance
+- SH color operations: 10-30x faster with Numba kernels vs pure NumPy
+- GPU color operations: Additional 10-20% speedup with Triton kernels (when available)
+- CPU-GPU consistency: No performance penalty for matching behavior
+
+### Fixed
+- CPU color operations now correctly handle SH formats matching GPU behavior
+- Shadow/highlight curves now use proper smoothstep interpolation (matches supersplat)
+- Format-aware filtering eliminates opacity/scale threshold bugs in PLY format
+
+### Documentation
+- Updated CLAUDE.md with SH color operation semantics
+- Documented brightness/saturation special case (both sh0 and shN)
+- Added GPU ground truth reference in color module docstrings
+
 ## [0.1.4] - 2025-11-26
 
 ### Added
