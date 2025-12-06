@@ -96,11 +96,14 @@ class GSTensorPro(GSTensor):
         """Convert GSData to GSTensorPro.
 
         Overrides GSTensor.from_gsdata to return GSTensorPro instead of GSTensor.
+        Preserves format tracking from source GSData to prevent auto-detection
+        from incorrectly changing the format (e.g., LINEAR scales to PLY log-scales).
         """
         # Call parent class method to get GSTensor
         base_tensor = GSTensor.from_gsdata(data, device, dtype, requires_grad)
 
         # Convert GSTensor to GSTensorPro by creating new instance with same data
+        # CRITICAL: Pass _format to prevent auto-detection in __post_init__
         result = cls(
             means=base_tensor.means,
             scales=base_tensor.scales,
@@ -110,13 +113,8 @@ class GSTensorPro(GSTensor):
             shN=base_tensor.shN,
             masks=base_tensor.masks if hasattr(base_tensor, "masks") else None,
             _base=base_tensor._base if hasattr(base_tensor, "_base") else None,
+            _format=base_tensor._format.copy() if hasattr(base_tensor, "_format") else {},
         )
-
-        # Copy format tracking using public API
-        if hasattr(result, "copy_format_from") and hasattr(base_tensor, "_format"):
-            result.copy_format_from(base_tensor)
-        elif hasattr(base_tensor, "_format"):
-            result._format = base_tensor._format.copy()
 
         return result
 
@@ -151,6 +149,7 @@ class GSTensorPro(GSTensor):
             source = tensor.to(target_device, dtype=target_dtype)
 
         # Create GSTensorPro with same tensor data
+        # CRITICAL: Pass _format to prevent auto-detection in __post_init__
         result = cls(
             means=source.means,
             scales=source.scales,
@@ -160,11 +159,8 @@ class GSTensorPro(GSTensor):
             shN=source.shN,
             masks=getattr(source, "masks", None),
             _base=getattr(source, "_base", None),
+            _format=tensor._format.copy() if hasattr(tensor, "_format") else {},
         )
-
-        # Preserve format state (is_sh0_rgb, is_scales_ply, etc.)
-        if hasattr(tensor, "_format"):
-            result.copy_format_from(tensor)
 
         return result
 
@@ -196,6 +192,7 @@ class GSTensorPro(GSTensor):
             base_tensor = GSTensor.from_gsdata(data, device=device)
 
         # Convert to GSTensorPro
+        # CRITICAL: Pass _format to prevent auto-detection in __post_init__
         result = cls(
             means=base_tensor.means,
             scales=base_tensor.scales,
@@ -205,13 +202,8 @@ class GSTensorPro(GSTensor):
             shN=base_tensor.shN,
             masks=base_tensor.masks if hasattr(base_tensor, "masks") else None,
             _base=base_tensor._base if hasattr(base_tensor, "_base") else None,
+            _format=base_tensor._format.copy() if hasattr(base_tensor, "_format") else {},
         )
-
-        # Copy format tracking using public API
-        if hasattr(result, "copy_format_from") and hasattr(base_tensor, "_format"):
-            result.copy_format_from(base_tensor)
-        elif hasattr(base_tensor, "_format"):
-            result._format = base_tensor._format.copy()
 
         return result
 
@@ -224,6 +216,7 @@ class GSTensorPro(GSTensor):
         base_clone = super().clone()
 
         # Convert to GSTensorPro
+        # CRITICAL: Pass _format to prevent auto-detection in __post_init__
         result = GSTensorPro(
             means=base_clone.means,
             scales=base_clone.scales,
@@ -233,13 +226,8 @@ class GSTensorPro(GSTensor):
             shN=base_clone.shN,
             masks=base_clone.masks if hasattr(base_clone, "masks") else None,
             _base=base_clone._base if hasattr(base_clone, "_base") else None,
+            _format=self._format.copy() if hasattr(self, "_format") else {},
         )
-
-        # Copy format tracking using public API
-        if hasattr(result, "copy_format_from"):
-            result.copy_format_from(self)
-        elif hasattr(self, "_format"):
-            result._format = self._format.copy()
 
         return result
 
@@ -291,18 +279,20 @@ class GSTensorPro(GSTensor):
         if values.is_neutral():
             return self
 
-        # Convert to RGB if needed for certain operations
-        needs_rgb = (
-            values.saturation != 1.0
-            or values.vibrance != 1.0
-            or values.hue_shift != 0.0
-            or values.temperature != 0.0
-            or values.tint != 0.0
-            or values.shadows != 0.0
-            or values.highlights != 0.0
-            or values.shadow_tint_sat != 0.0
-            or values.highlight_tint_sat != 0.0
-        )
+        # Track original format to restore after operations that require RGB
+        # This is critical for correct rendering when shN is present:
+        # gsplat uses SH evaluation when shN exists, so sh0 must stay in SH format
+        was_sh_format = not self.is_sh0_rgb
+        has_shN = self.shN is not None and self.shN.numel() > 0
+
+        # SH-aware color processing:
+        # Most operations now work correctly on SH data (with conditional clamping)
+        # Only vibrance truly requires RGB due to its adaptive saturation algorithm
+        # All other operations handle SH coefficients properly:
+        # - Multiplicative ops (brightness, contrast, saturation, temp, hue): scale ALL SH
+        # - Additive ops (tint, fade, shadow/highlight tints): apply to DC (sh0) only
+        # - Gamma: uses luminance ratio approximation for shN
+        needs_rgb = values.vibrance != 1.0
 
         if needs_rgb and not self.is_sh0_rgb:
             self.to_rgb(inplace=True)
@@ -338,6 +328,12 @@ class GSTensorPro(GSTensor):
             self._apply_shadow_tint(values.shadow_tint_hue, values.shadow_tint_sat)
         if values.highlight_tint_sat != 0.0:
             self._apply_highlight_tint(values.highlight_tint_hue, values.highlight_tint_sat)
+
+        # CRITICAL: Convert back to SH format if original was SH and shN is present
+        # Without this, gsplat will interpret RGB values as SH coefficients,
+        # causing washed-out/pale colors (e.g., RGB 0.87 becomes rgb = 0.87*0.28+0.5 = 0.74)
+        if was_sh_format and has_shN and self.is_sh0_rgb:
+            self.to_sh(inplace=True)
 
         return self
 
@@ -389,12 +385,14 @@ class GSTensorPro(GSTensor):
         tint_g = math.cos(hue_rad - 2.0 * math.pi / 3.0) * 0.5
         tint_b = math.cos(hue_rad - 4.0 * math.pi / 3.0) * 0.5
 
-        # Apply tint weighted by mask and saturation
+        # Apply tint weighted by mask and saturation (additive - DC only)
         tint_strength = shadow_mask * sat
         self.sh0[:, 0] = self.sh0[:, 0] + tint_r * tint_strength.squeeze(-1)
         self.sh0[:, 1] = self.sh0[:, 1] + tint_g * tint_strength.squeeze(-1)
         self.sh0[:, 2] = self.sh0[:, 2] + tint_b * tint_strength.squeeze(-1)
-        self.sh0.clamp_(0, 1)
+        # Only clamp if in RGB format - SH coefficients can be negative or > 1
+        if self.is_sh0_rgb:
+            self.sh0.clamp_(0, 1)
 
     def _apply_highlight_tint(self, hue: float, sat: float):
         """Apply highlight tinting (split toning for highlights).
@@ -418,12 +416,14 @@ class GSTensorPro(GSTensor):
         tint_g = math.cos(hue_rad - 2.0 * math.pi / 3.0) * 0.5
         tint_b = math.cos(hue_rad - 4.0 * math.pi / 3.0) * 0.5
 
-        # Apply tint weighted by mask and saturation
+        # Apply tint weighted by mask and saturation (additive - DC only)
         tint_strength = highlight_mask * sat
         self.sh0[:, 0] = self.sh0[:, 0] + tint_r * tint_strength.squeeze(-1)
         self.sh0[:, 1] = self.sh0[:, 1] + tint_g * tint_strength.squeeze(-1)
         self.sh0[:, 2] = self.sh0[:, 2] + tint_b * tint_strength.squeeze(-1)
-        self.sh0.clamp_(0, 1)
+        # Only clamp if in RGB format - SH coefficients can be negative or > 1
+        if self.is_sh0_rgb:
+            self.sh0.clamp_(0, 1)
 
     def filter(self, values: FilterValues, inplace: bool = True) -> Self:
         """Filter Gaussians based on criteria.
@@ -456,35 +456,50 @@ class GSTensorPro(GSTensor):
         # Opacity filtering
         if values.min_opacity > 0:
             if self.is_opacities_ply:
-                threshold_logit = torch.logit(torch.tensor(values.min_opacity, device=self.device))
+                # Clamp to avoid numerical issues with logit at boundaries
+                clamped_val = max(values.min_opacity, 1e-7)
+                threshold_logit = torch.logit(
+                    torch.tensor(clamped_val, dtype=self.dtype, device=self.device)
+                )
                 mask &= self.opacities.flatten() >= threshold_logit
             else:
                 mask &= self.opacities.flatten() >= values.min_opacity
 
         if values.max_opacity < 1.0:
             if self.is_opacities_ply:
-                threshold_logit = torch.logit(torch.tensor(values.max_opacity, device=self.device))
+                # Clamp to avoid numerical issues with logit at boundaries
+                clamped_val = min(values.max_opacity, 1.0 - 1e-7)
+                threshold_logit = torch.logit(
+                    torch.tensor(clamped_val, dtype=self.dtype, device=self.device)
+                )
                 mask &= self.opacities.flatten() <= threshold_logit
             else:
                 mask &= self.opacities.flatten() <= values.max_opacity
 
         # Scale filtering
+        # Compute max_scales once if needed (optimization for both min/max)
+        max_scales = None
+        if values.min_scale > 0 or values.max_scale < 100.0:
+            max_scales = torch.max(self.scales, dim=1)[0]
+
         if values.min_scale > 0:
             if self.is_scales_ply:
-                threshold_log = torch.log(torch.tensor(values.min_scale, device=self.device))
-                max_scales = torch.max(self.scales, dim=1)[0]
+                # Clamp to avoid log(0) which gives -inf
+                clamped_val = max(values.min_scale, 1e-7)
+                threshold_log = torch.log(
+                    torch.tensor(clamped_val, dtype=self.dtype, device=self.device)
+                )
                 mask &= max_scales >= threshold_log
             else:
-                max_scales = torch.max(self.scales, dim=1)[0]
                 mask &= max_scales >= values.min_scale
 
         if values.max_scale < 100.0:
             if self.is_scales_ply:
-                threshold_log = torch.log(torch.tensor(values.max_scale, device=self.device))
-                max_scales = torch.max(self.scales, dim=1)[0]
+                threshold_log = torch.log(
+                    torch.tensor(values.max_scale, dtype=self.dtype, device=self.device)
+                )
                 mask &= max_scales <= threshold_log
             else:
-                max_scales = torch.max(self.scales, dim=1)[0]
                 mask &= max_scales <= values.max_scale
 
         # Sphere filtering
@@ -564,7 +579,8 @@ class GSTensorPro(GSTensor):
             # Transform to local coordinates and check ellipsoid distance
             delta = self.means - center
             local = delta @ rot_matrix.T
-            normalized = local / radii
+            # Guard against division by zero with minimum radius
+            normalized = local / torch.clamp(radii, min=1e-7)
             dist_sq = torch.sum(normalized**2, dim=1)
             mask &= dist_sq <= 1.0
 
@@ -666,7 +682,9 @@ class GSTensorPro(GSTensor):
         # Apply scale
         if not np.allclose(values.scale, 1.0):
             if self.is_scales_ply:
-                self.scales += np.log(values.scale)
+                # Use torch.log to keep computation on GPU
+                scale_tensor = torch.tensor(values.scale, dtype=self.dtype, device=self.device)
+                self.scales += torch.log(scale_tensor)
             else:
                 self.scales *= values.scale
 
@@ -758,7 +776,7 @@ class GSTensorPro(GSTensor):
             # SH_C0 = 1 / (2 * sqrt(pi)) = 0.28209479177387814
             SH_C0 = 0.28209479177387814
             self.sh0 = self.sh0 * SH_C0 + 0.5
-            self.sh0.clamp_(0, 1)
+            self.sh0.clamp_(0, 1)  # Always clamp when converting TO RGB
             self._format["sh0"] = DataFormat.SH0_RGB
             if hasattr(self, "_base"):
                 self._base = None
@@ -796,6 +814,7 @@ class GSTensorPro(GSTensor):
             return result
 
         # Convert GSTensor to GSTensorPro
+        # CRITICAL: Pass _format to prevent auto-detection in __post_init__
         wrapped = GSTensorPro(
             means=result.means,
             scales=result.scales,
@@ -805,13 +824,8 @@ class GSTensorPro(GSTensor):
             shN=result.shN,
             masks=result.masks if hasattr(result, "masks") else None,
             _base=result._base if hasattr(result, "_base") else None,
+            _format=result._format.copy() if hasattr(result, "_format") else {},
         )
-
-        # Copy format tracking using public API
-        if hasattr(wrapped, "copy_format_from") and hasattr(result, "_format"):
-            wrapped.copy_format_from(result)
-        elif hasattr(result, "_format"):
-            wrapped._format = result._format.copy()
 
         return wrapped
 
@@ -837,11 +851,25 @@ class GSTensorPro(GSTensor):
             return self if inplace else self.clone()
 
         if inplace:
-            # Use Triton-accelerated brightness adjustment
-            sh0_out, shN_out = triton_adjust_brightness(self.sh0, self.shN, factor)
-            self.sh0 = sh0_out.clamp_(0, 1)
-            if shN_out is not None:
-                self.shN = shN_out
+            if self.is_sh0_rgb:
+                # RGB mode: just scale (Triton kernel does this)
+                sh0_out, shN_out = triton_adjust_brightness(self.sh0, self.shN, factor)
+                self.sh0 = sh0_out.clamp_(0, 1)
+                if shN_out is not None:
+                    self.shN = shN_out
+            else:
+                # SH mode: brightness scales the RENDERED RGB, not just the SH coefficient
+                # rendered_rgb = sh0 * SH_C0 + 0.5
+                # new_rgb = rendered_rgb * factor = (sh0 * SH_C0 + 0.5) * factor
+                # new_sh0 = (new_rgb - 0.5) / SH_C0
+                #         = ((sh0 * SH_C0 + 0.5) * factor - 0.5) / SH_C0
+                #         = sh0 * factor + (factor - 1) * 0.5 / SH_C0
+                SH_C0 = 0.28209479177387814
+                offset = (factor - 1.0) * 0.5 / SH_C0
+                self.sh0 = self.sh0 * factor + offset
+                # shN: scale by factor (brightness is multiplicative)
+                if self.shN is not None and self.shN.numel() > 0:
+                    self.shN = self.shN * factor
             self._base = None  # Invalidate base
             return self
 
@@ -867,8 +895,20 @@ class GSTensorPro(GSTensor):
             return self if inplace else self.clone()
 
         if inplace:
-            # Use Triton-accelerated contrast adjustment
-            self.sh0 = triton_adjust_contrast(self.sh0, factor).clamp_(0, 1)
+            if self.is_sh0_rgb:
+                # RGB mode: contrast around 0.5 midpoint (Triton kernel does this)
+                sh0_out = triton_adjust_contrast(self.sh0, factor)
+                self.sh0 = sh0_out.clamp_(0, 1)
+            else:
+                # SH mode: contrast in RGB space is (rgb - 0.5) * factor + 0.5
+                # Since rgb = sh0 * SH_C0 + 0.5, we have:
+                # new_rgb = (sh0 * SH_C0 + 0.5 - 0.5) * factor + 0.5 = sh0 * SH_C0 * factor + 0.5
+                # new_sh0 = (new_rgb - 0.5) / SH_C0 = sh0 * factor
+                # So for SH data, contrast is just scaling!
+                self.sh0 = self.sh0 * factor
+            # Apply contrast scaling to shN (multiplicative, no offset)
+            if self.shN is not None and self.shN.numel() > 0:
+                self.shN = self.shN * factor
             self._base = None
             return self
 
@@ -896,19 +936,17 @@ class GSTensorPro(GSTensor):
             return self if inplace else self.clone()
 
         if inplace:
-            # Convert to RGB if needed (saturation requires RGB color space)
-            if not self.is_sh0_rgb:
-                self.to_rgb(inplace=True)
-
+            # Saturation is a linear matrix operation that works on both RGB and SH
             # Use Triton-accelerated saturation adjustment
             sh0_out, shN_out = triton_adjust_saturation(self.sh0, self.shN, factor)
-            self.sh0 = sh0_out.clamp_(0, 1)
+            # Only clamp if in RGB format - SH coefficients can be negative or > 1
+            if self.is_sh0_rgb:
+                self.sh0 = sh0_out.clamp_(0, 1)
+            else:
+                self.sh0 = sh0_out
             if shN_out is not None:
                 self.shN = shN_out
             self._base = None
-
-            # Note: Keep in RGB format since conversion happened
-            # Caller can convert back if needed using to_sh()
             return self
 
         result = self.clone()
@@ -932,8 +970,37 @@ class GSTensorPro(GSTensor):
             return self if inplace else self.clone()
 
         if inplace:
-            # Use Triton-accelerated gamma correction
-            self.sh0 = triton_adjust_gamma(self.sh0, gamma).clamp_(0, 1)
+            # Gamma is a nonlinear operation that requires RGB space
+            if self.is_sh0_rgb:
+                # RGB data: apply gamma directly with Triton
+                self.sh0 = triton_adjust_gamma(self.sh0, gamma).clamp_(0, 1)
+            else:
+                # SH data: must convert to RGB, apply gamma, convert back
+                # This is because pow(x, gamma) is undefined for negative x,
+                # and SH coefficients can be negative.
+                SH_C0 = 0.28209479177387814
+
+                # Convert sh0 to RGB
+                rgb = self.sh0 * SH_C0 + 0.5
+
+                # Compute luminance before (for shN scaling)
+                lum_before = 0.299 * rgb[:, 0] + 0.587 * rgb[:, 1] + 0.114 * rgb[:, 2]
+
+                # Apply gamma to RGB (clamp to avoid negative before pow)
+                rgb_gamma = torch.pow(torch.clamp(rgb, min=1e-8), gamma)
+
+                # Compute luminance after
+                lum_after = (
+                    0.299 * rgb_gamma[:, 0] + 0.587 * rgb_gamma[:, 1] + 0.114 * rgb_gamma[:, 2]
+                )
+
+                # Convert back to SH
+                self.sh0 = (rgb_gamma - 0.5) / SH_C0
+
+                # Scale shN by luminance ratio (approximation for view-dependent effect)
+                if self.shN is not None and self.shN.numel() > 0:
+                    scale = (lum_after / (lum_before + 1e-8)).unsqueeze(-1).unsqueeze(-1)
+                    self.shN = self.shN * scale
             self._base = None
             return self
 
@@ -959,12 +1026,22 @@ class GSTensorPro(GSTensor):
             return self if inplace else self.clone()
 
         if inplace:
-            # Convert to RGB if needed (temperature requires RGB color space)
-            if not self.is_sh0_rgb:
-                self.to_rgb(inplace=True)
-
+            # Temperature is a per-channel scale - works on both RGB and SH
             # Use Triton-accelerated temperature adjustment
-            self.sh0 = triton_adjust_temperature(self.sh0, temp).clamp_(0, 1)
+            sh0_out = triton_adjust_temperature(self.sh0, temp)
+            # Only clamp if in RGB format - SH coefficients can be negative or > 1
+            if self.is_sh0_rgb:
+                self.sh0 = sh0_out.clamp_(0, 1)
+            else:
+                self.sh0 = sh0_out
+            # Apply same per-channel scaling to shN
+            if self.shN is not None and self.shN.numel() > 0:
+                r_factor = 1.0 + temp * 0.3
+                g_factor = 1.0
+                b_factor = 1.0 - temp * 0.3
+                self.shN[:, :, 0] = self.shN[:, :, 0] * r_factor
+                self.shN[:, :, 1] = self.shN[:, :, 1] * g_factor
+                self.shN[:, :, 2] = self.shN[:, :, 2] * b_factor
             self._base = None
             return self
 
@@ -990,7 +1067,7 @@ class GSTensorPro(GSTensor):
             return self if inplace else self.clone()
 
         if inplace:
-            # Convert to RGB if needed (vibrance requires RGB color space)
+            # Vibrance requires RGB for adaptive saturation calculation
             if not self.is_sh0_rgb:
                 self.to_rgb(inplace=True)
 
@@ -1011,7 +1088,7 @@ class GSTensorPro(GSTensor):
 
             # Apply vibrance
             self.sh0 = luminance + (self.sh0 - luminance) * boost
-            self.sh0.clamp_(0, 1)
+            self.sh0.clamp_(0, 1)  # Always clamp - we converted to RGB above
             self._base = None
             return self
 
@@ -1036,10 +1113,7 @@ class GSTensorPro(GSTensor):
             return self if inplace else self.clone()
 
         if inplace:
-            # Convert to RGB if needed (hue shift requires RGB color space)
-            if not self.is_sh0_rgb:
-                self.to_rgb(inplace=True)
-
+            # Hue shift is a linear matrix rotation - works on both RGB and SH
             # Convert degrees to radians
             angle = torch.tensor(degrees * np.pi / 180.0, device=self.device)
             cos_a = torch.cos(angle)
@@ -1068,9 +1142,15 @@ class GSTensorPro(GSTensor):
                 device=self.device,
             )
 
-            # Apply transformation
+            # Apply transformation to sh0
             self.sh0 = torch.matmul(self.sh0, mat.T)
-            self.sh0.clamp_(0, 1)
+            # Only clamp if in RGB format - SH coefficients can be negative or > 1
+            if self.is_sh0_rgb:
+                self.sh0.clamp_(0, 1)
+            # Apply same rotation matrix to shN
+            if self.shN is not None and self.shN.numel() > 0:
+                # shN is [N, K, 3], apply matrix to last dim
+                self.shN = torch.einsum("nkc,cd->nkd", self.shN, mat)
             self._base = None
             return self
 
@@ -1097,10 +1177,7 @@ class GSTensorPro(GSTensor):
             return self if inplace else self.clone()
 
         if inplace:
-            # Convert to RGB if needed
-            if not self.is_sh0_rgb:
-                self.to_rgb(inplace=True)
-
+            # Tint is an additive offset - only applies to DC (sh0), not shN
             # Tint: negative = green boost, positive = magenta (reduce green)
             tint_offset_g = -value * 0.1
             tint_offset_rb = value * 0.05
@@ -1108,7 +1185,9 @@ class GSTensorPro(GSTensor):
             self.sh0[..., 0] += tint_offset_rb  # R
             self.sh0[..., 1] += tint_offset_g  # G
             self.sh0[..., 2] += tint_offset_rb  # B
-            self.sh0.clamp_(0, 1)
+            # Only clamp if in RGB format - SH coefficients can be negative or > 1
+            if self.is_sh0_rgb:
+                self.sh0.clamp_(0, 1)
             self._base = None
             return self
 
@@ -1135,9 +1214,12 @@ class GSTensorPro(GSTensor):
             return self if inplace else self.clone()
 
         if inplace:
+            # Fade is an additive black point lift - only applies to DC (sh0), not shN
             # Fade: output = fade + input * (1 - fade)
             self.sh0.mul_(1.0 - value).add_(value)
-            self.sh0.clamp_(0, 1)
+            # Only clamp if in RGB format - SH coefficients can be negative or > 1
+            if self.is_sh0_rgb:
+                self.sh0.clamp_(0, 1)
             self._base = None
             return self
 
@@ -1191,7 +1273,9 @@ class GSTensorPro(GSTensor):
             self.means *= scale
             # For log-scales, add log(scale); for linear scales, multiply by scale
             if self.is_scales_ply:
-                self.scales += np.log(scale)
+                # Use torch.log to keep computation on GPU
+                scale_tensor = torch.tensor(scale, dtype=self.dtype, device=self.device)
+                self.scales += torch.log(scale_tensor)
             else:
                 self.scales *= scale
             self._base = None
@@ -1362,9 +1446,9 @@ class GSTensorPro(GSTensor):
             raise ValueError(f"Matrix must be shape (4, 4), got {matrix.shape}")
 
         if inplace:
-            # Extract rotation, translation, scale
+            # Extract rotation for quaternion update
             rotation = matrix[:3, :3]
-            matrix[:3, 3]
+            # Translation is applied via homogeneous matrix multiplication below
 
             # Apply to positions (homogeneous coordinates)
             ones = torch.ones((len(self), 1), dtype=self.dtype, device=self.device)

@@ -649,7 +649,8 @@ class FilterGPU:
         local = delta @ rot_matrix.T
 
         # Normalize by radii and compute ellipsoid distance
-        normalized = local / radii
+        # Guard against division by zero with minimum radius
+        normalized = local / torch.clamp(radii, min=1e-7)
         dist_sq = torch.sum(normalized**2, dim=1)
 
         # Point is inside if normalized distance <= 1

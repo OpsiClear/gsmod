@@ -5,6 +5,40 @@ All notable changes to gsmod will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.6] - 2025-12-06
+
+### Changed
+- **Enhanced SH-Aware Color Processing** (CPU and GPU)
+  - Brightness, Contrast, Saturation, Temperature, Gamma, Hue Shift now apply to BOTH sh0 (DC) and shN (higher-order SH coefficients)
+  - Improved SH mode handling: brightness/contrast use corrected formulas for rendered RGB behavior
+  - Vibrance now correctly converts SH->RGB->SH (required for adaptive saturation)
+  - Split toning (shadow/highlight tints) remain DC-only (additive operations)
+  - Conditional clamping: only applied when is_sh0_rgb=True (SH coefficients can be negative or >1)
+  - Automatic SH->RGB->SH conversion for operations requiring RGB format
+- **Dependencies Updated**
+  - gsply requirement updated from `0.2.11` to `>=0.2.13`
+  - torch added to main dependencies: `>=2.9.1`
+
+### Fixed
+- **CRITICAL: Format Tracking in GSTensorPro**
+  - Fixed format auto-detection incorrectly changing format during initialization
+  - `_format` now properly passed in all factory methods (from_gsdata, from_gstensor, clone, to)
+  - Prevents LINEAR scales from being incorrectly detected as PLY log-scales
+  - Affects: All GSTensorPro creation and conversion operations
+- **Numerical Stability Improvements**
+  - LUT kernels: clamp to [0,1] before conversion to int() to avoid NaN/Inf issues
+  - Ellipsoid filter: guard against division by zero with minimum radius (1e-7)
+  - Logit conversion: use log subtraction form for better numerical stability
+  - Consistent epsilon values: standardized to 1e-7 across codebase
+- **FilterValues.is_neutral() Bug Fix**
+  - Now correctly checks `invert` parameter (invert=True is NOT neutral)
+- **GPU Opacity/Scale Filtering**
+  - Improved threshold conversion with proper clamping to avoid boundary issues
+  - Optimized: compute max_scales once when needed for both min/max filters
+
+### Performance
+- GPU scale filtering: eliminated redundant max_scales computation (2x evaluation -> 1x)
+
 ## [0.1.5] - 2025-12-02
 
 ### Added

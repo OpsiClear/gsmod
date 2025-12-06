@@ -3,10 +3,17 @@
 This module provides the core color application function that matches
 the GPU (GSTensorPro) behavior exactly for CPU/GPU consistency.
 
-GPU Ground Truth (PyTorch fallback):
-- Brightness: sh0 + shN (both scaled)
-- Saturation: sh0 + shN (both via matrix)
-- All other ops: sh0 ONLY (contrast, gamma, temperature, tint, hue, vibrance, fade)
+SH-Aware Color Processing (SuperSplat algorithm):
+- Multiplicative ops apply to ALL SH coefficients:
+  - Brightness: sh0 + shN (both scaled)
+  - Contrast: sh0 (formula) + shN (scale factor only)
+  - Saturation: sh0 + shN (both via matrix)
+  - Temperature: sh0 + shN (per-channel scaling)
+  - Hue shift: sh0 + shN (rotation matrix)
+  - Gamma: sh0 (pow) + shN (luminance ratio approximation)
+- Additive ops apply to DC (sh0) ONLY:
+  - Tint, Fade, Shadow/Highlight tinting
+- Clamping only applied when is_sh0_rgb=True
 """
 
 from __future__ import annotations
@@ -70,12 +77,16 @@ def apply_color_values(
 
     # Apply operations matching GPU ground truth order and behavior
 
-    # 1. Temperature (sh0 only - R/B channel scaling, matching GPU)
+    # 1. Temperature (sh0 + shN - per-channel scaling, matching GPU)
     if values.temperature != 0.0:
         r_factor = 1.0 + values.temperature * 0.3
         b_factor = 1.0 - values.temperature * 0.3
         sh0[:, 0] *= r_factor
         sh0[:, 2] *= b_factor
+        # Apply same per-channel scaling to shN
+        if shN.size > 0:
+            shN[:, :, 0] *= r_factor
+            shN[:, :, 2] *= b_factor
 
     # 2. Tint (sh0 only - G channel offset, matching GPU)
     if values.tint != 0.0:
@@ -85,22 +96,69 @@ def apply_color_values(
         sh0[:, 1] += tint_offset_g  # G
         sh0[:, 2] += tint_offset_rb  # B
 
-    # 3. Brightness (sh0 + shN - both scaled, matching GPU)
+    # 3. Brightness (sh0 + shN - matching GPU)
     if values.brightness != 1.0:
-        apply_scale_to_sh_numba(sh0, shN, values.brightness, sh0_out, shN_out)
-        sh0, shN = sh0_out, shN_out
-        sh0_out, shN_out = np.empty_like(sh0), np.empty_like(shN)
+        if is_sh0_rgb:
+            # RGB mode: just scale
+            apply_scale_to_sh_numba(sh0, shN, values.brightness, sh0_out, shN_out)
+            sh0, shN = sh0_out, shN_out
+            sh0_out, shN_out = np.empty_like(sh0), np.empty_like(shN)
+        else:
+            # SH mode: brightness scales the RENDERED RGB, not just the SH coefficient
+            # rendered_rgb = sh0 * SH_C0 + 0.5
+            # new_rgb = rendered_rgb * factor
+            # new_sh0 = (new_rgb - 0.5) / SH_C0 = sh0 * factor + (factor - 1) * 0.5 / SH_C0
+            SH_C0 = 0.28209479177387814
+            offset = (values.brightness - 1.0) * 0.5 / SH_C0
+            sh0 = sh0 * values.brightness + offset
+            # shN: scale by factor (brightness is multiplicative)
+            if shN.size > 0:
+                shN = shN * values.brightness
 
-    # 4. Contrast (sh0 only - matching GPU)
+    # 4. Contrast (sh0 + shN - matching GPU)
     if values.contrast != 1.0:
-        # GPU formula: (val - 0.5) * factor + 0.5
-        sh0 = (sh0 - 0.5) * values.contrast + 0.5
+        if is_sh0_rgb:
+            # RGB mode: contrast around 0.5 midpoint
+            sh0 = (sh0 - 0.5) * values.contrast + 0.5
+        else:
+            # SH mode: contrast in RGB space is (rgb - 0.5) * factor + 0.5
+            # Since rgb = sh0 * SH_C0 + 0.5, the offset cancels out
+            # Result: new_sh0 = sh0 * factor
+            sh0 = sh0 * values.contrast
+        # For shN: apply scale factor only
+        if shN.size > 0:
+            shN = shN * values.contrast
 
-    # 5. Gamma (sh0 only - matching GPU)
+    # 5. Gamma (sh0 + shN - matching GPU)
     if values.gamma != 1.0:
-        # Apply gamma directly (GPU ground truth: pow(val, gamma))
-        # gamma > 1 = darker, gamma < 1 = brighter
-        sh0 = np.power(np.maximum(sh0, 1e-8), values.gamma)
+        # Gamma is nonlinear: pow(x, gamma) is undefined for negative x
+        if is_sh0_rgb:
+            # RGB data: apply gamma directly
+            sh0 = np.power(np.maximum(sh0, 1e-7), values.gamma)
+        else:
+            # SH data: must convert to RGB, apply gamma, convert back
+            # This is because SH coefficients can be negative
+            SH_C0 = 0.28209479177387814
+
+            # Convert sh0 to RGB
+            rgb = sh0 * SH_C0 + 0.5
+
+            # Compute luminance before (for shN scaling)
+            lum_before = 0.299 * rgb[:, 0] + 0.587 * rgb[:, 1] + 0.114 * rgb[:, 2]
+
+            # Apply gamma to RGB
+            rgb_gamma = np.power(np.maximum(rgb, 1e-7), values.gamma)
+
+            # Compute luminance after
+            lum_after = 0.299 * rgb_gamma[:, 0] + 0.587 * rgb_gamma[:, 1] + 0.114 * rgb_gamma[:, 2]
+
+            # Convert back to SH
+            sh0 = (rgb_gamma - 0.5) / SH_C0
+
+            # Scale shN by luminance ratio
+            if shN.size > 0:
+                scale = (lum_after / (lum_before + 1e-8))[:, np.newaxis, np.newaxis]
+                shN = shN * scale
 
     # 6. Saturation (sh0 + shN - both via matrix, matching GPU)
     if values.saturation != 1.0:
@@ -109,7 +167,7 @@ def apply_color_values(
         sh0, shN = sh0_out, shN_out
         sh0_out, shN_out = np.empty_like(sh0), np.empty_like(shN)
 
-    # 7. Hue shift (sh0 only - matching GPU)
+    # 7. Hue shift (sh0 + shN - matching GPU)
     if values.hue_shift != 0.0:
         angle = values.hue_shift * np.pi / 180.0
         cos_a = np.cos(angle)
@@ -137,9 +195,17 @@ def apply_color_values(
             dtype=np.float32,
         )
         sh0 = sh0 @ mat.T
+        # Apply same rotation matrix to shN
+        if shN.size > 0:
+            # shN is [N, K, 3], apply matrix to last dim
+            shN = np.einsum("nkc,cd->nkd", shN, mat)
 
     # 8. Vibrance (sh0 only - matching GPU)
+    # CRITICAL: Vibrance requires RGB for adaptive saturation calculation
+    # Must convert SH -> RGB, apply vibrance, then RGB -> SH when in SH mode
     if values.vibrance != 1.0:
+        from gsmod.color.sh_utils import rgb_to_sh
+
         if is_sh0_rgb:
             rgb = sh0
         else:
@@ -152,7 +218,13 @@ def apply_color_values(
 
         # Vibrance: boost less-saturated colors more
         boost = (1.0 - saturation) * (values.vibrance - 1.0) + 1.0
-        sh0 = luminance + (sh0 - luminance) * boost
+        rgb_result = luminance + (rgb - luminance) * boost
+
+        # Convert back to SH if original was SH
+        if is_sh0_rgb:
+            sh0 = np.clip(rgb_result, 0, 1)
+        else:
+            sh0 = rgb_to_sh(np.clip(rgb_result, 0, 1))
 
     # 9. Shadows/Highlights (sh0 only - using smoothstep curves like supersplat)
     if values.shadows != 0.0 or values.highlights != 0.0:

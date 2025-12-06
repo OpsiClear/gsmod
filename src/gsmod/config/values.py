@@ -445,6 +445,7 @@ class FilterValues:
             and self.box_min is None
             and self.ellipsoid_radii is None
             and self.frustum_pos is None
+            and not self.invert  # invert=True is NOT neutral
         )
 
     def learn(self, *params: str) -> LearnableFilter:

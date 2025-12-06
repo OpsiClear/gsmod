@@ -11,6 +11,8 @@ from gsply import GSData
 from gsply.gsdata import DataFormat
 
 if TYPE_CHECKING:
+    import numpy as np
+
     from gsmod.torch.gstensor_pro import GSTensorPro
 
 from gsmod.config.values import (
@@ -497,10 +499,10 @@ class GSDataPro(GSData):
             TransformValues.from_rotation_axis_angle(tuple(axis), angle), inplace=inplace
         )
 
-    def transform_matrix(self, matrix, inplace: bool = True) -> Self:
+    def transform_matrix(self, matrix: list | tuple | np.ndarray, inplace: bool = True) -> Self:
         """Apply 4x4 transformation matrix.
 
-        :param matrix: 4x4 homogeneous transformation matrix
+        :param matrix: 4x4 homogeneous transformation matrix (array-like)
         :param inplace: If True, modify self; if False, return modified copy
         :returns: Self (modified) or copy with modifications
         """

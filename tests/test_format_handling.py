@@ -68,33 +68,33 @@ class TestFormatTracking:
         gstensor.adjust_gamma(0.8, inplace=True)
         assert gstensor._format.get("sh0") == original_format
 
-    def test_saturation_converts_to_rgb(self, gstensor):
-        """Test that saturation converts to RGB format for accurate color space operations."""
-        # Saturation requires RGB color space for correct math
-        assert gstensor._format.get("sh0") == DataFormat.SH0_SH
+    def test_saturation_preserves_format(self, gstensor):
+        """Test that saturation preserves format (linear matrix operation works on both)."""
+        # Saturation is a linear matrix operation that works on both RGB and SH
+        original_format = gstensor._format.get("sh0")
         gstensor.adjust_saturation(1.3, inplace=True)
-        assert gstensor._format.get("sh0") == DataFormat.SH0_RGB
+        assert gstensor._format.get("sh0") == original_format
 
-    def test_temperature_converts_to_rgb(self, gstensor):
-        """Test that temperature converts to RGB format for accurate color space operations."""
-        # Temperature adjustment requires RGB color space for correct math
-        assert gstensor._format.get("sh0") == DataFormat.SH0_SH
+    def test_temperature_preserves_format(self, gstensor):
+        """Test that temperature preserves format (per-channel scale works on both)."""
+        # Temperature is a per-channel scale that works on both RGB and SH
+        original_format = gstensor._format.get("sh0")
         gstensor.adjust_temperature(0.2, inplace=True)
-        assert gstensor._format.get("sh0") == DataFormat.SH0_RGB
+        assert gstensor._format.get("sh0") == original_format
 
     def test_vibrance_converts_to_rgb(self, gstensor):
-        """Test that vibrance converts to RGB format for accurate color space operations."""
-        # Vibrance requires RGB color space for correct math
+        """Test that vibrance converts to RGB format (requires adaptive saturation calc)."""
+        # Vibrance truly requires RGB due to its adaptive saturation algorithm
         assert gstensor._format.get("sh0") == DataFormat.SH0_SH
         gstensor.adjust_vibrance(1.2, inplace=True)
         assert gstensor._format.get("sh0") == DataFormat.SH0_RGB
 
-    def test_hue_shift_converts_to_rgb(self, gstensor):
-        """Test that hue shift converts to RGB format for accurate color space operations."""
-        # Hue shift requires RGB color space for correct math
-        assert gstensor._format.get("sh0") == DataFormat.SH0_SH
+    def test_hue_shift_preserves_format(self, gstensor):
+        """Test that hue shift preserves format (linear matrix rotation works on both)."""
+        # Hue shift is a linear matrix rotation that works on both RGB and SH
+        original_format = gstensor._format.get("sh0")
         gstensor.adjust_hue_shift(30, inplace=True)
-        assert gstensor._format.get("sh0") == DataFormat.SH0_RGB
+        assert gstensor._format.get("sh0") == original_format
 
 
 class TestColorGPUFormatHandling:

@@ -148,9 +148,13 @@ def fused_color_full_pipeline_numba(
         b = colors[i, 2]
 
         # Quantize to LUT indices and lookup (fused operations)
-        r_idx = min(max(int(r * lut_max), 0), lut_max)
-        g_idx = min(max(int(g * lut_max), 0), lut_max)
-        b_idx = min(max(int(b * lut_max), 0), lut_max)
+        # Clamp to [0, 1] before conversion to avoid NaN/Inf issues with int()
+        r_clamped = min(max(r, 0.0), 1.0)
+        g_clamped = min(max(g, 0.0), 1.0)
+        b_clamped = min(max(b, 0.0), 1.0)
+        r_idx = int(r_clamped * lut_max)
+        g_idx = int(g_clamped * lut_max)
+        b_idx = int(b_clamped * lut_max)
 
         r = r_lut[r_idx]
         g = g_lut[g_idx]
@@ -354,9 +358,13 @@ def apply_lut_only_interleaved_numba(
         b = colors[i, 2]
 
         # Quantize and lookup
-        r_idx = min(max(int(r * lut_max), 0), lut_max)
-        g_idx = min(max(int(g * lut_max), 0), lut_max)
-        b_idx = min(max(int(b * lut_max), 0), lut_max)
+        # Clamp to [0, 1] before conversion to avoid NaN/Inf issues with int()
+        r_clamped = min(max(r, 0.0), 1.0)
+        g_clamped = min(max(g, 0.0), 1.0)
+        b_clamped = min(max(b, 0.0), 1.0)
+        r_idx = int(r_clamped * lut_max)
+        g_idx = int(g_clamped * lut_max)
+        b_idx = int(b_clamped * lut_max)
 
         # Single array access and direct output (no Phase 2 processing)
         out[i, 0] = lut[r_idx, 0]
@@ -431,9 +439,13 @@ def fused_color_pipeline_interleaved_lut_numba(
         b = colors[i, 2]
 
         # Quantize and lookup (interleaved access pattern)
-        r_idx = min(max(int(r * lut_max), 0), lut_max)
-        g_idx = min(max(int(g * lut_max), 0), lut_max)
-        b_idx = min(max(int(b * lut_max), 0), lut_max)
+        # Clamp to [0, 1] before conversion to avoid NaN/Inf issues with int()
+        r_clamped = min(max(r, 0.0), 1.0)
+        g_clamped = min(max(g, 0.0), 1.0)
+        b_clamped = min(max(b, 0.0), 1.0)
+        r_idx = int(r_clamped * lut_max)
+        g_idx = int(g_clamped * lut_max)
+        b_idx = int(b_clamped * lut_max)
 
         # Single array access (better cache locality)
         r = lut[r_idx, 0]

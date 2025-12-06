@@ -173,9 +173,11 @@ def get_opacity_for_threshold(data: Any, linear_threshold: float) -> float:
     import numpy as np
 
     if hasattr(data, "is_opacities_ply") and data.is_opacities_ply:
-        # Convert to logit space: logit(p) = log(p / (1-p))
+        # Convert to logit space: logit(p) = log(p / (1-p)) = log(p) - log(1-p)
+        # Clip to [1e-7, 1-1e-7] ensures both p and (1-p) are bounded away from 0
+        # Use log subtraction form for better numerical stability
         p = np.clip(linear_threshold, 1e-7, 1 - 1e-7)
-        return np.log(p / (1 - p))
+        return np.log(p) - np.log(1 - p)
     return linear_threshold
 
 

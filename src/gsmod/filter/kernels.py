@@ -104,9 +104,10 @@ def ellipsoid_filter_numba(
         lz = rotation_matrix[2, 0] * dx + rotation_matrix[2, 1] * dy + rotation_matrix[2, 2] * dz
 
         # Normalize by radii and compute ellipsoid distance
-        nx = lx / radii[0]
-        ny = ly / radii[1]
-        nz = lz / radii[2]
+        # Guard against division by zero with minimum radius
+        nx = lx / max(radii[0], 1e-7)
+        ny = ly / max(radii[1], 1e-7)
+        nz = lz / max(radii[2], 1e-7)
 
         # Point is inside if normalized distance <= 1
         dist_sq = nx * nx + ny * ny + nz * nz
@@ -413,10 +414,10 @@ def combined_filter_fused(
                 + ellipsoid_rotation[2, 1] * dy
                 + ellipsoid_rotation[2, 2] * dz
             )
-            # Normalize by radii
-            nx = lx / ellipsoid_radii[0]
-            ny = ly / ellipsoid_radii[1]
-            nz = lz / ellipsoid_radii[2]
+            # Normalize by radii (guard against division by zero)
+            nx = lx / max(ellipsoid_radii[0], 1e-7)
+            ny = ly / max(ellipsoid_radii[1], 1e-7)
+            nz = lz / max(ellipsoid_radii[2], 1e-7)
             dist_sq = nx * nx + ny * ny + nz * nz
             if dist_sq > 1.0:
                 passed = False

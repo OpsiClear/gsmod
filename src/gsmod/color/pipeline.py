@@ -859,21 +859,21 @@ class Color:
         r = input_range + temp_offset_r + tint_offset_rb
         r = r * optimized["brightness"]
         r = (r - 0.5) * optimized["contrast"] + 0.5
-        r = np.power(np.clip(r, 1e-6, 1.0), optimized["gamma"])
+        r = np.power(np.clip(r, 1e-7, 1.0), optimized["gamma"])
         r_lut = np.clip(r, 0, 1).astype(np.float32)
 
         # G Channel (tint affects green)
         g = input_range + tint_offset_g
         g = g * optimized["brightness"]
         g = (g - 0.5) * optimized["contrast"] + 0.5
-        g = np.power(np.clip(g, 1e-6, 1.0), optimized["gamma"])
+        g = np.power(np.clip(g, 1e-7, 1.0), optimized["gamma"])
         g_lut = np.clip(g, 0, 1).astype(np.float32)
 
         # B Channel (cool temperature subtracts offset, magenta tint adds offset)
         b = input_range + temp_offset_b + tint_offset_rb
         b = b * optimized["brightness"]
         b = (b - 0.5) * optimized["contrast"] + 0.5
-        b = np.power(np.clip(b, 1e-6, 1.0), optimized["gamma"])
+        b = np.power(np.clip(b, 1e-7, 1.0), optimized["gamma"])
         b_lut = np.clip(b, 0, 1).astype(np.float32)
 
         # Create interleaved LUT for better cache locality (1.73x speedup)
