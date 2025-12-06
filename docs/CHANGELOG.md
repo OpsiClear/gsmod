@@ -17,7 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Automatic SH->RGB->SH conversion for operations requiring RGB format
 - **Dependencies Updated**
   - gsply requirement updated from `0.2.11` to `>=0.2.13`
-  - torch added to main dependencies: `>=2.9.1`
+  - torch moved to optional dependency (install separately: `pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu128`)
+- **Code Consolidation**
+  - `_axis_angle_to_rotation_matrix_numpy()` moved to `shared/rotation.py` (single canonical implementation)
+  - `filter/api.py` and `filter/apply.py` now import from shared module
+- **Documentation Updated**
+  - CLAUDE.md: Updated module references (`color/` module structure, distributed `*/kernels.py` files)
+  - WORKFLOWS.md: Updated API references to current exports (GSDataPro, ColorValues, Filter, Pipeline)
 
 ### Fixed
 - **CRITICAL: Format Tracking in GSTensorPro**
