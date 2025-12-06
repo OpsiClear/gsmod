@@ -142,6 +142,37 @@ def _axis_angle_to_quaternion_numpy(axis_angle: np.ndarray) -> np.ndarray:
     return np.array([w, x, y, z], dtype=axis_angle.dtype)
 
 
+def _axis_angle_to_rotation_matrix_numpy(
+    axis_angle: tuple[float, float, float] | np.ndarray | None,
+) -> np.ndarray:
+    """NumPy axis-angle to 3x3 rotation matrix using Rodrigues' formula.
+
+    :param axis_angle: Rotation vector [3] where magnitude is angle in radians, or None
+    :returns: Rotation matrix [3, 3]
+    """
+    if axis_angle is None:
+        return np.eye(3, dtype=np.float32)
+
+    axis_angle = np.asarray(axis_angle, dtype=np.float32)
+    angle = np.linalg.norm(axis_angle)
+
+    if angle < 1e-8:
+        return np.eye(3, dtype=np.float32)
+
+    # Normalize axis
+    axis = axis_angle / angle
+
+    # Rodrigues' rotation formula: R = I + sin(angle)*K + (1-cos(angle))*K^2
+    K = np.array(
+        [[0, -axis[2], axis[1]], [axis[2], 0, -axis[0]], [-axis[1], axis[0], 0]],
+        dtype=np.float32,
+    )
+
+    R = np.eye(3, dtype=np.float32) + np.sin(angle) * K + (1 - np.cos(angle)) * (K @ K)
+
+    return R
+
+
 def _euler_to_quaternion_numpy(euler: np.ndarray, order: str = "XYZ") -> np.ndarray:
     """NumPy Euler angles to quaternion.
 

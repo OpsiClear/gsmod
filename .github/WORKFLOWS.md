@@ -50,8 +50,9 @@ This repository uses GitHub Actions for CI/CD. The workflows are based on the gs
 - Installs from wheel
 - Tests imports:
   - `import gsmod`
-  - Main APIs: ColorLUT, transform, Pipeline, ColorPreset
-  - Filter APIs: filter_gaussians, apply_filter
+  - Main APIs: GSDataPro, ColorValues, FilterValues, TransformValues
+  - Pipeline APIs: Color, Transform, Filter, Pipeline
+  - Preset APIs: CINEMATIC, WARM, STRICT_FILTER
 
 **Status**: [OK] Production ready
 

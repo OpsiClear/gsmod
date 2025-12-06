@@ -13,35 +13,9 @@ from gsmod.filter.kernels import (
     compute_output_indices_and_count,
     filter_gaussians_fused_parallel,
 )
-
-
-def _axis_angle_to_rotation_matrix(axis_angle: tuple[float, float, float] | None) -> np.ndarray:
-    """Convert axis-angle rotation to 3x3 rotation matrix.
-
-    :param axis_angle: Rotation vector [3] where magnitude is angle in radians
-    :returns: Rotation matrix [3, 3]
-    """
-    if axis_angle is None:
-        return np.eye(3, dtype=np.float32)
-
-    axis_angle = np.asarray(axis_angle, dtype=np.float32)
-    angle = np.linalg.norm(axis_angle)
-
-    if angle < 1e-8:
-        return np.eye(3, dtype=np.float32)
-
-    # Normalize axis
-    axis = axis_angle / angle
-
-    # Rodrigues' rotation formula
-    K = np.array(
-        [[0, -axis[2], axis[1]], [axis[2], 0, -axis[0]], [-axis[1], axis[0], 0]], dtype=np.float32
-    )
-
-    # R = I + sin(angle) * K + (1 - cos(angle)) * K^2
-    R = np.eye(3, dtype=np.float32) + np.sin(angle) * K + (1 - np.cos(angle)) * (K @ K)
-
-    return R
+from gsmod.shared.rotation import (
+    _axis_angle_to_rotation_matrix_numpy as _axis_angle_to_rotation_matrix,
+)
 
 
 def compute_filter_mask(data, values: FilterValues) -> np.ndarray:

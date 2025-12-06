@@ -27,6 +27,7 @@ from gsmod.filter.kernels import (
     rotated_cuboid_filter_numba,
     sphere_filter_numba,
 )
+from gsmod.shared.rotation import _axis_angle_to_rotation_matrix_numpy
 
 logger = logging.getLogger(__name__)
 
@@ -322,35 +323,6 @@ def _apply_sphere_filter(
     return mask
 
 
-def _axis_angle_to_rotation_matrix(
-    axis_angle: tuple[float, float, float] | np.ndarray,
-) -> np.ndarray:
-    """
-    Convert axis-angle rotation to 3x3 rotation matrix.
-
-    :param axis_angle: Rotation vector [3] where magnitude is angle in radians
-    :returns: Rotation matrix [3, 3]
-    """
-    axis_angle = np.asarray(axis_angle, dtype=np.float32)
-    angle = np.linalg.norm(axis_angle)
-
-    if angle < 1e-8:
-        return np.eye(3, dtype=np.float32)
-
-    # Normalize axis
-    axis = axis_angle / angle
-
-    # Rodrigues' rotation formula
-    K = np.array(
-        [[0, -axis[2], axis[1]], [axis[2], 0, -axis[0]], [-axis[1], axis[0], 0]], dtype=np.float32
-    )
-
-    # R = I + sin(angle) * K + (1 - cos(angle)) * K^2
-    R = np.eye(3, dtype=np.float32) + np.sin(angle) * K + (1 - np.cos(angle)) * (K @ K)
-
-    return R
-
-
 def _apply_ellipsoid_filter(
     positions: np.ndarray,
     ellipsoid_center: tuple[float, float, float],
@@ -370,7 +342,7 @@ def _apply_ellipsoid_filter(
     radii = np.array(ellipsoid_radii, dtype=np.float32)
 
     if ellipsoid_rotation is not None:
-        rotation_matrix = _axis_angle_to_rotation_matrix(ellipsoid_rotation).T
+        rotation_matrix = _axis_angle_to_rotation_matrix_numpy(ellipsoid_rotation).T
     else:
         rotation_matrix = np.eye(3, dtype=np.float32)
 
@@ -403,7 +375,7 @@ def _apply_rotated_cuboid_filter(
     half_extents = np.array(cuboid_size, dtype=np.float32) * 0.5
 
     if cuboid_rotation is not None:
-        rotation_matrix = _axis_angle_to_rotation_matrix(cuboid_rotation).T
+        rotation_matrix = _axis_angle_to_rotation_matrix_numpy(cuboid_rotation).T
     else:
         rotation_matrix = np.eye(3, dtype=np.float32)
 
@@ -442,7 +414,7 @@ def _apply_frustum_filter(
     camera_pos = np.array(frustum_position, dtype=np.float32)
 
     if frustum_rotation is not None:
-        rotation_matrix = _axis_angle_to_rotation_matrix(frustum_rotation).T
+        rotation_matrix = _axis_angle_to_rotation_matrix_numpy(frustum_rotation).T
     else:
         rotation_matrix = np.eye(3, dtype=np.float32)
 

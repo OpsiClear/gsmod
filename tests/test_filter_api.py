@@ -16,7 +16,6 @@ from gsmod.filter.api import (
     _apply_frustum_filter,
     _apply_rotated_cuboid_filter,
     _apply_sphere_filter,
-    _axis_angle_to_rotation_matrix,
     apply_geometry_filter,
 )
 from gsmod.filter.config import (
@@ -25,6 +24,9 @@ from gsmod.filter.config import (
     FrustumFilter,
     QualityFilter,
     SphereFilter,
+)
+from gsmod.shared.rotation import (
+    _axis_angle_to_rotation_matrix_numpy as _axis_angle_to_rotation_matrix,
 )
 from gsmod.utils import linear_interp_1d, multiply_opacity, nearest_neighbor_1d
 
