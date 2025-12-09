@@ -68,7 +68,6 @@
   - Volume filters: sphere, box, ellipsoid, frustum
   - Property filters: opacity and scale thresholds
   - Composable with AND/OR/NOT operators
-  - Multi-layer mask management (FilterMasks API)
 
 - **Auto-Correction**: Industry-standard automatic color correction (NEW!)
   - `auto_enhance()`: Combined enhancement like iOS Photos Auto Enhance
@@ -137,7 +136,7 @@ cd gsmod
 pip install -e .
 ```
 
-**Requirements:** Python >= 3.10, NumPy >= 1.24.0, Numba >= 0.59.0
+**Requirements:** Python >= 3.12, NumPy >= 1.24.0, Numba >= 0.59.0
 
 **GPU Support (Optional):**
 ```bash
@@ -893,53 +892,6 @@ frustum = Filter.frustum(
 )
 ```
 
-#### Multi-Layer Mask Management (FilterMasks)
-
-For complex filtering scenarios requiring multiple independent mask layers with different combination strategies, use the `FilterMasks` API for managing named mask layers:
-
-```python
-from gsmod import GSDataPro, Filter
-from gsmod.filter import FilterMasks
-
-data = GSDataPro.from_ply("scene.ply")
-
-# Create FilterMasks manager
-masks = FilterMasks(data)
-
-# Add multiple named mask layers using atomic filters
-masks.add("opacity", Filter.min_opacity(0.3))
-masks.add("sphere", Filter.sphere(radius=5.0))
-masks.add("scale", Filter.max_scale(2.0))
-
-# Inspect mask layers
-masks.summary()
-# Output:
-# opacity: 45231/100000 (45.2%)
-# sphere: 67890/100000 (67.9%)
-# scale: 89123/100000 (89.1%)
-
-# Combine masks with AND logic (all conditions must pass)
-combined_and = masks.combine(mode="and")
-print(f"{combined_and.sum():,} Gaussians pass all filters")
-
-# Combine masks with OR logic (any condition passes)
-combined_or = masks.combine(mode="or")
-print(f"{combined_or.sum():,} Gaussians pass any filter")
-
-# Apply masks directly to filter data
-filtered = masks.apply(mode="and", inplace=False)
-
-# Access individual mask layers
-opacity_mask = masks["opacity"]
-```
-
-**Performance:** FilterMasks uses Numba-optimized mask combination with automatic strategy selection:
-- **1 layer**: NumPy (0.006ms, lower overhead)
-- **2+ layers**: Numba parallel (0.026ms vs 1.447ms numpy, 55x faster)
-- **Large-scale (1M Gaussians, 5 layers)**: 0.425ms vs 14.587ms (34x faster)
-
-The mask combination overhead is negligible (3.8% of total filtering time) thanks to Numba optimization, making multi-layer filtering practical for interactive applications.
-
 #### Using Low-Level Utilities
 
 ```python
@@ -1353,13 +1305,12 @@ transform = get_transform_preset("double_size")
 
 For advanced use cases like mask computation and fine-grained control:
 ```python
-from gsmod import Pipeline, Color, Transform, Filter, FilterMasks
+from gsmod import Pipeline, Color, Transform, Filter
 ```
 
 - **Pipeline**: Unified CPU pipeline (new in 0.1.3) - matches PipelineGPU interface
 - **Filter**: Atomic filter with boolean operators (new in 0.1.3)
 - **Color, Transform**: Legacy pipeline classes for backward compatibility
-- **FilterMasks**: Multi-layer mask management
 
 ### Low-Level Utilities
 
@@ -1615,8 +1566,7 @@ gsmod/
 │   │   └── kernels.py         # Numba kernels
 │   ├── filter/                # Spatial filtering
 │   │   ├── api.py             # Core implementation
-│   │   ├── pipeline.py        # Filter class
-│   │   ├── masks.py           # FilterMasks API
+│   │   ├── atomic.py          # Filter class with operators
 │   │   ├── bounds.py          # Scene bounds
 │   │   ├── config.py          # FilterConfig
 │   │   └── kernels.py         # Numba kernels
@@ -1700,7 +1650,7 @@ For detailed documentation see:
 gsmod includes a complete GitHub Actions CI/CD pipeline:
 
 - **Multi-platform testing**: Ubuntu, Windows, macOS
-- **Multi-version testing**: Python 3.10, 3.11, 3.12, 3.13
+- **Multi-version testing**: Python 3.12, 3.13
 - **Automated benchmarking**: Performance tracking on PRs
 - **Build verification**: Wheel building and installation testing
 - **PyPI publishing**: Automated release on GitHub Release
@@ -1770,7 +1720,6 @@ If you use gsmod in your research, please cite:
 - **gsply**: Ultra-fast Gaussian Splatting PLY I/O library (required dependency)
   - v0.3.0+ adds concatenation optimizations (6.15x faster bulk merging)
   - `make_contiguous()` for manual optimization of iterative workflows (100+ operations)
-  - Multi-layer mask management (used by FilterMasks in gsmod)
   - See [gsply documentation](https://github.com/OpsiClear/gsply) for details
 - **gsplat**: CUDA-accelerated Gaussian Splatting rasterizer
 - **nerfstudio**: NeRF training framework with Gaussian Splatting support

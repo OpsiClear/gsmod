@@ -99,6 +99,30 @@ class Transform:
 
         logger.info("[Transform] Initialized")
 
+    @classmethod
+    def from_srt(
+        cls,
+        scale: float | ArrayLike = 1.0,
+        rotation: ArrayLike = (1.0, 0.0, 0.0, 0.0),
+        translation: ArrayLike = (0.0, 0.0, 0.0),
+    ) -> Transform:
+        """
+        Create transform with Scale -> Rotate -> Translate order.
+
+        This is the standard graphics convention for object-to-world transforms.
+        Operations are applied in SRT order: scale first, then rotate, then translate.
+
+        :param scale: Uniform scale (float) or per-axis scale [3]
+        :param rotation: Quaternion [w, x, y, z] (default: identity)
+        :param translation: Translation vector [x, y, z] (default: origin)
+        :returns: New Transform instance with SRT operations
+
+        Example:
+            >>> t = Transform.from_srt(scale=2.0, rotation=[1, 0, 0, 0], translation=[1, 0, 0])
+            >>> # Equivalent to: Transform().scale(2.0).rotate_quat([1,0,0,0]).translate([1,0,0])
+        """
+        return cls().scale(scale).rotate_quat(rotation).translate(translation)
+
     def translate(self, vector: ArrayLike) -> Self:
         """
         Add a translation to the pipeline.
@@ -117,12 +141,18 @@ class Transform:
         """
         Add a quaternion rotation to the pipeline.
 
+        All rotations are performed around a center point. By default, the center
+        is the world origin (0, 0, 0). To rotate around the object's own center,
+        compute the centroid and pass it as the center parameter.
+
         :param quaternion: Rotation quaternion [w, x, y, z] (4-element array)
-        :param center: Optional center point for rotation
+        :param center: Center point for rotation (default: origin [0, 0, 0])
         :returns: Self for method chaining
 
         Example:
-            >>> Transform().rotate_quat([1, 0, 0, 0])  # Identity rotation
+            >>> Transform().rotate_quat([1, 0, 0, 0])  # Identity rotation around origin
+            >>> Transform().rotate_quat(quat, center=[1, 2, 3])  # Rotate around point
+            >>> Transform().rotate_quat(quat, center=data.means.mean(axis=0))  # Around centroid
         """
         params = {"rotation": quaternion, "format": "quaternion"}
         if center is not None:
@@ -136,12 +166,17 @@ class Transform:
         """
         Add an Euler angle rotation to the pipeline.
 
+        All rotations are performed around a center point. By default, the center
+        is the world origin (0, 0, 0). To rotate around the object's own center,
+        compute the centroid and pass it as the center parameter.
+
         :param angles: Euler angles [roll, pitch, yaw] in radians (3-element array)
-        :param center: Optional center point for rotation
+        :param center: Center point for rotation (default: origin [0, 0, 0])
         :returns: Self for method chaining
 
         Example:
-            >>> Transform().rotate_euler([0, 0, np.pi/2])  # 90deg yaw rotation
+            >>> Transform().rotate_euler([0, 0, np.pi/2])  # 90deg yaw around origin
+            >>> Transform().rotate_euler(angles, center=centroid)  # Around object center
         """
         params = {"rotation": angles, "format": "euler"}
         if center is not None:
@@ -151,24 +186,54 @@ class Transform:
         self._is_dirty = True
         return self
 
+    def rotate_euler_deg(self, angles: ArrayLike, center: ArrayLike | None = None) -> Self:
+        """
+        Add an Euler angle rotation using degrees.
+
+        All rotations are performed around a center point. By default, the center
+        is the world origin (0, 0, 0). To rotate around the object's own center,
+        compute the centroid and pass it as the center parameter.
+
+        :param angles: Euler angles [roll, pitch, yaw] in degrees (3-element array)
+        :param center: Center point for rotation (default: origin [0, 0, 0])
+        :returns: Self for method chaining
+
+        Example:
+            >>> Transform().rotate_euler_deg([0, 0, 90])  # 90deg yaw around origin
+            >>> Transform().rotate_euler_deg([0, 45, 0], center=centroid)  # Around object center
+        """
+        angles_rad = np.radians(np.asarray(angles, dtype=np.float32))
+        return self.rotate_euler(angles_rad, center=center)
+
     def rotate_axis_angle(
         self, axis: ArrayLike, angle: float, center: ArrayLike | None = None
     ) -> Self:
         """
         Add an axis-angle rotation to the pipeline.
 
+        All rotations are performed around a center point. By default, the center
+        is the world origin (0, 0, 0). To rotate around the object's own center,
+        compute the centroid and pass it as the center parameter.
+
         :param axis: Rotation axis (3-element array, will be normalized)
         :param angle: Rotation angle in radians
-        :param center: Optional center point for rotation
+        :param center: Center point for rotation (default: origin [0, 0, 0])
         :returns: Self for method chaining
 
         Example:
-            >>> Transform().rotate_axis_angle(axis=[0, 0, 1], angle=np.pi/2)  # 90deg around Z
+            >>> Transform().rotate_axis_angle([0, 0, 1], np.pi/2)  # 90deg around Z
+            >>> Transform().rotate_axis_angle([0, 1, 0], np.pi/4, center=centroid)
         """
         # Encode axis-angle as scaled axis vector (magnitude = angle)
         # The internal representation uses the magnitude of the vector as the angle
         axis_arr = np.asarray(axis, dtype=np.float32)
-        axis_norm = axis_arr / np.linalg.norm(axis_arr)
+        norm = np.linalg.norm(axis_arr)
+        if norm < 1e-8:
+            # Zero-length axis: use Z-axis default (matches TransformValues behavior)
+            logger.warning("rotate_axis_angle: zero-length axis, using Z-axis default")
+            axis_arr = np.array([0.0, 0.0, 1.0], dtype=np.float32)
+            norm = 1.0
+        axis_norm = axis_arr / norm
         axis_angle = axis_norm * angle  # Scale normalized axis by angle
 
         params = {"rotation": axis_angle, "format": "axis_angle"}
@@ -179,17 +244,44 @@ class Transform:
         self._is_dirty = True
         return self
 
+    def rotate_axis_angle_deg(
+        self, axis: ArrayLike, angle_deg: float, center: ArrayLike | None = None
+    ) -> Self:
+        """
+        Add an axis-angle rotation using degrees.
+
+        All rotations are performed around a center point. By default, the center
+        is the world origin (0, 0, 0). To rotate around the object's own center,
+        compute the centroid and pass it as the center parameter.
+
+        :param axis: Rotation axis (3-element array, will be normalized)
+        :param angle_deg: Rotation angle in degrees
+        :param center: Center point for rotation (default: origin [0, 0, 0])
+        :returns: Self for method chaining
+
+        Example:
+            >>> Transform().rotate_axis_angle_deg([0, 0, 1], 90)  # 90deg around Z
+            >>> Transform().rotate_axis_angle_deg([1, 0, 0], 45, center=centroid)
+        """
+        angle_rad = np.radians(angle_deg)
+        return self.rotate_axis_angle(axis, angle_rad, center=center)
+
     def rotate_matrix(self, matrix: ArrayLike, center: ArrayLike | None = None) -> Self:
         """
         Add a rotation matrix rotation to the pipeline.
 
+        All rotations are performed around a center point. By default, the center
+        is the world origin (0, 0, 0). To rotate around the object's own center,
+        compute the centroid and pass it as the center parameter.
+
         :param matrix: 3x3 rotation matrix
-        :param center: Optional center point for rotation
+        :param center: Center point for rotation (default: origin [0, 0, 0])
         :returns: Self for method chaining
 
         Example:
             >>> R = np.eye(3)  # Identity rotation
-            >>> Transform().rotate_matrix(R)
+            >>> Transform().rotate_matrix(R)  # Rotate around origin
+            >>> Transform().rotate_matrix(R, center=centroid)  # Around object center
         """
         params = {"rotation": matrix, "format": "matrix"}
         if center is not None:
@@ -203,9 +295,17 @@ class Transform:
         """
         Add a scaling to the pipeline.
 
+        All scaling is performed around a center point. By default, the center
+        is the world origin (0, 0, 0). To scale around the object's own center,
+        compute the centroid and pass it as the center parameter.
+
         :param factor: Uniform scale (float) or per-axis scale [3]
-        :param center: Optional center point for scaling
+        :param center: Center point for scaling (default: origin [0, 0, 0])
         :returns: Self for method chaining
+
+        Example:
+            >>> Transform().scale(2.0)  # Scale around origin
+            >>> Transform().scale(0.5, center=centroid)  # Scale around object center
         """
         params = {"scale_factor": factor}
         if center is not None:

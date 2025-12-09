@@ -22,16 +22,14 @@ from numpy.typing import NDArray
 def quaternion_multiply_single_numba(
     q1: NDArray[np.float32], q2: NDArray[np.float32], out: NDArray[np.float32]
 ) -> None:
-    """
-    Multiply single quaternion q1 with array of quaternions q2.
+    """Multiply single quaternion q1 with array of quaternions q2.
 
     Numba-optimized version with parallelization.
     ~200x faster than pure NumPy for 1M quaternions.
 
-    Args:
-        q1: Single quaternion [4] (w, x, y, z)
-        q2: Array of quaternions [N, 4]
-        out: Output array [N, 4] (pre-allocated)
+    :param q1: Single quaternion [4] (w, x, y, z)
+    :param q2: Array of quaternions [N, 4]
+    :param out: Output array [N, 4] (pre-allocated)
 
     Note: Modifies out in-place for efficiency
     """
@@ -54,13 +52,11 @@ def quaternion_multiply_single_numba(
 def quaternion_multiply_batched_numba(
     q1: NDArray[np.float32], q2: NDArray[np.float32], out: NDArray[np.float32]
 ) -> None:
-    """
-    Multiply two arrays of quaternions element-wise.
+    """Multiply two arrays of quaternions element-wise.
 
-    Args:
-        q1: Array of quaternions [N, 4]
-        q2: Array of quaternions [N, 4]
-        out: Output array [N, 4] (pre-allocated)
+    :param q1: Array of quaternions [N, 4]
+    :param q2: Array of quaternions [N, 4]
+    :param out: Output array [N, 4] (pre-allocated)
     """
     N = q1.shape[0]
     for i in prange(N):
@@ -86,15 +82,13 @@ def quaternion_multiply_batched_numba(
     cache=True,
 )
 def quaternion_multiply_single_guvec(q1, q2, out):
-    """
-    GUVectorize version: handles broadcasting automatically, no wrapper overhead.
+    """GUVectorize version: handles broadcasting automatically, no wrapper overhead.
 
     Eliminates ~1ms of shape checking and allocation overhead.
 
-    Args:
-        q1: Single quaternion [4] (w, x, y, z)
-        q2: Array of quaternions [N, 4]
-        out: Output array [N, 4]
+    :param q1: Single quaternion [4] (w, x, y, z)
+    :param q2: Array of quaternions [N, 4]
+    :param out: Output array [N, 4]
     """
     w1, x1, y1, z1 = q1[0], q1[1], q1[2], q1[3]
 
@@ -119,19 +113,17 @@ def apply_transform_matrix_numba(
     t: NDArray[np.float32],
     out: NDArray[np.float32],
 ) -> None:
-    """
-    Apply 3x3 rotation/scale matrix and translation to points.
+    """Apply 3x3 rotation/scale matrix and translation to points.
 
     NOTE: Not used in transforms.py - NumPy's BLAS-optimized @ operator
     is faster than this naive Numba implementation for matrix multiplication.
 
     Kept for reference and potential future optimizations.
 
-    Args:
-        points: Input points [N, 3]
-        R: Combined rotation/scale matrix [3, 3]
-        t: Translation vector [3]
-        out: Output array [N, 3] (pre-allocated)
+    :param points: Input points [N, 3]
+    :param R: Combined rotation/scale matrix [3, 3]
+    :param t: Translation vector [3]
+    :param out: Output array [N, 3] (pre-allocated)
     """
     N = points.shape[0]
     for i in prange(N):
@@ -152,13 +144,11 @@ def apply_transform_matrix_numba(
 def elementwise_multiply_scalar_numba(
     arr: NDArray[np.float32], scalar: float, out: NDArray[np.float32]
 ) -> None:
-    """
-    Multiply array by scalar element-wise: arr * scalar
+    """Multiply array by scalar element-wise: arr * scalar.
 
-    Args:
-        arr: Input array [N, M]
-        scalar: Scalar multiplier
-        out: Output array [N, M] (pre-allocated)
+    :param arr: Input array [N, M]
+    :param scalar: Scalar multiplier
+    :param out: Output array [N, M] (pre-allocated)
     """
     N = arr.shape[0]
     M = arr.shape[1]
@@ -171,15 +161,13 @@ def elementwise_multiply_scalar_numba(
 def elementwise_add_scalar_numba(
     arr: NDArray[np.float32], scalar: float, out: NDArray[np.float32]
 ) -> None:
-    """
-    Add scalar to array element-wise: arr + scalar
+    """Add scalar to array element-wise: arr + scalar.
 
     Used for log-space scale transforms where multiplication becomes addition.
 
-    Args:
-        arr: Input array [N, M]
-        scalar: Scalar to add
-        out: Output array [N, M] (pre-allocated)
+    :param arr: Input array [N, M]
+    :param scalar: Scalar to add
+    :param out: Output array [N, M] (pre-allocated)
     """
     N = arr.shape[0]
     M = arr.shape[1]
@@ -192,13 +180,11 @@ def elementwise_add_scalar_numba(
 def elementwise_multiply_vector_numba(
     arr: NDArray[np.float32], vec: NDArray[np.float32], out: NDArray[np.float32]
 ) -> None:
-    """
-    Multiply array by vector (broadcast): arr * vec
+    """Multiply array by vector (broadcast): arr * vec.
 
-    Args:
-        arr: Input array [N, M]
-        vec: Vector [M] or [1, M]
-        out: Output array [N, M] (pre-allocated)
+    :param arr: Input array [N, M]
+    :param vec: Vector [M] or [1, M]
+    :param out: Output array [N, M] (pre-allocated)
     """
     N = arr.shape[0]
     M = arr.shape[1]
@@ -232,8 +218,7 @@ def fused_transform_numba(
     out_quats: NDArray[np.float32],
     out_scales: NDArray[np.float32],
 ) -> None:
-    """
-    Fused kernel that performs all transform operations in a single parallel loop.
+    """Fused kernel that performs all transform operations in a single parallel loop.
 
     This achieves 4-5x speedup over separate operations by:
     - Eliminating function call overhead
@@ -241,17 +226,16 @@ def fused_transform_numba(
     - Single parallel loop with prange
     - Avoiding intermediate allocations
 
-    Args:
-        means: Input positions [N, 3]
-        quaternions: Input orientations [N, 4]
-        scales: Input scales [N, 3]
-        rot_quat: Rotation quaternion [4] (w, x, y, z)
-        scale_vec: Scale vector [3]
-        translation: Translation vector [3]
-        R: Pre-computed rotation matrix [3, 3] (includes scale)
-        out_means: Output positions [N, 3]
-        out_quats: Output orientations [N, 4]
-        out_scales: Output scales [N, 3]
+    :param means: Input positions [N, 3]
+    :param quaternions: Input orientations [N, 4]
+    :param scales: Input scales [N, 3]
+    :param rot_quat: Rotation quaternion [4] (w, x, y, z)
+    :param scale_vec: Scale vector [3]
+    :param translation: Translation vector [3]
+    :param R: Pre-computed rotation matrix [3, 3] (includes scale)
+    :param out_means: Output positions [N, 3]
+    :param out_quats: Output orientations [N, 4]
+    :param out_scales: Output scales [N, 3]
 
     Performance: ~2ms for 1M Gaussians (vs 9ms for separate operations)
     """
@@ -291,11 +275,9 @@ def fused_transform_numba(
 
 
 def get_numba_status() -> dict[str, Any]:
-    """
-    Get information about Numba availability and configuration.
+    """Get information about Numba availability and configuration.
 
-    Returns:
-        Dictionary with Numba status information
+    :returns: Dictionary with Numba status information
     """
     import numba
 

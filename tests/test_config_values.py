@@ -249,7 +249,10 @@ class TestTransformValuesMerge:
         t2 = TransformValues.from_scale(3.0)
         result = t1 + t2
 
-        assert abs(result.scale - 6.0) < 1e-5
+        # Scale is now a tuple (sx, sy, sz)
+        assert abs(result.scale[0] - 6.0) < 1e-5
+        assert abs(result.scale[1] - 6.0) < 1e-5
+        assert abs(result.scale[2] - 6.0) < 1e-5
 
     def test_translation_composition(self):
         """Test translation composes additively when no rotation."""
@@ -271,7 +274,7 @@ class TestTransformValuesMerge:
 
         # Translation gets scaled by the following scale operation
         assert abs(result.translation[0] - 2.0) < 1e-5
-        assert abs(result.scale - 2.0) < 1e-5
+        assert abs(result.scale[0] - 2.0) < 1e-5
 
     def test_scale_then_translate(self):
         """Test non-commutative: scale then translate."""
@@ -283,7 +286,7 @@ class TestTransformValuesMerge:
 
         # Translation is applied after scaling, so translation is not scaled
         assert abs(result.translation[0] - 1.0) < 1e-5
-        assert abs(result.scale - 2.0) < 1e-5
+        assert abs(result.scale[0] - 2.0) < 1e-5
 
     def test_rotation_euler(self):
         """Test rotation from Euler angles."""
@@ -344,7 +347,7 @@ class TestTransformValuesMerge:
     def test_matrix_round_trip(self):
         """Test to_matrix and from_matrix preserve values."""
         original = TransformValues(
-            scale=2.0,
+            scale=(2.0, 2.0, 2.0),  # Uniform scale as tuple
             rotation=(0.7071067811865476, 0.0, 0.0, 0.7071067811865476),  # 90 deg Z
             translation=(1.0, 2.0, 3.0),
         )
@@ -352,7 +355,10 @@ class TestTransformValuesMerge:
         M = original.to_matrix()
         recovered = TransformValues.from_matrix(M)
 
-        assert abs(recovered.scale - original.scale) < 1e-4
+        # Scale is now a tuple
+        assert abs(recovered.scale[0] - original.scale[0]) < 1e-4
+        assert abs(recovered.scale[1] - original.scale[1]) < 1e-4
+        assert abs(recovered.scale[2] - original.scale[2]) < 1e-4
         assert abs(recovered.translation[0] - original.translation[0]) < 1e-4
         assert abs(recovered.translation[1] - original.translation[1]) < 1e-4
         assert abs(recovered.translation[2] - original.translation[2]) < 1e-4
@@ -610,10 +616,15 @@ class TestEdgeCases:
         some_transform = TransformValues.from_scale(2.0)
 
         result = identity + some_transform
-        assert abs(result.scale - 2.0) < 1e-5
+        # Scale is now a tuple
+        assert abs(result.scale[0] - 2.0) < 1e-5
+        assert abs(result.scale[1] - 2.0) < 1e-5
+        assert abs(result.scale[2] - 2.0) < 1e-5
 
         result = some_transform + identity
-        assert abs(result.scale - 2.0) < 1e-5
+        assert abs(result.scale[0] - 2.0) < 1e-5
+        assert abs(result.scale[1] - 2.0) < 1e-5
+        assert abs(result.scale[2] - 2.0) < 1e-5
 
     def test_hue_boundary_values(self):
         """Test hue at exact boundary values."""

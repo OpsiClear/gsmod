@@ -122,24 +122,26 @@ class TransformConfig:
     """Configuration for learnable 3D transforms.
 
     :param translation: Initial translation (x, y, z)
-    :param scale: Initial uniform scale
+    :param scale: Initial scale - uniform (float) or per-axis (tuple)
     :param rotation: Initial rotation as axis-angle (rx, ry, rz)
         The magnitude is the angle in radians, direction is the axis.
         Internally uses 6D continuous representation (Zhou et al. 2019) for speed.
+    :param center: Center point for rotation/scale (None = origin)
     :param learnable: List of parameter names to learn (None = all)
         Use 'rotation' to learn rotation parameters.
 
     Example:
         >>> config = TransformConfig(
-        ...     scale=1.0,
+        ...     scale=1.0,  # or scale=(2.0, 1.0, 1.0) for non-uniform
         ...     rotation=(0.0, 0.0, 0.785),  # 45 degrees around Z
         ...     learnable=['translation', 'scale', 'rotation']
         ... )
     """
 
     translation: tuple[float, float, float] = (0.0, 0.0, 0.0)
-    scale: float = 1.0
+    scale: float | tuple[float, float, float] = 1.0
     rotation: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    center: tuple[float, float, float] | None = None
 
     learnable: list[str] | None = None
     device: str | None = None  # None = auto-detect, or 'cpu', 'cuda', 'cuda:0', etc.
@@ -150,6 +152,9 @@ class TransformConfig:
             self.device = "cuda" if torch.cuda.is_available() else "cpu"
         if self.learnable is None:
             self.learnable = ["translation", "scale", "rotation"]
+        # Normalize scale to tuple
+        if isinstance(self.scale, int | float):
+            self.scale = (float(self.scale), float(self.scale), float(self.scale))
 
 
 @dataclass
@@ -594,7 +599,7 @@ class LearnableTransform(nn.Module):
         else:
             self.register_buffer("translation", translation)
 
-        # Scale
+        # Scale - now always a tuple (3,) after TransformConfig.__post_init__
         scale = torch.tensor(config.scale, dtype=torch.float32)
         if "scale" in config.learnable:
             self.scale = nn.Parameter(scale)
@@ -608,6 +613,14 @@ class LearnableTransform(nn.Module):
         else:
             self.register_buffer("rotation_6d", rot_6d)
 
+        # Center for rotation/scale (not learnable - fixed reference point)
+        if config.center is not None:
+            center = torch.tensor(config.center, dtype=torch.float32)
+        else:
+            center = torch.zeros(3, dtype=torch.float32)
+        self.register_buffer("center", center)
+        self._has_center = config.center is not None
+
         # Move to device
         self.to(config.device)
 
@@ -616,23 +629,41 @@ class LearnableTransform(nn.Module):
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Apply transform (fully differentiable).
 
+        Applies Scale -> Rotate -> Translate (SRT order) around the center point.
+        This matches TransformValues.to_matrix() behavior for CPU/GPU consistency.
+
         :param means: Gaussian positions [N, 3]
         :param scales: Gaussian scales [N, 3]
         :param quats: Gaussian quaternions [N, 4] (w, x, y, z)
         :returns: (new_means, new_scales, new_quats)
         """
-        # Scale positions and Gaussian sizes
-        new_means = means * self.scale
+        # Get rotation matrix from 6D representation
+        rot_matrix = self._6d_to_rotation_matrix(self.rotation_6d)
+
+        # Transform positions with center handling
+        if self._has_center:
+            # Translate to origin relative to center
+            new_means = means - self.center
+            # Scale around center
+            new_means = new_means * self.scale
+            # Rotate around center
+            new_means = torch.matmul(new_means, rot_matrix.T)
+            # Translate back from center
+            new_means = new_means + self.center
+        else:
+            # No center: scale and rotate around origin
+            new_means = means * self.scale
+            new_means = torch.matmul(new_means, rot_matrix.T)
+
+        # Apply translation (always after scale-rotate)
+        new_means = new_means + self.translation
+
+        # Scale Gaussian sizes (center doesn't affect sizes)
         new_scales = scales * self.scale
 
-        # Rotation using 6D continuous representation
-        rot_matrix = self._6d_to_rotation_matrix(self.rotation_6d)
-        new_means = torch.matmul(new_means, rot_matrix.T)
+        # Rotate Gaussian orientations (center doesn't affect orientations)
         rot_quat = self._rotation_matrix_to_quat(rot_matrix)
         new_quats = self._quat_multiply(rot_quat.unsqueeze(0), quats)
-
-        # Translation
-        new_means = new_means + self.translation
 
         return new_means, new_scales, new_quats
 
@@ -795,13 +826,14 @@ class LearnableTransform(nn.Module):
         """
         from gsmod.transform.api import quaternion_to_euler
 
-        # Convert quaternion to axis-angle
+        # Convert quaternion to axis-angle (euler angles in radians)
         euler = quaternion_to_euler(np.array(values.rotation))
 
         config = TransformConfig(
             translation=values.translation,
-            scale=values.scale,
+            scale=values.scale,  # Now tuple (sx, sy, sz)
             rotation=tuple(euler),
+            center=values.center,  # Preserve center
             learnable=learnable,
         )
         return cls(config)
@@ -836,10 +868,21 @@ class LearnableTransform(nn.Module):
         quat_tensor = self._rotation_matrix_to_quat(rot_matrix)
         quat = quat_tensor.detach().cpu().numpy()
 
+        # Scale is now a 3-vector
+        scale_arr = self.scale.detach().cpu().numpy()
+        scale_tuple = (float(scale_arr[0]), float(scale_arr[1]), float(scale_arr[2]))
+
+        # Preserve center if it was set
+        center = None
+        if self._has_center:
+            center_arr = self.center.detach().cpu().numpy()
+            center = (float(center_arr[0]), float(center_arr[1]), float(center_arr[2]))
+
         return TransformValues(
-            scale=self.scale.detach().item(),
+            scale=scale_tuple,
             rotation=tuple(quat),
             translation=tuple(self.translation.detach().cpu().numpy()),
+            center=center,
         )
 
 

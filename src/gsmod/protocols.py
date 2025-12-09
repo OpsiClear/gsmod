@@ -104,7 +104,7 @@ class FilterProcessor(Protocol[T]):
         """Compute filter mask for data."""
         ...
 
-    def apply(self, data: T, inplace: bool = False) -> T:
+    def apply(self, data: T, inplace: bool = True) -> T:
         """Apply filter to data."""
         ...
 

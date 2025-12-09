@@ -412,39 +412,39 @@ class GSDataPro(GSData):
             return self if inplace else self.clone()
         return self.transform(TransformValues.from_translation(t[0], t[1], t[2]), inplace=inplace)
 
-    def scale_uniform(self, factor: float, inplace: bool = True) -> Self:
+    def scale_uniform(self, scale: float, inplace: bool = True) -> Self:
         """Apply uniform scale.
 
-        :param factor: Scale factor (1.0 = no change)
+        :param scale: Scale factor (1.0 = no change)
         :param inplace: If True, modify self; if False, return modified copy
         :returns: Self (modified) or copy with modifications
         """
-        if factor == 1.0:
+        if scale == 1.0:
             return self if inplace else self.clone()
-        return self.transform(TransformValues.from_scale(factor), inplace=inplace)
+        return self.transform(TransformValues.from_scale(scale), inplace=inplace)
 
     def scale_nonuniform(
-        self, factors: list[float] | tuple[float, ...], inplace: bool = True
+        self, scale: list[float] | tuple[float, ...], inplace: bool = True
     ) -> Self:
         """Apply non-uniform scale.
 
-        :param factors: Scale factors [sx, sy, sz]
+        :param scale: Scale factors [sx, sy, sz]
         :param inplace: If True, modify self; if False, return modified copy
         :returns: Self (modified) or copy with modifications
         """
         import numpy as np
 
-        f = np.asarray(factors, dtype=np.float32)
-        if np.allclose(f, 1):
+        s = np.asarray(scale, dtype=np.float32)
+        if np.allclose(s, 1):
             return self if inplace else self.clone()
 
         if not inplace:
             data = self.clone()
-            return data.scale_nonuniform(factors, inplace=True)
+            return data.scale_nonuniform(scale, inplace=True)
 
         # Apply non-uniform scale directly to positions and scales
-        self.means = self.means * f
-        self.scales = self.scales * f
+        self.means = self.means * s
+        self.scales = self.scales * s
         return self
 
     def rotate_quaternion(
@@ -550,16 +550,16 @@ class GSDataPro(GSData):
             return self if inplace else self.clone()
         return self.color(ColorValues(saturation=factor), inplace=inplace)
 
-    def adjust_gamma(self, value: float, inplace: bool = True) -> Self:
+    def adjust_gamma(self, gamma: float, inplace: bool = True) -> Self:
         """Adjust gamma (power curve).
 
-        :param value: Gamma value (1.0 = linear, no change)
+        :param gamma: Gamma value (1.0 = linear, no change)
         :param inplace: If True, modify self; if False, return modified copy
         :returns: Self (modified) or copy with modifications
         """
-        if value == 1.0:
+        if gamma == 1.0:
             return self if inplace else self.clone()
-        return self.color(ColorValues(gamma=value), inplace=inplace)
+        return self.color(ColorValues(gamma=gamma), inplace=inplace)
 
     def adjust_temperature(self, temp: float, inplace: bool = True) -> Self:
         """Adjust color temperature.

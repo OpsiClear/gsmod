@@ -423,7 +423,7 @@ class FilterGPU:
 
         return result_mask
 
-    def __call__(self, data: GSTensorPro, mode: str = "and", inplace: bool = False) -> GSTensorPro:
+    def __call__(self, data: GSTensorPro, mode: str = "and", inplace: bool = True) -> GSTensorPro:
         """Apply filter pipeline to GSTensorPro.
 
         :param data: GSTensorPro object to filter

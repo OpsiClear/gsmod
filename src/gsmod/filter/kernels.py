@@ -18,14 +18,12 @@ def sphere_filter_numba(
     radius_sq: float,
     out: NDArray[np.bool_],
 ) -> None:
-    """
-    Apply sphere filter with Numba optimization.
+    """Apply sphere filter with Numba optimization.
 
-    Args:
-        positions: Gaussian positions [N, 3]
-        center: Sphere center [3]
-        radius_sq: Squared radius threshold
-        out: Output mask [N] (modified in-place)
+    :param positions: Gaussian positions [N, 3]
+    :param center: Sphere center [3]
+    :param radius_sq: Squared radius threshold
+    :param out: Output mask [N] (modified in-place)
     """
     n = positions.shape[0]
 
@@ -46,14 +44,12 @@ def cuboid_filter_numba(
     max_bounds: NDArray[np.float32],
     out: NDArray[np.bool_],
 ) -> None:
-    """
-    Apply cuboid filter with Numba optimization.
+    """Apply cuboid filter with Numba optimization.
 
-    Args:
-        positions: Gaussian positions [N, 3]
-        min_bounds: Minimum bounds [3]
-        max_bounds: Maximum bounds [3]
-        out: Output mask [N] (modified in-place)
+    :param positions: Gaussian positions [N, 3]
+    :param min_bounds: Minimum bounds [3]
+    :param max_bounds: Maximum bounds [3]
+    :param out: Output mask [N] (modified in-place)
     """
     n = positions.shape[0]
 
@@ -79,15 +75,13 @@ def ellipsoid_filter_numba(
     rotation_matrix: NDArray[np.float32],
     out: NDArray[np.bool_],
 ) -> None:
-    """
-    Apply ellipsoid filter with rotation and Numba optimization.
+    """Apply ellipsoid filter with rotation and Numba optimization.
 
-    Args:
-        positions: Gaussian positions [N, 3]
-        center: Ellipsoid center [3]
-        radii: Ellipsoid radii [3] (x, y, z)
-        rotation_matrix: Rotation matrix [3, 3] (transforms world to local)
-        out: Output mask [N] (modified in-place)
+    :param positions: Gaussian positions [N, 3]
+    :param center: Ellipsoid center [3]
+    :param radii: Ellipsoid radii [3] (x, y, z)
+    :param rotation_matrix: Rotation matrix [3, 3] (transforms world to local)
+    :param out: Output mask [N] (modified in-place)
     """
     n = positions.shape[0]
 
@@ -122,15 +116,13 @@ def rotated_cuboid_filter_numba(
     rotation_matrix: NDArray[np.float32],
     out: NDArray[np.bool_],
 ) -> None:
-    """
-    Apply rotated cuboid (box) filter with Numba optimization.
+    """Apply rotated cuboid (box) filter with Numba optimization.
 
-    Args:
-        positions: Gaussian positions [N, 3]
-        center: Box center [3]
-        half_extents: Half extents [3] (half size in each dimension)
-        rotation_matrix: Rotation matrix [3, 3] (transforms world to local)
-        out: Output mask [N] (modified in-place)
+    :param positions: Gaussian positions [N, 3]
+    :param center: Box center [3]
+    :param half_extents: Half extents [3] (half size in each dimension)
+    :param rotation_matrix: Rotation matrix [3, 3] (transforms world to local)
+    :param out: Output mask [N] (modified in-place)
     """
     n = positions.shape[0]
 
@@ -164,8 +156,7 @@ def frustum_filter_numba(
     far: float,
     out: NDArray[np.bool_],
 ) -> None:
-    """
-    Apply camera frustum filter with Numba optimization.
+    """Apply camera frustum filter with Numba optimization.
 
     Points are transformed to camera local space where camera looks down -Z axis.
     A point is inside the frustum if:
@@ -174,15 +165,14 @@ def frustum_filter_numba(
     - It's within vertical FOV: |y/z| <= tan(fov_y/2)
     - It's closer than far plane: z > -far
 
-    Args:
-        positions: Gaussian positions [N, 3]
-        camera_pos: Camera position [3]
-        rotation_matrix: Camera rotation matrix [3, 3] (world-to-camera)
-        tan_half_fov_x: tan(horizontal_fov / 2)
-        tan_half_fov_y: tan(vertical_fov / 2)
-        near: Near plane distance (> 0)
-        far: Far plane distance (> near)
-        out: Output mask [N] (modified in-place)
+    :param positions: Gaussian positions [N, 3]
+    :param camera_pos: Camera position [3]
+    :param rotation_matrix: Camera rotation matrix [3, 3] (world-to-camera)
+    :param tan_half_fov_x: tan(horizontal_fov / 2)
+    :param tan_half_fov_y: tan(vertical_fov / 2)
+    :param near: Near plane distance (> 0)
+    :param far: Far plane distance (> near)
+    :param out: Output mask [N] (modified in-place)
     """
     n = positions.shape[0]
 
@@ -221,13 +211,11 @@ def scale_filter_numba(
     max_scale: float,
     out: NDArray[np.bool_],
 ) -> None:
-    """
-    Apply scale filter with Numba optimization.
+    """Apply scale filter with Numba optimization.
 
-    Args:
-        scales: Gaussian scales [N, 3]
-        max_scale: Maximum scale threshold
-        out: Output mask [N] (modified in-place)
+    :param scales: Gaussian scales [N, 3]
+    :param max_scale: Maximum scale threshold
+    :param out: Output mask [N] (modified in-place)
     """
     n = scales.shape[0]
 
@@ -248,13 +236,11 @@ def opacity_filter_numba(
     threshold: float,
     out: NDArray[np.bool_],
 ) -> None:
-    """
-    Apply opacity filter with Numba optimization (min opacity).
+    """Apply opacity filter with Numba optimization (min opacity).
 
-    Args:
-        opacities: Gaussian opacities [N]
-        threshold: Minimum opacity threshold
-        out: Output mask [N] (modified in-place)
+    :param opacities: Gaussian opacities [N]
+    :param threshold: Minimum opacity threshold
+    :param out: Output mask [N] (modified in-place)
     """
     n = opacities.shape[0]
 
@@ -268,13 +254,11 @@ def combine_masks_numba(
     mask2: NDArray[np.bool_],
     out: NDArray[np.bool_],
 ) -> None:
-    """
-    Combine two boolean masks with AND operation.
+    """Combine two boolean masks with AND operation.
 
-    Args:
-        mask1: First mask [N]
-        mask2: Second mask [N]
-        out: Output mask [N] (modified in-place)
+    :param mask1: First mask [N]
+    :param mask2: Second mask [N]
+    :param out: Output mask [N] (modified in-place)
     """
     n = mask1.shape[0]
 
@@ -313,38 +297,36 @@ def combined_filter_fused(
     has_frustum: bool,
     out: NDArray[np.bool_],
 ) -> None:
-    """
-    Fused filter combining all filter criteria in single pass.
+    """Fused filter combining all filter criteria in single pass.
 
     Uses short-circuit evaluation for maximum performance.
 
-    Args:
-        positions: Gaussian positions [N, 3]
-        opacities: Gaussian opacities [N]
-        scales: Gaussian scales [N, 3]
-        sphere_center: Sphere center [3]
-        sphere_radius_sq: Squared sphere radius
-        box_center: Box center [3]
-        box_half_extents: Box half extents [3] (half size in each dimension)
-        box_rotation: Box rotation matrix [3, 3] (world-to-local)
-        min_opacity: Minimum opacity threshold
-        max_opacity: Maximum opacity threshold
-        min_scale: Minimum scale threshold
-        max_scale: Maximum scale threshold
-        has_sphere: Whether sphere filter is active
-        has_box: Whether box filter is active
-        ellipsoid_center: Ellipsoid center [3]
-        ellipsoid_radii: Ellipsoid radii [3]
-        ellipsoid_rotation: Ellipsoid rotation matrix [3, 3]
-        has_ellipsoid: Whether ellipsoid filter is active
-        frustum_pos: Camera position [3]
-        frustum_rotation: Camera rotation matrix [3, 3]
-        tan_half_fov_x: tan(horizontal_fov / 2)
-        tan_half_fov_y: tan(vertical_fov / 2)
-        frustum_near: Near plane distance
-        frustum_far: Far plane distance
-        has_frustum: Whether frustum filter is active
-        out: Output mask [N] (modified in-place)
+    :param positions: Gaussian positions [N, 3]
+    :param opacities: Gaussian opacities [N]
+    :param scales: Gaussian scales [N, 3]
+    :param sphere_center: Sphere center [3]
+    :param sphere_radius_sq: Squared sphere radius
+    :param box_center: Box center [3]
+    :param box_half_extents: Box half extents [3] (half size in each dimension)
+    :param box_rotation: Box rotation matrix [3, 3] (world-to-local)
+    :param min_opacity: Minimum opacity threshold
+    :param max_opacity: Maximum opacity threshold
+    :param min_scale: Minimum scale threshold
+    :param max_scale: Maximum scale threshold
+    :param has_sphere: Whether sphere filter is active
+    :param has_box: Whether box filter is active
+    :param ellipsoid_center: Ellipsoid center [3]
+    :param ellipsoid_radii: Ellipsoid radii [3]
+    :param ellipsoid_rotation: Ellipsoid rotation matrix [3, 3]
+    :param has_ellipsoid: Whether ellipsoid filter is active
+    :param frustum_pos: Camera position [3]
+    :param frustum_rotation: Camera rotation matrix [3, 3]
+    :param tan_half_fov_x: tan(horizontal_fov / 2)
+    :param tan_half_fov_y: tan(vertical_fov / 2)
+    :param frustum_near: Near plane distance
+    :param frustum_far: Far plane distance
+    :param has_frustum: Whether frustum filter is active
+    :param out: Output mask [N] (modified in-place)
     """
     n = positions.shape[0]
 
@@ -466,19 +448,17 @@ def opacity_scale_filter_fused(
     max_scale: float,
     out: NDArray[np.bool_],
 ) -> None:
-    """
-    Fused opacity and scale filtering in a single pass (20-30% faster).
+    """Fused opacity and scale filtering in a single pass (20-30% faster).
 
     Combines opacity_filter + scale_filter + combine_masks into one kernel,
     eliminating multiple passes through data and kernel launches.
 
-    Args:
-        mask: Input spatial filter mask [N] (from sphere/cuboid, or all True)
-        opacities: Gaussian opacities [N] (optional, None to skip)
-        scales: Gaussian scales [N, 3] (optional, None to skip)
-        opacity_threshold: Minimum opacity threshold
-        max_scale: Maximum scale threshold
-        out: Output mask [N] (modified in-place)
+    :param mask: Input spatial filter mask [N] (from sphere/cuboid, or all True)
+    :param opacities: Gaussian opacities [N] (optional, None to skip)
+    :param scales: Gaussian scales [N, 3] (optional, None to skip)
+    :param opacity_threshold: Minimum opacity threshold
+    :param max_scale: Maximum scale threshold
+    :param out: Output mask [N] (modified in-place)
     """
     n = mask.shape[0]
 
@@ -514,12 +494,10 @@ def calculate_max_scales_numba(
     scales: NDArray[np.float32],
     out: NDArray[np.float32],
 ) -> None:
-    """
-    Calculate maximum scale per Gaussian with Numba optimization.
+    """Calculate maximum scale per Gaussian with Numba optimization.
 
-    Args:
-        scales: Gaussian scales [N, 3]
-        out: Output max scales [N] (modified in-place)
+    :param scales: Gaussian scales [N, 3]
+    :param out: Output max scales [N] (modified in-place)
     """
     n = scales.shape[0]
 
@@ -536,17 +514,13 @@ def calculate_max_scales_numba(
 def compute_output_indices_and_count(
     mask: NDArray[np.bool_], out_indices: NDArray[np.int64]
 ) -> int:
-    """
-    Compute output indices and count in single pass (fused operation).
+    """Compute output indices and count in single pass (fused operation).
 
     Combines count_true_values + compute_output_indices to eliminate redundant pass.
 
-    Args:
-        mask: Boolean mask [N]
-        out_indices: Output indices [N] (modified in-place)
-
-    Returns:
-        Number of True values in mask
+    :param mask: Boolean mask [N]
+    :param out_indices: Output indices [N] (modified in-place)
+    :returns: Number of True values in mask
     """
     n = mask.shape[0]
     count = 0
@@ -579,29 +553,27 @@ def filter_gaussians_fused_parallel(
     out_colors: NDArray[np.float32] | None,
     out_shN: NDArray[np.float32] | None,
 ) -> None:
-    """
-    Parallel fused masking kernel for all Gaussian attributes.
+    """Parallel fused masking kernel for all Gaussian attributes.
 
     Optimizations:
     - fastmath=True for aggressive float optimizations
     - None checks hoisted outside loop
     - Parallel scatter with prange
 
-    Args:
-        mask: Boolean mask [N]
-        out_indices: Pre-computed output indices [N]
-        positions: Input positions [N, 3]
-        quaternions: Input quaternions [N, 4] or None
-        scales: Input scales [N, 3] or None
-        opacities: Input opacities [N] or None
-        colors: Input colors [N, C] or None
-        shN: Input higher-order SH [N, K, 3] or None
-        out_positions: Output positions [n_kept, 3]
-        out_quaternions: Output quaternions [n_kept, 4] or None
-        out_scales: Output scales [n_kept, 3] or None
-        out_opacities: Output opacities [n_kept] or None
-        out_colors: Output colors [n_kept, C] or None
-        out_shN: Output higher-order SH [n_kept, K, 3] or None
+    :param mask: Boolean mask [N]
+    :param out_indices: Pre-computed output indices [N]
+    :param positions: Input positions [N, 3]
+    :param quaternions: Input quaternions [N, 4] or None
+    :param scales: Input scales [N, 3] or None
+    :param opacities: Input opacities [N] or None
+    :param colors: Input colors [N, C] or None
+    :param shN: Input higher-order SH [N, K, 3] or None
+    :param out_positions: Output positions [n_kept, 3]
+    :param out_quaternions: Output quaternions [n_kept, 4] or None
+    :param out_scales: Output scales [n_kept, 3] or None
+    :param out_opacities: Output opacities [n_kept] or None
+    :param out_colors: Output colors [n_kept, C] or None
+    :param out_shN: Output higher-order SH [n_kept, K, 3] or None
     """
     n = mask.shape[0]
 

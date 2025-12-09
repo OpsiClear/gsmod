@@ -135,11 +135,8 @@ class ColorValues:
     def learn(self, *params: str) -> LearnableColor:
         """Create learnable nn.Module from these values.
 
-        Args:
-            *params: Parameter names to learn. If empty, learns all.
-
-        Returns:
-            LearnableColor nn.Module initialized with these values.
+        :param params: Parameter names to learn. If empty, learns all.
+        :returns: LearnableColor nn.Module initialized with these values.
 
         Example:
             >>> model = ColorValues(brightness=1.0).learn('brightness', 'saturation').cuda()
@@ -451,11 +448,8 @@ class FilterValues:
     def learn(self, *params: str) -> LearnableFilter:
         """Create learnable nn.Module from these values.
 
-        Args:
-            *params: Parameter names to learn. If empty, learns all.
-
-        Returns:
-            LearnableFilter nn.Module initialized with these values.
+        :param params: Parameter names to learn. If empty, learns all.
+        :returns: LearnableFilter nn.Module initialized with these values.
 
         Example:
             >>> model = FilterValues(min_opacity=0.1).learn('min_opacity').cuda()
@@ -471,18 +465,35 @@ class TransformValues:
 
     Convention: a + b applies a FIRST, then b.
 
+    Scale is stored as a 3-tuple (sx, sy, sz) for consistency and to support
+    non-uniform scaling. Use from_scale() for uniform scaling convenience.
+
+    Center Point:
+        All rotations and scaling are performed around a center point. By default,
+        the center is None, which means the world origin (0, 0, 0). To rotate/scale
+        around the object's own center, compute the centroid and pass it as the
+        center parameter:
+            >>> centroid = data.means.mean(axis=0)
+            >>> values = TransformValues.from_rotation_euler(0, 45, 0, center=tuple(centroid))
+
     Example:
         >>> translate = TransformValues.from_translation(1, 0, 0)
         >>> rotate = TransformValues.from_rotation_euler(0, 0, 90)
         >>> composed = translate + rotate  # translate then rotate
     """
 
-    scale: float = 1.0
+    scale: tuple[float, float, float] = (1.0, 1.0, 1.0)  # (sx, sy, sz)
     rotation: tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.0)  # wxyz
     translation: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    center: tuple[float, float, float] | None = None  # rotation/scale center (None = origin)
 
     def to_matrix(self) -> np.ndarray:
         """Convert to 4x4 homogeneous transformation matrix.
+
+        If center is set, the matrix represents: T(translation) @ T(center) @ SR @ T(-center)
+        where SR is the combined scale-rotation matrix.
+
+        The order is: Scale-Rotate around center, then Translate (standard SRT order).
 
         :returns: 4x4 numpy array
         """
@@ -490,33 +501,66 @@ class TransformValues:
 
         quat = np.array(self.rotation, dtype=np.float32)
         R = quaternion_to_rotation_matrix(quat)
-        R = R * self.scale
+        # Apply per-axis scale to rotation matrix columns
+        scale_vec = np.array(self.scale, dtype=np.float32)
+        SR = R * scale_vec  # Broadcasts: each column scaled by corresponding factor
 
-        M = np.eye(4, dtype=np.float32)
-        M[:3, :3] = R
-        M[:3, 3] = self.translation
+        # Build scale-rotation matrix
+        M_sr = np.eye(4, dtype=np.float32)
+        M_sr[:3, :3] = SR
+
+        # Handle center point for rotation/scale
+        if self.center is not None:
+            center_arr = np.array(self.center, dtype=np.float32)
+            # T(center) @ SR @ T(-center)
+            T_center = np.eye(4, dtype=np.float32)
+            T_center[:3, 3] = center_arr
+            T_neg_center = np.eye(4, dtype=np.float32)
+            T_neg_center[:3, 3] = -center_arr
+            M_sr = T_center @ M_sr @ T_neg_center
+
+        # Add translation to the result
+        # T @ M_sr = translation applied AFTER scale-rotation (standard SRT order)
+        M = M_sr.copy()
+        M[:3, 3] += self.translation
+
         return M
 
     @classmethod
     def from_matrix(cls, M: np.ndarray) -> TransformValues:
         """Extract parameters from 4x4 matrix.
 
+        Extracts per-axis scale from column norms, supporting non-uniform scaling.
+
+        Note: Center information cannot be recovered from a matrix. The resulting
+        TransformValues will have center=None. If the original had a center, the
+        effect is baked into the translation component.
+
         :param M: 4x4 homogeneous transformation matrix
-        :returns: TransformValues instance
+        :returns: TransformValues instance (with center=None)
         """
         from gsmod.transform.api import rotation_matrix_to_quaternion
 
-        scale = float(np.linalg.norm(M[:3, 0]))
-        if scale > 1e-6:
-            R = M[:3, :3] / scale
+        # Extract per-axis scales from column norms
+        scale_x = float(np.linalg.norm(M[:3, 0]))
+        scale_y = float(np.linalg.norm(M[:3, 1]))
+        scale_z = float(np.linalg.norm(M[:3, 2]))
+        scale = (scale_x, scale_y, scale_z)
+
+        # Extract rotation by normalizing each column
+        if scale_x > 1e-6 and scale_y > 1e-6 and scale_z > 1e-6:
+            R = M[:3, :3].copy()
+            R[:, 0] /= scale_x
+            R[:, 1] /= scale_y
+            R[:, 2] /= scale_z
         else:
             R = np.eye(3, dtype=np.float32)
-            scale = 0.0
 
         rotation = tuple(rotation_matrix_to_quaternion(R).tolist())
         translation = tuple(M[:3, 3].tolist())
 
-        return cls(scale=scale, rotation=rotation, translation=translation)
+        # Note: center cannot be recovered from matrix
+        return cls(scale=scale, rotation=rotation, translation=translation, center=None)
 
     def __add__(self, other: TransformValues) -> TransformValues:
         """Compose transforms: self applied FIRST, then other.
@@ -541,15 +585,12 @@ class TransformValues:
 
         :returns: True if this is the identity transform
         """
-        import numpy as np
-
-        scale_arr = np.asarray(self.scale, dtype=np.float32).reshape(-1)
-        scale_val = float(scale_arr[0])
-        rot = np.asarray(self.rotation, dtype=np.float32).reshape(-1)
-        trans = np.asarray(self.translation, dtype=np.float32).reshape(-1)
+        scale_arr = np.asarray(self.scale, dtype=np.float32)
+        rot = np.asarray(self.rotation, dtype=np.float32)
+        trans = np.asarray(self.translation, dtype=np.float32)
 
         return (
-            np.allclose(scale_val, 1.0)
+            np.allclose(scale_arr, np.array([1.0, 1.0, 1.0], dtype=np.float32))
             and np.allclose(rot, np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float32))
             and np.allclose(trans, np.array([0.0, 0.0, 0.0], dtype=np.float32))
         )
@@ -557,11 +598,8 @@ class TransformValues:
     def learn(self, *params: str) -> LearnableTransform:
         """Create learnable nn.Module from these values.
 
-        Args:
-            *params: Parameter names to learn. If empty, learns all.
-
-        Returns:
-            LearnableTransform nn.Module initialized with these values.
+        :param params: Parameter names to learn. If empty, learns all.
+        :returns: LearnableTransform nn.Module initialized with these values.
 
         Example:
             >>> model = TransformValues().learn('rotation', 'translation').cuda()
@@ -572,13 +610,22 @@ class TransformValues:
 
     # Factory methods
     @classmethod
-    def from_scale(cls, factor: float) -> TransformValues:
-        """Create uniform scale transform.
+    def from_scale(
+        cls,
+        factor: float | tuple[float, float, float],
+        center: tuple[float, float, float] | None = None,
+    ) -> TransformValues:
+        """Create scale transform.
 
-        :param factor: Scale factor
+        :param factor: Uniform scale (float) or per-axis scale (3-tuple)
+        :param center: Center point for scaling (default: origin [0, 0, 0])
         :returns: TransformValues with only scale set
         """
-        return cls(scale=factor)
+        if isinstance(factor, int | float):
+            scale = (float(factor), float(factor), float(factor))
+        else:
+            scale = (float(factor[0]), float(factor[1]), float(factor[2]))
+        return cls(scale=scale, center=center)
 
     @classmethod
     def from_translation(cls, x: float, y: float, z: float) -> TransformValues:
@@ -592,12 +639,19 @@ class TransformValues:
         return cls(translation=(x, y, z))
 
     @classmethod
-    def from_rotation_euler(cls, rx: float, ry: float, rz: float) -> TransformValues:
+    def from_rotation_euler(
+        cls,
+        rx: float,
+        ry: float,
+        rz: float,
+        center: tuple[float, float, float] | None = None,
+    ) -> TransformValues:
         """Create rotation transform from Euler angles.
 
         :param rx: X rotation in degrees
         :param ry: Y rotation in degrees
         :param rz: Z rotation in degrees
+        :param center: Center point for rotation (default: origin [0, 0, 0])
         :returns: TransformValues with only rotation set
         """
         from gsmod.transform.api import euler_to_quaternion
@@ -605,16 +659,20 @@ class TransformValues:
         # Convert degrees to radians for euler_to_quaternion
         angles = np.radians(np.array([rx, ry, rz], dtype=np.float32))
         quat = euler_to_quaternion(angles)
-        return cls(rotation=tuple(quat.tolist()))
+        return cls(rotation=tuple(quat.tolist()), center=center)
 
     @classmethod
     def from_rotation_axis_angle(
-        cls, axis: tuple[float, float, float], angle: float
+        cls,
+        axis: tuple[float, float, float],
+        angle: float,
+        center: tuple[float, float, float] | None = None,
     ) -> TransformValues:
         """Create rotation transform from axis-angle.
 
         :param axis: Rotation axis [x, y, z]
         :param angle: Rotation angle in degrees
+        :param center: Center point for rotation (default: origin [0, 0, 0])
         :returns: TransformValues with only rotation set
         """
         from gsmod.transform.api import axis_angle_to_quaternion
@@ -629,31 +687,44 @@ class TransformValues:
         angle_rad = np.radians(angle)
         axis_angle = axis_normalized * angle_rad
         quat = axis_angle_to_quaternion(axis_angle)
-        return cls(rotation=tuple(quat.tolist()))
+        return cls(rotation=tuple(quat.tolist()), center=center)
 
     # Radian unit aliases
 
     @classmethod
-    def from_euler_rad(cls, rx: float, ry: float, rz: float) -> TransformValues:
+    def from_euler_rad(
+        cls,
+        rx: float,
+        ry: float,
+        rz: float,
+        center: tuple[float, float, float] | None = None,
+    ) -> TransformValues:
         """Create rotation transform from Euler angles in radians.
 
         :param rx: X rotation in radians
         :param ry: Y rotation in radians
         :param rz: Z rotation in radians
+        :param center: Center point for rotation (default: origin [0, 0, 0])
         :returns: TransformValues with only rotation set
         """
         from gsmod.transform.api import euler_to_quaternion
 
         angles = np.array([rx, ry, rz], dtype=np.float32)
         quat = euler_to_quaternion(angles)
-        return cls(rotation=tuple(quat.tolist()))
+        return cls(rotation=tuple(quat.tolist()), center=center)
 
     @classmethod
-    def from_axis_angle_rad(cls, axis: tuple[float, float, float], angle: float) -> TransformValues:
+    def from_axis_angle_rad(
+        cls,
+        axis: tuple[float, float, float],
+        angle: float,
+        center: tuple[float, float, float] | None = None,
+    ) -> TransformValues:
         """Create rotation transform from axis-angle with angle in radians.
 
         :param axis: Rotation axis [x, y, z]
         :param angle: Rotation angle in radians
+        :param center: Center point for rotation (default: origin [0, 0, 0])
         :returns: TransformValues with only rotation set
         """
         from gsmod.transform.api import axis_angle_to_quaternion
@@ -667,7 +738,7 @@ class TransformValues:
             axis_normalized = np.array([0.0, 0.0, 1.0], dtype=np.float32)
         axis_angle = axis_normalized * angle
         quat = axis_angle_to_quaternion(axis_angle)
-        return cls(rotation=tuple(quat.tolist()))
+        return cls(rotation=tuple(quat.tolist()), center=center)
 
 
 @dataclass

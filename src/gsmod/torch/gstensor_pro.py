@@ -679,14 +679,15 @@ class GSTensorPro(GSTensor):
             rot_quat = torch.tensor(values.rotation, dtype=self.dtype, device=self.device)
             self.quats = self._quaternion_multiply(rot_quat.unsqueeze(0), self.quats)
 
-        # Apply scale
-        if not np.allclose(values.scale, 1.0):
+        # Apply scale (scale is now a tuple (sx, sy, sz))
+        scale_arr = np.array(values.scale, dtype=np.float32)
+        if not np.allclose(scale_arr, 1.0):
+            scale_tensor = torch.tensor(scale_arr, dtype=self.dtype, device=self.device)
             if self.is_scales_ply:
                 # Use torch.log to keep computation on GPU
-                scale_tensor = torch.tensor(values.scale, dtype=self.dtype, device=self.device)
                 self.scales += torch.log(scale_tensor)
             else:
-                self.scales *= values.scale
+                self.scales *= scale_tensor
 
         self._base = None
         return self
@@ -833,7 +834,7 @@ class GSTensorPro(GSTensor):
     # Color Adjustment Operations (GPU-Optimized)
     # ==========================================================================
 
-    def adjust_brightness(self, factor: float, inplace: bool = False) -> GSTensorPro:
+    def adjust_brightness(self, factor: float, inplace: bool = True) -> GSTensorPro:
         """Adjust brightness of colors (GPU-optimized with Triton, format-aware).
 
         Uses Triton-accelerated kernel when available for maximum GPU efficiency.
@@ -877,7 +878,7 @@ class GSTensorPro(GSTensor):
         result = self.clone()
         return result.adjust_brightness(factor, inplace=True)
 
-    def adjust_contrast(self, factor: float, inplace: bool = False) -> GSTensorPro:
+    def adjust_contrast(self, factor: float, inplace: bool = True) -> GSTensorPro:
         """Adjust contrast of colors (GPU-optimized with Triton, format-aware).
 
         Uses Triton-accelerated kernel when available for maximum GPU efficiency.
@@ -915,7 +916,7 @@ class GSTensorPro(GSTensor):
         result = self.clone()
         return result.adjust_contrast(factor, inplace=True)
 
-    def adjust_saturation(self, factor: float, inplace: bool = False) -> GSTensorPro:
+    def adjust_saturation(self, factor: float, inplace: bool = True) -> GSTensorPro:
         """Adjust saturation of colors (GPU-optimized with Triton, format-aware).
 
         Uses Triton-accelerated kernel when available for maximum GPU efficiency.
@@ -952,7 +953,7 @@ class GSTensorPro(GSTensor):
         result = self.clone()
         return result.adjust_saturation(factor, inplace=True)
 
-    def adjust_gamma(self, gamma: float, inplace: bool = False) -> GSTensorPro:
+    def adjust_gamma(self, gamma: float, inplace: bool = True) -> GSTensorPro:
         """Apply gamma correction (GPU-optimized with Triton, format-aware).
 
         Uses Triton-accelerated kernel when available for maximum GPU efficiency.
@@ -1007,7 +1008,7 @@ class GSTensorPro(GSTensor):
         result = self.clone()
         return result.adjust_gamma(gamma, inplace=True)
 
-    def adjust_temperature(self, temp: float, inplace: bool = False) -> GSTensorPro:
+    def adjust_temperature(self, temp: float, inplace: bool = True) -> GSTensorPro:
         """Adjust color temperature (GPU-optimized with Triton, format-aware).
 
         Uses Triton-accelerated kernel when available for maximum GPU efficiency.
@@ -1048,7 +1049,7 @@ class GSTensorPro(GSTensor):
         result = self.clone()
         return result.adjust_temperature(temp, inplace=True)
 
-    def adjust_vibrance(self, factor: float, inplace: bool = False) -> GSTensorPro:
+    def adjust_vibrance(self, factor: float, inplace: bool = True) -> GSTensorPro:
         """Adjust vibrance (smart saturation) of colors (GPU-optimized, format-aware).
 
         Increases saturation more for less-saturated colors, protecting skin tones.
@@ -1095,7 +1096,7 @@ class GSTensorPro(GSTensor):
         result = self.clone()
         return result.adjust_vibrance(factor, inplace=True)
 
-    def adjust_hue_shift(self, degrees: float, inplace: bool = False) -> GSTensorPro:
+    def adjust_hue_shift(self, degrees: float, inplace: bool = True) -> GSTensorPro:
         """Shift hue of colors (GPU-optimized, format-aware).
 
         Note: Hue shift requires RGB format for proper color space rotation.
@@ -1157,7 +1158,7 @@ class GSTensorPro(GSTensor):
         result = self.clone()
         return result.adjust_hue_shift(degrees, inplace=True)
 
-    def adjust_tint(self, value: float, inplace: bool = False) -> GSTensorPro:
+    def adjust_tint(self, value: float, inplace: bool = True) -> GSTensorPro:
         """Adjust green/magenta tint (GPU-optimized, format-aware).
 
         Complements temperature adjustment for white balance control.
@@ -1194,7 +1195,7 @@ class GSTensorPro(GSTensor):
         result = self.clone()
         return result.adjust_tint(value, inplace=True)
 
-    def adjust_fade(self, value: float, inplace: bool = False) -> GSTensorPro:
+    def adjust_fade(self, value: float, inplace: bool = True) -> GSTensorPro:
         """Apply fade/black point lift for film look (GPU-optimized, format-aware).
 
         Lifts the black point, creating a faded/matte appearance common in
@@ -1231,7 +1232,7 @@ class GSTensorPro(GSTensor):
     # ==========================================================================
 
     def translate(
-        self, translation: list[float] | np.ndarray | torch.Tensor, inplace: bool = False
+        self, translation: list[float] | np.ndarray | torch.Tensor, inplace: bool = True
     ) -> GSTensorPro:
         """Translate Gaussian positions (GPU-optimized).
 
@@ -1259,7 +1260,7 @@ class GSTensorPro(GSTensor):
         result = self.clone()
         return result.translate(translation, inplace=True)
 
-    def scale_uniform(self, scale: float, inplace: bool = False) -> GSTensorPro:
+    def scale_uniform(self, scale: float, inplace: bool = True) -> GSTensorPro:
         """Scale Gaussians uniformly (GPU-optimized).
 
         :param scale: Uniform scale factor
@@ -1285,7 +1286,7 @@ class GSTensorPro(GSTensor):
         return result.scale_uniform(scale, inplace=True)
 
     def scale_nonuniform(
-        self, scale: list[float] | np.ndarray | torch.Tensor, inplace: bool = False
+        self, scale: list[float] | np.ndarray | torch.Tensor, inplace: bool = True
     ) -> GSTensorPro:
         """Scale Gaussians non-uniformly (GPU-optimized).
 
@@ -1319,7 +1320,7 @@ class GSTensorPro(GSTensor):
         return result.scale_nonuniform(scale, inplace=True)
 
     def rotate_quaternion(
-        self, quaternion: np.ndarray | torch.Tensor, inplace: bool = False
+        self, quaternion: np.ndarray | torch.Tensor, inplace: bool = True
     ) -> GSTensorPro:
         """Rotate Gaussians using quaternion (GPU-optimized).
 
@@ -1359,7 +1360,7 @@ class GSTensorPro(GSTensor):
         self,
         angles: list[float] | np.ndarray | torch.Tensor,
         order: str = "XYZ",
-        inplace: bool = False,
+        inplace: bool = True,
     ) -> GSTensorPro:
         """Rotate using Euler angles (GPU-optimized).
 
@@ -1384,7 +1385,7 @@ class GSTensorPro(GSTensor):
         return self.rotate_quaternion(quaternion, inplace=inplace)
 
     def rotate_axis_angle(
-        self, axis: list[float] | np.ndarray | torch.Tensor, angle: float, inplace: bool = False
+        self, axis: list[float] | np.ndarray | torch.Tensor, angle: float, inplace: bool = True
     ) -> GSTensorPro:
         """Rotate around axis by angle (GPU-optimized).
 
@@ -1423,7 +1424,7 @@ class GSTensorPro(GSTensor):
         return self.rotate_quaternion(quaternion, inplace=inplace)
 
     def transform_matrix(
-        self, matrix: np.ndarray | torch.Tensor, inplace: bool = False
+        self, matrix: np.ndarray | torch.Tensor, inplace: bool = True
     ) -> GSTensorPro:
         """Apply 4x4 transformation matrix (GPU-optimized).
 
@@ -1656,7 +1657,7 @@ class GSTensorPro(GSTensor):
     # ==========================================================================
 
     def apply_color_preset(
-        self, preset: str, strength: float = 1.0, inplace: bool = False
+        self, preset: str, strength: float = 1.0, inplace: bool = True
     ) -> GSTensorPro:
         """Apply a color preset (GPU-optimized).
 
@@ -1694,26 +1695,27 @@ class GSTensorPro(GSTensor):
         else:
             result = self
 
+        # Method dispatch map for cleaner code
+        method_map = {
+            "brightness": result.adjust_brightness,
+            "contrast": result.adjust_contrast,
+            "saturation": result.adjust_saturation,
+            "gamma": result.adjust_gamma,
+            "temperature": result.adjust_temperature,
+            "vibrance": result.adjust_vibrance,
+        }
+
         # Apply adjustments with strength interpolation
         for key, value in config.items():
-            # Interpolate between 1.0 (no change) and target value based on strength
-            if key in ["temperature"]:
+            if key == "temperature":
+                # Temperature: additive, 0 = no change
                 adjusted_value = value * strength
             else:
+                # Multiplicative: 1.0 = no change
                 adjusted_value = 1.0 + (value - 1.0) * strength
 
-            if key == "brightness":
-                result.adjust_brightness(adjusted_value, inplace=True)
-            elif key == "contrast":
-                result.adjust_contrast(adjusted_value, inplace=True)
-            elif key == "saturation":
-                result.adjust_saturation(adjusted_value, inplace=True)
-            elif key == "gamma":
-                result.adjust_gamma(adjusted_value, inplace=True)
-            elif key == "temperature":
-                result.adjust_temperature(adjusted_value, inplace=True)
-            elif key == "vibrance":
-                result.adjust_vibrance(adjusted_value, inplace=True)
+            if key in method_map:
+                method_map[key](adjusted_value, inplace=True)
 
         return result
 
@@ -1730,7 +1732,7 @@ class GSTensorPro(GSTensor):
         max_bounds = torch.max(self.means, dim=0)[0]
         return min_bounds, max_bounds
 
-    def center_at_origin(self, inplace: bool = False) -> GSTensorPro:
+    def center_at_origin(self, inplace: bool = True) -> GSTensorPro:
         """Center scene at origin (GPU-optimized).
 
         :param inplace: If True, modify in-place; if False, return new object
@@ -1742,7 +1744,7 @@ class GSTensorPro(GSTensor):
         center = torch.mean(self.means, dim=0)
         return self.translate(-center, inplace=inplace)
 
-    def normalize_scale(self, target_size: float = 2.0, inplace: bool = False) -> GSTensorPro:
+    def normalize_scale(self, target_size: float = 2.0, inplace: bool = True) -> GSTensorPro:
         """Normalize scene to fit in target size (GPU-optimized).
 
         :param target_size: Target bounding box size
@@ -1803,12 +1805,9 @@ class GSTensorPro(GSTensor):
             max_val = float(sh0.max().item())
 
         # Compute histograms per channel using torch.histc
-        counts = []
-        for c in range(3):
-            hist = torch.histc(sh0[:, c], bins=n_bins, min=min_val, max=max_val)
-            counts.append(hist)
-
-        counts = torch.stack(counts)
+        counts = torch.stack(
+            [torch.histc(sh0[:, c], bins=n_bins, min=min_val, max=max_val) for c in range(3)]
+        )
 
         # Compute statistics
         mean = torch.mean(sh0, dim=0)

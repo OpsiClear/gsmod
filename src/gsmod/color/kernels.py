@@ -24,8 +24,7 @@ def fused_color_phase2_numba(
     highlights: float,
     out: NDArray[np.float32],
 ) -> None:
-    """
-    Fused Phase 2 color operations: saturation + shadows/highlights.
+    """Fused Phase 2 color operations: saturation + shadows/highlights.
 
     Optimizations:
     - Calculate luminance once (shared by saturation and shadows/highlights)
@@ -35,12 +34,11 @@ def fused_color_phase2_numba(
 
     Performance: ~2.5-3x faster than separate PyTorch operations
 
-    Args:
-        colors: Input RGB colors [N, 3] in range [0, 1]
-        saturation: Saturation adjustment (1.0=no change, 0=grayscale)
-        shadows: Shadow adjustment (0.0=no change, additive)
-        highlights: Highlight adjustment (0.0=no change, additive)
-        out: Output buffer [N, 3]
+    :param colors: Input RGB colors [N, 3] in range [0, 1]
+    :param saturation: Saturation adjustment (1.0=no change, 0=grayscale)
+    :param shadows: Shadow adjustment (0.0=no change, additive)
+    :param highlights: Highlight adjustment (0.0=no change, additive)
+    :param out: Output buffer [N, 3]
     """
     N = colors.shape[0]
 
@@ -107,8 +105,7 @@ def fused_color_full_pipeline_numba(
     highlights: float,
     out: NDArray[np.float32],
 ) -> None:
-    """
-    ULTRA-FUSED kernel: LUT lookup (Phase 1) + Saturation + Shadows/Highlights (Phase 2).
+    """ULTRA-FUSED kernel: LUT lookup (Phase 1) + Saturation + Shadows/Highlights (Phase 2).
 
     This is the ultimate CPU optimization - single kernel that does EVERYTHING:
     - Phase 1: LUT lookup (temperature, brightness, contrast, gamma)
@@ -123,15 +120,14 @@ def fused_color_full_pipeline_numba(
 
     Expected performance: 3-5x faster than separate operations
 
-    Args:
-        colors: Input RGB colors [N, 3] in range [0, 1]
-        r_lut: Red channel LUT [lut_size]
-        g_lut: Green channel LUT [lut_size]
-        b_lut: Blue channel LUT [lut_size]
-        saturation: Saturation adjustment (1.0=no change)
-        shadows: Shadow adjustment (0.0=no change, additive)
-        highlights: Highlight adjustment (0.0=no change, additive)
-        out: Output buffer [N, 3]
+    :param colors: Input RGB colors [N, 3] in range [0, 1]
+    :param r_lut: Red channel LUT [lut_size]
+    :param g_lut: Green channel LUT [lut_size]
+    :param b_lut: Blue channel LUT [lut_size]
+    :param saturation: Saturation adjustment (1.0=no change)
+    :param shadows: Shadow adjustment (0.0=no change, additive)
+    :param highlights: Highlight adjustment (0.0=no change, additive)
+    :param out: Output buffer [N, 3]
     """
     N = colors.shape[0]
     lut_size = r_lut.shape[0]
@@ -203,18 +199,16 @@ def fused_color_pipeline_skip_lut_numba(
     highlights: float,
     out: NDArray[np.float32],
 ) -> None:
-    """
-    Ultra-fast path when Phase 1 params are defaults (skip LUT entirely).
+    """Ultra-fast path when Phase 1 params are defaults (skip LUT entirely).
 
     Use when: temperature=0.5, brightness=1.0, contrast=1.0, gamma=1.0
     Performance: 2.8x faster than full pipeline (0.040 ms vs 0.114 ms)
 
-    Args:
-        colors: Input RGB colors [N, 3]
-        saturation: Saturation adjustment
-        shadows: Shadow adjustment
-        highlights: Highlight adjustment
-        out: Output buffer [N, 3]
+    :param colors: Input RGB colors [N, 3]
+    :param saturation: Saturation adjustment
+    :param shadows: Shadow adjustment
+    :param highlights: Highlight adjustment
+    :param out: Output buffer [N, 3]
     """
     N = colors.shape[0]
 
@@ -259,19 +253,21 @@ def fused_color_pipeline_interp_lut_numba(
     highlights: float,
     out: NDArray[np.float32],
 ) -> None:
-    """
-    Fused pipeline with LINEAR INTERPOLATION for LUT lookups.
+    """Fused pipeline with LINEAR INTERPOLATION for LUT lookups.
 
     Benefits:
     - Smaller LUT (64-128 entries) fits in L1 cache
     - Better quality (smooth gradients)
     - 1.6x faster than baseline with large LUT
 
-    Args:
-        colors: Input RGB colors [N, 3]
-        r_lut, g_lut, b_lut: Small LUTs (64-128 entries recommended)
-        saturation, shadows, highlights: Phase 2 params
-        out: Output buffer [N, 3]
+    :param colors: Input RGB colors [N, 3]
+    :param r_lut: Red channel LUT (64-128 entries recommended)
+    :param g_lut: Green channel LUT (64-128 entries recommended)
+    :param b_lut: Blue channel LUT (64-128 entries recommended)
+    :param saturation: Saturation adjustment
+    :param shadows: Shadow adjustment
+    :param highlights: Highlight adjustment
+    :param out: Output buffer [N, 3]
     """
     N = colors.shape[0]
     lut_size = r_lut.shape[0]
@@ -334,18 +330,16 @@ def apply_lut_only_interleaved_numba(
     lut: NDArray[np.float32],
     out: NDArray[np.float32],
 ) -> None:
-    """
-    Ultra-fast path: Apply ONLY Phase 1 LUT, skip all Phase 2 operations.
+    """Ultra-fast path: Apply ONLY Phase 1 LUT, skip all Phase 2 operations.
 
     Use when all Phase 2 params are at defaults (saturation=1.0, vibrance=1.0,
     hue_shift=0.0, shadows=0.0, highlights=0.0).
 
     Expected performance: ~3x faster than full pipeline for LUT-only operations.
 
-    Args:
-        colors: Input colors [N, 3]
-        lut: Interleaved LUT [lut_size, 3]
-        out: Output buffer [N, 3]
+    :param colors: Input colors [N, 3]
+    :param lut: Interleaved LUT [lut_size, 3]
+    :param out: Output buffer [N, 3]
     """
     N = colors.shape[0]
     lut_size = lut.shape[0]
@@ -403,27 +397,37 @@ def fused_color_pipeline_interleaved_lut_numba(
     highlight_tint_b: float = 0.0,
     highlight_tint_sat: float = 0.0,
 ) -> None:
-    """
-    Fused color pipeline with INTERLEAVED LUT for better cache locality.
+    """Fused color pipeline with INTERLEAVED LUT for better cache locality.
 
     Uses single [N, 3] LUT array instead of 3 separate arrays.
     Expected 1.23x speedup from better cache performance.
 
-    Args:
-        colors: Input colors [N, 3]
-        lut: Interleaved LUT [lut_size, 3] - single array for all channels
-        saturation: Saturation adjustment
-        vibrance: Vibrance adjustment (selective saturation)
-        hue_shift_deg: Hue shift in degrees
-        shadows: Shadow adjustment
-        highlights: Highlight adjustment
-        out: Output buffer [N, 3]
-        m00-m22: Pre-computed hue rotation matrix coefficients (defaults to identity)
-        fade: Black point lift (0=none, 1=full)
-        shadow_tint_r/g/b: Pre-computed RGB offsets for shadow tint
-        shadow_tint_sat: Shadow tint intensity
-        highlight_tint_r/g/b: Pre-computed RGB offsets for highlight tint
-        highlight_tint_sat: Highlight tint intensity
+    :param colors: Input colors [N, 3]
+    :param lut: Interleaved LUT [lut_size, 3] - single array for all channels
+    :param saturation: Saturation adjustment
+    :param vibrance: Vibrance adjustment (selective saturation)
+    :param hue_shift_deg: Hue shift in degrees
+    :param shadows: Shadow adjustment
+    :param highlights: Highlight adjustment
+    :param out: Output buffer [N, 3]
+    :param m00: Hue rotation matrix coefficient (0,0)
+    :param m01: Hue rotation matrix coefficient (0,1)
+    :param m02: Hue rotation matrix coefficient (0,2)
+    :param m10: Hue rotation matrix coefficient (1,0)
+    :param m11: Hue rotation matrix coefficient (1,1)
+    :param m12: Hue rotation matrix coefficient (1,2)
+    :param m20: Hue rotation matrix coefficient (2,0)
+    :param m21: Hue rotation matrix coefficient (2,1)
+    :param m22: Hue rotation matrix coefficient (2,2)
+    :param fade: Black point lift (0=none, 1=full)
+    :param shadow_tint_r: Pre-computed R offset for shadow tint
+    :param shadow_tint_g: Pre-computed G offset for shadow tint
+    :param shadow_tint_b: Pre-computed B offset for shadow tint
+    :param shadow_tint_sat: Shadow tint intensity
+    :param highlight_tint_r: Pre-computed R offset for highlight tint
+    :param highlight_tint_g: Pre-computed G offset for highlight tint
+    :param highlight_tint_b: Pre-computed B offset for highlight tint
+    :param highlight_tint_sat: Highlight tint intensity
     """
     N = colors.shape[0]
     lut_size = lut.shape[0]

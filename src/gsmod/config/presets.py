@@ -494,14 +494,12 @@ def filter_from_dict(d: dict) -> FilterValues:
         "box_min",
         "box_max",
     }
-    kwargs = {}
-    for k, v in d.items():
-        if k not in valid_fields:
-            continue
-        if k in ("sphere_center", "box_min", "box_max") and v is not None:
-            kwargs[k] = tuple(v)
-        else:
-            kwargs[k] = v
+    tuple_fields = {"sphere_center", "box_min", "box_max"}
+    kwargs = {
+        k: (tuple(v) if k in tuple_fields and v is not None else v)
+        for k, v in d.items()
+        if k in valid_fields
+    }
     return FilterValues(**kwargs)
 
 

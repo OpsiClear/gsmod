@@ -5,6 +5,43 @@ All notable changes to gsmod will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.7] - 2025-12-09
+
+### Changed
+- **Style Consistency Improvements**
+  - Unified `inplace` defaults: All methods now default to `inplace=True` for consistency
+    - GSTensorPro methods (35 methods)
+    - Filter.__call__(), FilterGPU.__call__(), FilterProcessor.apply() protocol
+    - Exception: `compose_with_transforms()` remains `inplace=False` (composition utility)
+  - Parameter naming unification: `factor` -> `scale` in scale methods, `value` -> `gamma` in adjust_gamma
+  - Dict/list comprehensions used for cleaner code in GSTensorPro (apply_color_preset, compute_histogram)
+- **TransformValues Non-Uniform Scale Support**
+  - `TransformValues.scale` now stores 3-tuple `(sx, sy, sz)` for per-axis scaling
+  - `from_scale()` accepts both uniform (float) and per-axis (tuple) scales
+  - `from_matrix()` extracts per-axis scales from column norms
+  - `is_neutral()` properly checks 3-tuple scale against `[1.0, 1.0, 1.0]`
+- **Rotation/Scale Center Point Support**
+  - New `center` parameter on TransformValues for rotation/scale center
+  - Factory methods `from_rotation_euler()`, `from_rotation_axis_angle()`, `from_scale()` accept `center`
+  - `to_matrix()` correctly applies T(center) @ SR @ T(-center) transformation
+  - LearnableTransform correctly handles center in forward pass
+- **Transform Pipeline Enhancements**
+  - New `Transform.from_srt()` factory for standard Scale-Rotate-Translate order
+  - New `rotate_euler_deg()` method for degree-based rotation
+  - Improved docstrings with center point usage examples
+- **Docstring Format Standardized**
+  - All docstrings now use Sphinx reST format (`:param:`, `:returns:`) consistently
+  - Removed Google-style Args/Returns in favor of Sphinx style
+- **TransformConfig/LearnableTransform Updates**
+  - `TransformConfig.scale` now supports float or 3-tuple
+  - LearnableTransform handles center point for rotation/scale around arbitrary points
+- **Numba Kernel Optimizations**
+  - Filter kernels refactored with dict/list comprehensions
+  - Color kernels use cleaner iteration patterns
+
+### Fixed
+- LearnableTransform now correctly applies SRT order with center support
+
 ## [0.1.6] - 2025-12-06
 
 ### Changed
@@ -352,7 +389,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Project structure reorganized similar to gsply
   - `color.py` -> `color/` module (pipeline.py, presets.py, kernels.py)
   - `transforms.py` -> `transform/` module (api.py, pipeline.py, kernels.py)
-  - `filter/` module expanded (api.py, pipeline.py, masks.py, bounds.py, config.py, kernels.py)
+  - `filter/` module expanded (api.py, atomic.py, bounds.py, config.py, kernels.py)
 - Updated all documentation to reflect new module structure
 - Improved error messages with more detailed context
 
@@ -375,7 +412,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Color processing pipeline with LUT-based operations
 - Transform pipeline with Numba-optimized kernels
 - Filter pipeline with spatial and property-based filtering
-- FilterMasks API for multi-layer mask management
+- Filter atomic class with boolean operators (&, |, ~)
 - Parameterized templates for efficient parameter variation
 - Scene composition utilities (concatenate, merge, split)
 - ColorPreset class with built-in presets (cinematic, warm, cool, etc.)

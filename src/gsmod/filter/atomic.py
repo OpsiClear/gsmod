@@ -407,7 +407,7 @@ class Filter:
             logger.debug("Filter %s: kept %d/%d", self._description, mask.sum(), len(mask))
         return mask
 
-    def __call__(self, data: GSDataPro, inplace: bool = False) -> GSDataPro:
+    def __call__(self, data: GSDataPro, inplace: bool = True) -> GSDataPro:
         """Apply filter to data.
 
         :param data: GSDataPro instance

@@ -51,12 +51,24 @@ def apply_transform_values(
         _quaternion_multiply_numpy(rot_quat[np.newaxis, :], quats, out=quats)
 
     # Apply scale (handle log-space for PLY format)
-    if values.scale != 1.0:
+    # Scale is now a tuple (sx, sy, sz)
+    scale_arr = np.array(values.scale, dtype=scales.dtype)
+    is_uniform = np.allclose(scale_arr, scale_arr[0])
+    is_identity = np.allclose(scale_arr, 1.0)
+
+    if not is_identity:
         if is_scales_ply:
             # In log space: add log(scale) instead of multiplying
-            elementwise_add_scalar_numba(scales, np.log(values.scale), scales)
+            log_scale = np.log(scale_arr)
+            if is_uniform:
+                elementwise_add_scalar_numba(scales, float(log_scale[0]), scales)
+            else:
+                scales += log_scale  # Broadcast add for non-uniform
         else:
             # In linear space: multiply directly
-            elementwise_multiply_scalar_numba(scales, values.scale, scales)
+            if is_uniform:
+                elementwise_multiply_scalar_numba(scales, float(scale_arr[0]), scales)
+            else:
+                scales *= scale_arr  # Broadcast multiply for non-uniform
 
     return means, quats, scales
